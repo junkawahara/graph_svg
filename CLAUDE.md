@@ -4,8 +4,8 @@ Electron + TypeScript で構築された SVG 編集ドローツール。
 
 ## プロジェクト概要
 
-直線・楕円・長方形を描画し、選択・移動・リサイズ・スタイル変更ができる SVG エディタ。
-Undo/Redo、ファイル保存/読み込みに対応。
+直線・楕円・長方形・テキストを描画し、選択・移動・リサイズ・スタイル変更ができる SVG エディタ。
+Undo/Redo、ファイル保存/読み込み、コピー/ペーストに対応。
 
 ## コマンド
 
@@ -30,37 +30,45 @@ src/
 │   ├── components/          # UI コンポーネント
 │   │   ├── Canvas.ts        # SVG キャンバス管理
 │   │   ├── Toolbar.ts       # ツールバー（ツール選択、Undo/Redo、削除、ファイル操作）
-│   │   └── Sidebar.ts       # サイドバー（スタイル編集）
+│   │   ├── Sidebar.ts       # サイドバー（スタイル編集）
+│   │   └── TextInputDialog.ts # テキスト入力ダイアログ
 │   ├── core/                # コアロジック
 │   │   ├── EventBus.ts      # イベント通信
 │   │   ├── EditorState.ts   # 状態管理
 │   │   ├── SelectionManager.ts  # 選択管理
 │   │   ├── HistoryManager.ts    # Undo/Redo履歴管理
-│   │   └── FileManager.ts       # SVGシリアライズ/パース
+│   │   ├── FileManager.ts       # SVGシリアライズ/パース
+│   │   └── ClipboardManager.ts  # コピー/ペースト管理
 │   ├── commands/            # コマンドパターン（Undo/Redo）
 │   │   ├── Command.ts           # インターフェース
 │   │   ├── AddShapeCommand.ts   # 図形追加
 │   │   ├── DeleteShapeCommand.ts # 図形削除
 │   │   ├── MoveShapeCommand.ts  # 図形移動
 │   │   ├── ResizeShapeCommand.ts # 図形リサイズ
-│   │   └── StyleChangeCommand.ts # スタイル変更
+│   │   ├── StyleChangeCommand.ts # スタイル変更
+│   │   ├── PasteShapesCommand.ts # 図形ペースト
+│   │   └── TextPropertyChangeCommand.ts # テキストプロパティ変更
 │   ├── shapes/              # 図形クラス
 │   │   ├── Shape.ts         # インターフェース
 │   │   ├── Line.ts          # 直線
 │   │   ├── Ellipse.ts       # 楕円
-│   │   └── Rectangle.ts     # 長方形
+│   │   ├── Rectangle.ts     # 長方形
+│   │   ├── Text.ts          # テキスト
+│   │   └── ShapeFactory.ts  # 図形生成ファクトリ
 │   ├── tools/               # ツール
 │   │   ├── Tool.ts          # インターフェース
 │   │   ├── SelectTool.ts    # 選択・移動・リサイズ・範囲選択
 │   │   ├── LineTool.ts      # 直線描画
 │   │   ├── EllipseTool.ts   # 楕円描画
-│   │   └── RectangleTool.ts # 長方形描画
+│   │   ├── RectangleTool.ts # 長方形描画
+│   │   └── TextTool.ts      # テキスト配置
 │   ├── handles/             # リサイズハンドル
 │   │   ├── Handle.ts        # インターフェース
 │   │   ├── LineHandles.ts   # 直線用（2点）
 │   │   ├── EllipseHandles.ts # 楕円用（4隅）
-│   │   └── RectangleHandles.ts # 長方形用（4隅）
-│   └── styles/              # CSS
+│   │   ├── RectangleHandles.ts # 長方形用（4隅）
+│   │   └── TextHandles.ts   # テキスト用（中心点）
+│   └── styles/              # CSS（main, toolbar, sidebar, canvas, dialog）
 └── shared/
     └── types.ts             # 共有型定義
 ```
@@ -79,6 +87,7 @@ src/
 - `style:changed` - スタイル変更
 - `shape:added` - 図形追加
 - `shapes:delete` - 図形削除リクエスト
+- `shapes:paste` - 図形ペーストリクエスト
 - `selection:changed` - 選択変更
 - `history:changed` - Undo/Redo状態変更
 - `file:save` - ファイル保存リクエスト
@@ -90,9 +99,12 @@ src/
 - `L` - 直線ツール
 - `E` - 楕円ツール
 - `R` - 長方形ツール
+- `T` - テキストツール
 - `Delete` / `Backspace` - 選択図形を削除
 - `Ctrl+Z` - 元に戻す（Undo）
 - `Ctrl+Y` / `Ctrl+Shift+Z` - やり直し（Redo）
+- `Ctrl+C` - コピー
+- `Ctrl+V` - ペースト
 - `Ctrl+S` - ファイル保存
 - `Ctrl+O` - ファイルを開く
 
@@ -112,3 +124,11 @@ src/
 - Opacity（不透明度）
 - Stroke Dasharray（破線スタイル）
 - Stroke Linecap（線端スタイル）
+
+## テキストプロパティ
+
+テキスト図形選択時のみ表示:
+- Content（テキスト内容）
+- Font Size（フォントサイズ）
+- Font Family（フォントファミリー）
+- Bold（太字）
