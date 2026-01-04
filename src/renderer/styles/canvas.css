@@ -34,3 +34,17 @@
   pointer-events: none;
   opacity: 0.7;
 }
+
+/* Marquee selection styles */
+.marquee-selection {
+  fill: rgba(14, 99, 156, 0.1);
+  stroke: #0e639c;
+  stroke-width: 1;
+  stroke-dasharray: 4, 4;
+  pointer-events: none;
+}
+
+.marquee-selection.intersection-mode {
+  fill: rgba(156, 99, 14, 0.1);
+  stroke: #9c630e;
+}

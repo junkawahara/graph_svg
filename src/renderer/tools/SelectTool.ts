@@ -1,4 +1,4 @@
-import { Point } from '../../shared/types';
+import { Point, Bounds } from '../../shared/types';
 import { Tool } from './Tool';
 import { Shape } from '../shapes/Shape';
 import { Handle } from '../handles/Handle';
@@ -11,6 +11,32 @@ export interface SelectToolCallbacks {
   findShapeAt: (point: Point) => Shape | null;
   findHandleAt: (point: Point) => Handle | null;
   updateHandles: () => void;
+  getShapes: () => Shape[];
+  getSvgElement: () => SVGSVGElement;
+}
+
+/**
+ * Check if bounds1 is completely contained within bounds2
+ */
+function isContainedIn(inner: Bounds, outer: Bounds): boolean {
+  return (
+    inner.x >= outer.x &&
+    inner.y >= outer.y &&
+    inner.x + inner.width <= outer.x + outer.width &&
+    inner.y + inner.height <= outer.y + outer.height
+  );
+}
+
+/**
+ * Check if two bounds intersect
+ */
+function boundsIntersect(a: Bounds, b: Bounds): boolean {
+  return !(
+    a.x + a.width < b.x ||
+    b.x + b.width < a.x ||
+    a.y + a.height < b.y ||
+    b.y + b.height < a.y
+  );
 }
 
 /**
@@ -21,12 +47,14 @@ export class SelectTool implements Tool {
 
   private isDragging = false;
   private isResizing = false;
+  private isMarqueeSelecting = false;
   private dragStartPoint: Point | null = null;
   private dragOriginPoint: Point | null = null;  // Original start for total delta
   private draggedShape: Shape | null = null;
   private activeHandle: Handle | null = null;
   private resizeShape: Shape | null = null;
   private resizeBeforeState: any = null;
+  private marqueeRect: SVGRectElement | null = null;
   private callbacks: SelectToolCallbacks;
 
   constructor(callbacks: SelectToolCallbacks) {
@@ -75,12 +103,21 @@ export class SelectTool implements Tool {
         this.draggedShape = shape;
       }
     } else {
-      // Clicked on empty area - clear selection
-      selectionManager.clearSelection();
+      // Clicked on empty area - start marquee selection
+      if (!event.shiftKey) {
+        selectionManager.clearSelection();
+      }
+      this.startMarqueeSelection(point);
     }
   }
 
-  onMouseMove(point: Point, _event: MouseEvent): void {
+  onMouseMove(point: Point, event: MouseEvent): void {
+    // Handle marquee selection
+    if (this.isMarqueeSelecting && this.dragStartPoint) {
+      this.updateMarqueeRect(point, event.altKey);
+      return;
+    }
+
     // Handle resizing
     if (this.isResizing && this.activeHandle) {
       this.activeHandle.onDrag(point);
@@ -108,7 +145,14 @@ export class SelectTool implements Tool {
     this.dragStartPoint = point;
   }
 
-  onMouseUp(point: Point, _event: MouseEvent): void {
+  onMouseUp(point: Point, event: MouseEvent): void {
+    // Handle marquee selection completion
+    if (this.isMarqueeSelecting && this.dragStartPoint) {
+      this.completeMarqueeSelection(point, event.shiftKey, event.altKey);
+      this.resetState();
+      return;
+    }
+
     // Create move command if we were dragging
     if (this.isDragging && this.dragOriginPoint) {
       const totalDx = point.x - this.dragOriginPoint.x;
@@ -172,14 +216,125 @@ export class SelectTool implements Tool {
     this.resetState();
   }
 
+  /**
+   * Start marquee selection
+   */
+  private startMarqueeSelection(point: Point): void {
+    this.isMarqueeSelecting = true;
+    this.dragStartPoint = point;
+
+    // Create marquee rectangle
+    const svg = this.callbacks.getSvgElement();
+    this.marqueeRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    this.marqueeRect.setAttribute('x', String(point.x));
+    this.marqueeRect.setAttribute('y', String(point.y));
+    this.marqueeRect.setAttribute('width', '0');
+    this.marqueeRect.setAttribute('height', '0');
+    this.marqueeRect.classList.add('marquee-selection');
+    svg.appendChild(this.marqueeRect);
+  }
+
+  /**
+   * Update marquee rectangle during drag
+   */
+  private updateMarqueeRect(point: Point, isIntersectionMode: boolean): void {
+    if (!this.marqueeRect || !this.dragStartPoint) return;
+
+    const x = Math.min(this.dragStartPoint.x, point.x);
+    const y = Math.min(this.dragStartPoint.y, point.y);
+    const width = Math.abs(point.x - this.dragStartPoint.x);
+    const height = Math.abs(point.y - this.dragStartPoint.y);
+
+    this.marqueeRect.setAttribute('x', String(x));
+    this.marqueeRect.setAttribute('y', String(y));
+    this.marqueeRect.setAttribute('width', String(width));
+    this.marqueeRect.setAttribute('height', String(height));
+
+    // Visual feedback for intersection mode
+    if (isIntersectionMode) {
+      this.marqueeRect.classList.add('intersection-mode');
+    } else {
+      this.marqueeRect.classList.remove('intersection-mode');
+    }
+  }
+
+  /**
+   * Complete marquee selection and select shapes
+   */
+  private completeMarqueeSelection(point: Point, addToSelection: boolean, intersectionMode: boolean): void {
+    if (!this.dragStartPoint) return;
+
+    // Calculate selection bounds
+    const selectionBounds: Bounds = {
+      x: Math.min(this.dragStartPoint.x, point.x),
+      y: Math.min(this.dragStartPoint.y, point.y),
+      width: Math.abs(point.x - this.dragStartPoint.x),
+      height: Math.abs(point.y - this.dragStartPoint.y)
+    };
+
+    // Remove marquee rectangle
+    if (this.marqueeRect) {
+      this.marqueeRect.remove();
+      this.marqueeRect = null;
+    }
+
+    // Don't select if too small (just a click)
+    if (selectionBounds.width < 3 && selectionBounds.height < 3) {
+      return;
+    }
+
+    // Find shapes within selection
+    const shapes = this.callbacks.getShapes();
+    const selectedShapes: Shape[] = [];
+
+    shapes.forEach(shape => {
+      const shapeBounds = shape.getBounds();
+
+      if (intersectionMode) {
+        // Alt key: select if intersecting
+        if (boundsIntersect(shapeBounds, selectionBounds)) {
+          selectedShapes.push(shape);
+        }
+      } else {
+        // Default: select if completely contained
+        if (isContainedIn(shapeBounds, selectionBounds)) {
+          selectedShapes.push(shape);
+        }
+      }
+    });
+
+    // Select the shapes
+    if (addToSelection) {
+      // Add to existing selection
+      selectedShapes.forEach(shape => {
+        selectionManager.addToSelection(shape);
+      });
+    } else {
+      // Replace selection
+      if (selectedShapes.length > 0) {
+        selectionManager.select(selectedShapes[0]);
+        for (let i = 1; i < selectedShapes.length; i++) {
+          selectionManager.addToSelection(selectedShapes[i]);
+        }
+      }
+    }
+  }
+
   private resetState(): void {
     this.isDragging = false;
     this.isResizing = false;
+    this.isMarqueeSelecting = false;
     this.dragStartPoint = null;
     this.dragOriginPoint = null;
     this.draggedShape = null;
     this.activeHandle = null;
     this.resizeShape = null;
     this.resizeBeforeState = null;
+
+    // Clean up marquee rect if exists
+    if (this.marqueeRect) {
+      this.marqueeRect.remove();
+      this.marqueeRect = null;
+    }
   }
 }

@@ -72,7 +72,9 @@ export class Canvas {
     this.tools.set('select', new SelectTool({
       findShapeAt: (point) => this.findShapeAt(point),
       findHandleAt: (point) => this.findHandleAt(point),
-      updateHandles: () => this.updateHandles()
+      updateHandles: () => this.updateHandles(),
+      getShapes: () => this.getShapes(),
+      getSvgElement: () => this.svg
     }));
     this.tools.set('line', new LineTool(this.svg));
     this.tools.set('ellipse', new EllipseTool(this.svg));
