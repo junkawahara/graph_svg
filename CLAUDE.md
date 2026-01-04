@@ -38,7 +38,8 @@ src/
 │   │   ├── SelectionManager.ts  # 選択管理
 │   │   ├── HistoryManager.ts    # Undo/Redo履歴管理
 │   │   ├── FileManager.ts       # SVGシリアライズ/パース
-│   │   └── ClipboardManager.ts  # コピー/ペースト管理
+│   │   ├── ClipboardManager.ts  # コピー/ペースト管理
+│   │   └── MarkerManager.ts     # SVGマーカー定義（矢印）
 │   ├── commands/            # コマンドパターン（Undo/Redo）
 │   │   ├── Command.ts           # インターフェース
 │   │   ├── AddShapeCommand.ts   # 図形追加
@@ -47,7 +48,8 @@ src/
 │   │   ├── ResizeShapeCommand.ts # 図形リサイズ
 │   │   ├── StyleChangeCommand.ts # スタイル変更
 │   │   ├── PasteShapesCommand.ts # 図形ペースト
-│   │   └── TextPropertyChangeCommand.ts # テキストプロパティ変更
+│   │   ├── TextPropertyChangeCommand.ts # テキストプロパティ変更
+│   │   └── MarkerChangeCommand.ts # 矢印マーカー変更
 │   ├── shapes/              # 図形クラス
 │   │   ├── Shape.ts         # インターフェース
 │   │   ├── Line.ts          # 直線
@@ -132,3 +134,18 @@ src/
 - Font Size（フォントサイズ）
 - Font Family（フォントファミリー）
 - Bold（太字）
+
+## 直線プロパティ（矢印）
+
+直線図形選択時のみ表示:
+- Arrow Start（始点マーカー）
+- Arrow End（終点マーカー）
+
+マーカー種類:
+- None（なし）
+- Triangle（三角形）
+- Triangle Open（中抜き三角形）
+- Circle（円）
+- Diamond（ひし形）
+
+※ マーカーの色は線の色（Stroke）に連動
