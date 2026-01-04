@@ -2,6 +2,7 @@ import './styles/main.css';
 import './styles/toolbar.css';
 import './styles/sidebar.css';
 import './styles/canvas.css';
+import './styles/dialog.css';
 
 import { Canvas } from './components/Canvas';
 import { Toolbar } from './components/Toolbar';

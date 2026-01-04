@@ -31,7 +31,8 @@ export class Toolbar {
       { id: 'tool-select', type: 'select' },
       { id: 'tool-line', type: 'line' },
       { id: 'tool-ellipse', type: 'ellipse' },
-      { id: 'tool-rectangle', type: 'rectangle' }
+      { id: 'tool-rectangle', type: 'rectangle' },
+      { id: 'tool-text', type: 'text' }
     ];
 
     tools.forEach(({ id, type }) => {
@@ -204,6 +205,9 @@ export class Toolbar {
           break;
         case 'r':
           editorState.setTool('rectangle');
+          break;
+        case 't':
+          editorState.setTool('text');
           break;
       }
     });

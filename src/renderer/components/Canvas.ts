@@ -8,14 +8,17 @@ import { SelectTool } from '../tools/SelectTool';
 import { LineTool } from '../tools/LineTool';
 import { EllipseTool } from '../tools/EllipseTool';
 import { RectangleTool } from '../tools/RectangleTool';
+import { TextTool } from '../tools/TextTool';
 import { Shape } from '../shapes/Shape';
 import { Line } from '../shapes/Line';
 import { Ellipse } from '../shapes/Ellipse';
 import { Rectangle } from '../shapes/Rectangle';
+import { Text } from '../shapes/Text';
 import { Handle, HandleSet } from '../handles/Handle';
 import { LineHandles } from '../handles/LineHandles';
 import { EllipseHandles } from '../handles/EllipseHandles';
 import { RectangleHandles } from '../handles/RectangleHandles';
+import { TextHandles } from '../handles/TextHandles';
 import { AddShapeCommand } from '../commands/AddShapeCommand';
 import { DeleteShapeCommand } from '../commands/DeleteShapeCommand';
 
@@ -79,6 +82,7 @@ export class Canvas {
     this.tools.set('line', new LineTool(this.svg));
     this.tools.set('ellipse', new EllipseTool(this.svg));
     this.tools.set('rectangle', new RectangleTool(this.svg));
+    this.tools.set('text', new TextTool());
     console.log('Canvas: All tools registered');
 
     // Set initial tool
@@ -138,6 +142,8 @@ export class Canvas {
       return new EllipseHandles(shape);
     } else if (shape instanceof Rectangle) {
       return new RectangleHandles(shape);
+    } else if (shape instanceof Text) {
+      return new TextHandles(shape);
     }
     return null;
   }
@@ -296,6 +302,9 @@ export class Canvas {
       case 'ellipse':
       case 'rectangle':
         this.svg.style.cursor = 'crosshair';
+        break;
+      case 'text':
+        this.svg.style.cursor = 'text';
         break;
       default:
         this.svg.style.cursor = 'default';

@@ -3,6 +3,7 @@ import { Shape } from './Shape';
 import { Line } from './Line';
 import { Ellipse } from './Ellipse';
 import { Rectangle } from './Rectangle';
+import { Text } from './Text';
 
 /**
  * Create a shape from serialized data
@@ -38,6 +39,18 @@ export function createShapeFromData(data: ShapeData, offsetX: number = 0, offset
         data.y + offsetY,
         data.width,
         data.height,
+        { ...data.style }
+      );
+
+    case 'text':
+      return new Text(
+        newId,
+        data.x + offsetX,
+        data.y + offsetY,
+        data.content,
+        data.fontSize,
+        data.fontFamily,
+        data.fontWeight,
         { ...data.style }
       );
 

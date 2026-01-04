@@ -4,7 +4,9 @@ import { editorState } from '../core/EditorState';
 import { selectionManager } from '../core/SelectionManager';
 import { historyManager } from '../core/HistoryManager';
 import { Shape } from '../shapes/Shape';
+import { Text } from '../shapes/Text';
 import { StyleChangeCommand } from '../commands/StyleChangeCommand';
+import { TextPropertyChangeCommand, TextPropertyUpdates } from '../commands/TextPropertyChangeCommand';
 
 /**
  * Sidebar component - handles style property editing
@@ -19,6 +21,13 @@ export class Sidebar {
   private strokeDasharray: HTMLSelectElement;
   private strokeLinecap: HTMLSelectElement;
 
+  // Text-specific properties
+  private textPropertiesContainer: HTMLDivElement;
+  private textContent: HTMLInputElement;
+  private fontSize: HTMLInputElement;
+  private fontFamily: HTMLSelectElement;
+  private fontBold: HTMLInputElement;
+
   private isUpdatingUI = false; // Prevent feedback loop
 
   constructor() {
@@ -32,7 +41,15 @@ export class Sidebar {
     this.strokeDasharray = document.getElementById('prop-stroke-dasharray') as HTMLSelectElement;
     this.strokeLinecap = document.getElementById('prop-stroke-linecap') as HTMLSelectElement;
 
+    // Text-specific elements
+    this.textPropertiesContainer = document.getElementById('text-properties') as HTMLDivElement;
+    this.textContent = document.getElementById('prop-text-content') as HTMLInputElement;
+    this.fontSize = document.getElementById('prop-font-size') as HTMLInputElement;
+    this.fontFamily = document.getElementById('prop-font-family') as HTMLSelectElement;
+    this.fontBold = document.getElementById('prop-font-bold') as HTMLInputElement;
+
     this.setupInputListeners();
+    this.setupTextInputListeners();
     this.setupEventListeners();
 
     // Initialize with default style
@@ -86,19 +103,55 @@ export class Sidebar {
   }
 
   /**
+   * Setup text property input listeners
+   */
+  private setupTextInputListeners(): void {
+    this.textContent.addEventListener('change', () => {
+      if (this.isUpdatingUI) return;
+      this.applyTextPropertyChange({ content: this.textContent.value });
+    });
+
+    this.fontSize.addEventListener('change', () => {
+      if (this.isUpdatingUI) return;
+      this.applyTextPropertyChange({ fontSize: parseInt(this.fontSize.value, 10) || 24 });
+    });
+
+    this.fontFamily.addEventListener('change', () => {
+      if (this.isUpdatingUI) return;
+      this.applyTextPropertyChange({ fontFamily: this.fontFamily.value });
+    });
+
+    this.fontBold.addEventListener('change', () => {
+      if (this.isUpdatingUI) return;
+      this.applyTextPropertyChange({ fontWeight: this.fontBold.checked ? 'bold' : 'normal' });
+    });
+  }
+
+  /**
    * Setup event listeners
    */
   private setupEventListeners(): void {
     // Update UI when selection changes
     eventBus.on('selection:changed', (shapes: Shape[]) => {
       if (shapes.length === 1) {
+        const shape = shapes[0];
         // Show selected shape's style
-        this.updateUIFromStyle(shapes[0].style);
+        this.updateUIFromStyle(shape.style);
+
+        // Show/hide text properties based on shape type
+        if (shape instanceof Text) {
+          this.showTextProperties(shape);
+        } else {
+          this.hideTextProperties();
+        }
       } else if (shapes.length === 0) {
         // Show editor's current style (for new shapes)
         this.updateUIFromStyle(editorState.currentStyle);
+        this.hideTextProperties();
+      } else {
+        // Multiple selection - hide text properties
+        this.hideTextProperties();
       }
-      // For multiple selection, keep current UI (could show "mixed" state)
     });
   }
 
@@ -116,6 +169,41 @@ export class Sidebar {
 
     // Always update editor state (for new shapes)
     editorState.updateStyle(updates);
+  }
+
+  /**
+   * Apply text property change to selected Text shape
+   */
+  private applyTextPropertyChange(updates: TextPropertyUpdates): void {
+    const selectedShapes = selectionManager.getSelection();
+
+    if (selectedShapes.length === 1 && selectedShapes[0] instanceof Text) {
+      const textShape = selectedShapes[0] as Text;
+      const command = new TextPropertyChangeCommand(textShape, updates);
+      historyManager.execute(command);
+    }
+  }
+
+  /**
+   * Show text properties and populate with shape values
+   */
+  private showTextProperties(text: Text): void {
+    this.isUpdatingUI = true;
+
+    this.textPropertiesContainer.style.display = 'block';
+    this.textContent.value = text.content;
+    this.fontSize.value = String(text.fontSize);
+    this.fontFamily.value = text.fontFamily;
+    this.fontBold.checked = text.fontWeight === 'bold';
+
+    this.isUpdatingUI = false;
+  }
+
+  /**
+   * Hide text properties
+   */
+  private hideTextProperties(): void {
+    this.textPropertiesContainer.style.display = 'none';
   }
 
   /**

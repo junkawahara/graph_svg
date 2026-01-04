@@ -23,6 +23,9 @@
         <button id="tool-rectangle" class="tool-btn" title="Rectangle (R)">
           <span class="icon">&#9645;</span>
         </button>
+        <button id="tool-text" class="tool-btn" title="Text (T)">
+          <span class="icon">T</span>
+        </button>
       </div>
       <div class="tool-group">
         <button id="btn-undo" class="tool-btn" title="Undo (Ctrl+Z)" disabled>
@@ -55,6 +58,37 @@
       <!-- Sidebar -->
       <div id="sidebar">
         <h3>Properties</h3>
+
+        <!-- Text-specific properties (hidden by default) -->
+        <div id="text-properties" style="display: none;">
+          <div class="property-group">
+            <label>Content</label>
+            <input type="text" id="prop-text-content" placeholder="Text content">
+          </div>
+          <div class="property-group">
+            <label>Font Size</label>
+            <input type="number" id="prop-font-size" value="24" min="8" max="200">
+          </div>
+          <div class="property-group">
+            <label>Font Family</label>
+            <select id="prop-font-family">
+              <option value="Arial">Arial</option>
+              <option value="Times New Roman">Times New Roman</option>
+              <option value="Georgia">Georgia</option>
+              <option value="Verdana">Verdana</option>
+              <option value="Courier New">Courier New</option>
+              <option value="serif">Serif</option>
+              <option value="sans-serif">Sans-serif</option>
+              <option value="monospace">Monospace</option>
+            </select>
+          </div>
+          <div class="property-group">
+            <label class="checkbox-label">
+              <input type="checkbox" id="prop-font-bold">
+              Bold
+            </label>
+          </div>
+        </div>
 
         <div class="property-group">
           <label>Fill</label>

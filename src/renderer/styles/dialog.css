@@ -1,0 +1,131 @@
+.dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.dialog {
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  min-width: 320px;
+  max-width: 90%;
+}
+
+.dialog-header {
+  padding: 16px 20px;
+  font-size: 16px;
+  font-weight: bold;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.dialog-body {
+  padding: 20px;
+}
+
+.dialog-field {
+  margin-bottom: 16px;
+}
+
+.dialog-field:last-child {
+  margin-bottom: 0;
+}
+
+.dialog-field label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 13px;
+  color: #666;
+}
+
+.dialog-field input[type="text"],
+.dialog-field input[type="number"],
+.dialog-field select {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+.dialog-field input[type="text"]:focus,
+.dialog-field input[type="number"]:focus,
+.dialog-field select:focus {
+  outline: none;
+  border-color: #2196F3;
+  box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.2);
+}
+
+.dialog-row {
+  display: flex;
+  gap: 12px;
+}
+
+.dialog-row .dialog-field {
+  flex: 1;
+}
+
+.dialog-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dialog-checkbox input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+}
+
+.dialog-checkbox label {
+  display: inline;
+  margin: 0;
+  font-size: 14px;
+  color: #333;
+  cursor: pointer;
+}
+
+.dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 20px;
+  border-top: 1px solid #e0e0e0;
+  background: #f5f5f5;
+  border-radius: 0 0 8px 8px;
+}
+
+.dialog-btn {
+  padding: 8px 20px;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.dialog-btn-cancel {
+  background: #e0e0e0;
+  color: #333;
+}
+
+.dialog-btn-cancel:hover {
+  background: #d0d0d0;
+}
+
+.dialog-btn-ok {
+  background: #2196F3;
+  color: #fff;
+}
+
+.dialog-btn-ok:hover {
+  background: #1976D2;
+}

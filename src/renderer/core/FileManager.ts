@@ -3,6 +3,7 @@ import { Shape } from '../shapes/Shape';
 import { Line } from '../shapes/Line';
 import { Ellipse } from '../shapes/Ellipse';
 import { Rectangle } from '../shapes/Rectangle';
+import { Text } from '../shapes/Text';
 
 /**
  * Manages file save/load operations for SVG files
@@ -38,6 +39,9 @@ export class FileManager {
       return `  <ellipse id="${shape.id}" cx="${shape.cx}" cy="${shape.cy}" rx="${shape.rx}" ry="${shape.ry}" ${style}/>`;
     } else if (shape instanceof Rectangle) {
       return `  <rect id="${shape.id}" x="${shape.x}" y="${shape.y}" width="${shape.width}" height="${shape.height}" ${style}/>`;
+    } else if (shape instanceof Text) {
+      const escapedContent = this.escapeXml(shape.content);
+      return `  <text id="${shape.id}" x="${shape.x}" y="${shape.y}" font-size="${shape.fontSize}" font-family="${shape.fontFamily}" font-weight="${shape.fontWeight}" dominant-baseline="hanging" ${style}>${escapedContent}</text>`;
     }
 
     return '';
@@ -123,6 +127,14 @@ export class FileManager {
       shapes.push(rectangle);
     });
 
+    // Parse text elements
+    const texts = svg.querySelectorAll('text');
+    texts.forEach(el => {
+      const style = this.parseStyleFromElement(el);
+      const text = Text.fromElement(el, style);
+      shapes.push(text);
+    });
+
     return shapes;
   }
 
@@ -142,5 +154,17 @@ export class FileManager {
       strokeDasharray: el.getAttribute('stroke-dasharray') || '',
       strokeLinecap: (el.getAttribute('stroke-linecap') as StrokeLinecap) || DEFAULT_STYLE.strokeLinecap
     };
+  }
+
+  /**
+   * Escape special XML characters
+   */
+  private static escapeXml(str: string): string {
+    return str
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&apos;');
   }
 }

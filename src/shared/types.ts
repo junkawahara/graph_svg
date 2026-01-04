@@ -1,12 +1,12 @@
 /**
  * Tool types available in the editor
  */
-export type ToolType = 'select' | 'line' | 'ellipse' | 'rectangle';
+export type ToolType = 'select' | 'line' | 'ellipse' | 'rectangle' | 'text';
 
 /**
  * Shape types that can be created
  */
-export type ShapeType = 'line' | 'ellipse' | 'rectangle';
+export type ShapeType = 'line' | 'ellipse' | 'rectangle' | 'text';
 
 /**
  * 2D point coordinate
@@ -100,9 +100,22 @@ export interface RectangleData extends BaseShapeData {
 }
 
 /**
+ * Text shape data
+ */
+export interface TextData extends BaseShapeData {
+  type: 'text';
+  content: string;
+  x: number;
+  y: number;
+  fontSize: number;
+  fontFamily: string;
+  fontWeight: 'normal' | 'bold';
+}
+
+/**
  * Union type for all shape data
  */
-export type ShapeData = LineData | EllipseData | RectangleData;
+export type ShapeData = LineData | EllipseData | RectangleData | TextData;
 
 /**
  * Event names used in EventBus
