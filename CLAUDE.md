@@ -4,7 +4,7 @@ Electron + TypeScript で構築された SVG 編集ドローツール。
 
 ## プロジェクト概要
 
-直線と楕円を描画し、選択・移動・リサイズ・スタイル変更ができる SVG エディタ。
+直線・楕円・長方形を描画し、選択・移動・リサイズ・スタイル変更ができる SVG エディタ。
 Undo/Redo、ファイル保存/読み込みに対応。
 
 ## コマンド
@@ -47,16 +47,19 @@ src/
 │   ├── shapes/              # 図形クラス
 │   │   ├── Shape.ts         # インターフェース
 │   │   ├── Line.ts          # 直線
-│   │   └── Ellipse.ts       # 楕円
+│   │   ├── Ellipse.ts       # 楕円
+│   │   └── Rectangle.ts     # 長方形
 │   ├── tools/               # ツール
 │   │   ├── Tool.ts          # インターフェース
 │   │   ├── SelectTool.ts    # 選択・移動・リサイズ
 │   │   ├── LineTool.ts      # 直線描画
-│   │   └── EllipseTool.ts   # 楕円描画
+│   │   ├── EllipseTool.ts   # 楕円描画
+│   │   └── RectangleTool.ts # 長方形描画
 │   ├── handles/             # リサイズハンドル
 │   │   ├── Handle.ts        # インターフェース
 │   │   ├── LineHandles.ts   # 直線用（2点）
-│   │   └── EllipseHandles.ts # 楕円用（4隅）
+│   │   ├── EllipseHandles.ts # 楕円用（4隅）
+│   │   └── RectangleHandles.ts # 長方形用（4隅）
 │   └── styles/              # CSS
 └── shared/
     └── types.ts             # 共有型定義
@@ -86,6 +89,7 @@ src/
 - `V` - 選択ツール
 - `L` - 直線ツール
 - `E` - 楕円ツール
+- `R` - 長方形ツール
 - `Delete` / `Backspace` - 選択図形を削除
 - `Ctrl+Z` - 元に戻す（Undo）
 - `Ctrl+Y` / `Ctrl+Shift+Z` - やり直し（Redo）
