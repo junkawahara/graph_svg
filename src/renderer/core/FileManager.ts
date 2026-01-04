@@ -2,6 +2,7 @@ import { ShapeStyle, DEFAULT_STYLE, StrokeLinecap } from '../../shared/types';
 import { Shape } from '../shapes/Shape';
 import { Line } from '../shapes/Line';
 import { Ellipse } from '../shapes/Ellipse';
+import { Rectangle } from '../shapes/Rectangle';
 
 /**
  * Manages file save/load operations for SVG files
@@ -35,6 +36,8 @@ export class FileManager {
       return `  <line id="${shape.id}" x1="${shape.x1}" y1="${shape.y1}" x2="${shape.x2}" y2="${shape.y2}" ${style}/>`;
     } else if (shape instanceof Ellipse) {
       return `  <ellipse id="${shape.id}" cx="${shape.cx}" cy="${shape.cy}" rx="${shape.rx}" ry="${shape.ry}" ${style}/>`;
+    } else if (shape instanceof Rectangle) {
+      return `  <rect id="${shape.id}" x="${shape.x}" y="${shape.y}" width="${shape.width}" height="${shape.height}" ${style}/>`;
     }
 
     return '';
@@ -110,6 +113,14 @@ export class FileManager {
       const r = parseFloat(el.getAttribute('r') || '0');
       const ellipse = Ellipse.fromCenter({ x: cx, y: cy }, r, r, style);
       shapes.push(ellipse);
+    });
+
+    // Parse rect elements
+    const rects = svg.querySelectorAll('rect');
+    rects.forEach(el => {
+      const style = this.parseStyleFromElement(el);
+      const rectangle = Rectangle.fromElement(el, style);
+      shapes.push(rectangle);
     });
 
     return shapes;

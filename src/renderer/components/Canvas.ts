@@ -7,12 +7,15 @@ import { Tool } from '../tools/Tool';
 import { SelectTool } from '../tools/SelectTool';
 import { LineTool } from '../tools/LineTool';
 import { EllipseTool } from '../tools/EllipseTool';
+import { RectangleTool } from '../tools/RectangleTool';
 import { Shape } from '../shapes/Shape';
 import { Line } from '../shapes/Line';
 import { Ellipse } from '../shapes/Ellipse';
+import { Rectangle } from '../shapes/Rectangle';
 import { Handle, HandleSet } from '../handles/Handle';
 import { LineHandles } from '../handles/LineHandles';
 import { EllipseHandles } from '../handles/EllipseHandles';
+import { RectangleHandles } from '../handles/RectangleHandles';
 import { AddShapeCommand } from '../commands/AddShapeCommand';
 import { DeleteShapeCommand } from '../commands/DeleteShapeCommand';
 
@@ -73,6 +76,7 @@ export class Canvas {
     }));
     this.tools.set('line', new LineTool(this.svg));
     this.tools.set('ellipse', new EllipseTool(this.svg));
+    this.tools.set('rectangle', new RectangleTool(this.svg));
     console.log('Canvas: All tools registered');
 
     // Set initial tool
@@ -130,6 +134,8 @@ export class Canvas {
       return new LineHandles(shape);
     } else if (shape instanceof Ellipse) {
       return new EllipseHandles(shape);
+    } else if (shape instanceof Rectangle) {
+      return new RectangleHandles(shape);
     }
     return null;
   }
@@ -286,6 +292,7 @@ export class Canvas {
         break;
       case 'line':
       case 'ellipse':
+      case 'rectangle':
         this.svg.style.cursor = 'crosshair';
         break;
       default:

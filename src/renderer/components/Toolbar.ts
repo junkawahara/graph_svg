@@ -29,7 +29,8 @@ export class Toolbar {
     const tools: { id: string; type: ToolType }[] = [
       { id: 'tool-select', type: 'select' },
       { id: 'tool-line', type: 'line' },
-      { id: 'tool-ellipse', type: 'ellipse' }
+      { id: 'tool-ellipse', type: 'ellipse' },
+      { id: 'tool-rectangle', type: 'rectangle' }
     ];
 
     tools.forEach(({ id, type }) => {
@@ -185,6 +186,9 @@ export class Toolbar {
           break;
         case 'e':
           editorState.setTool('ellipse');
+          break;
+        case 'r':
+          editorState.setTool('rectangle');
           break;
       }
     });
