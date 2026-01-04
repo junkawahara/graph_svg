@@ -18,6 +18,7 @@ export class Toolbar {
     this.setupToolButtons();
     this.setupUndoRedoButtons();
     this.setupDeleteButton();
+    this.setupFileButtons();
     this.setupEventListeners();
   }
 
@@ -84,6 +85,26 @@ export class Toolbar {
   }
 
   /**
+   * Setup Open/Save buttons
+   */
+  private setupFileButtons(): void {
+    const openButton = document.getElementById('btn-open') as HTMLButtonElement;
+    const saveButton = document.getElementById('btn-save') as HTMLButtonElement;
+
+    if (openButton) {
+      openButton.addEventListener('click', () => {
+        eventBus.emit('file:open', null);
+      });
+    }
+
+    if (saveButton) {
+      saveButton.addEventListener('click', () => {
+        eventBus.emit('file:save', null);
+      });
+    }
+  }
+
+  /**
    * Delete currently selected shapes
    */
   private deleteSelectedShapes(): void {
@@ -138,6 +159,20 @@ export class Toolbar {
       if (e.key === 'Delete' || e.key === 'Backspace') {
         e.preventDefault();
         this.deleteSelectedShapes();
+        return;
+      }
+
+      // Save: Ctrl+S
+      if (e.ctrlKey && e.key === 's') {
+        e.preventDefault();
+        eventBus.emit('file:save', null);
+        return;
+      }
+
+      // Open: Ctrl+O
+      if (e.ctrlKey && e.key === 'o') {
+        e.preventDefault();
+        eventBus.emit('file:open', null);
         return;
       }
 

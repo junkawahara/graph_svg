@@ -194,6 +194,38 @@ export class Canvas {
   }
 
   /**
+   * Clear all shapes from the canvas
+   */
+  clearAll(): void {
+    // Clear selection first
+    selectionManager.clearSelection();
+
+    // Remove all shapes
+    this.shapes.forEach(shape => {
+      shape.element?.remove();
+    });
+    this.shapes = [];
+
+    // Clear handles
+    this.clearHandles();
+  }
+
+  /**
+   * Load shapes into canvas (replaces existing shapes)
+   */
+  loadShapes(shapes: Shape[]): void {
+    // Clear existing shapes
+    this.clearAll();
+
+    // Add new shapes
+    shapes.forEach(shape => {
+      this.shapes.push(shape);
+      const element = shape.render();
+      this.svg.appendChild(element);
+    });
+  }
+
+  /**
    * Find shape at point
    */
   findShapeAt(point: Point): Shape | null {

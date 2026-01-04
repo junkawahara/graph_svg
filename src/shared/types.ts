@@ -105,7 +105,9 @@ export type EventName =
   | 'shapes:delete'
   | 'selection:changed'
   | 'history:changed'
-  | 'canvas:render';
+  | 'canvas:render'
+  | 'file:save'
+  | 'file:open';
 
 /**
  * Generate unique ID
