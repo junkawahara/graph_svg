@@ -1,25 +1,44 @@
 import { Point } from '../../shared/types';
 import { Tool } from './Tool';
 import { Shape } from '../shapes/Shape';
+import { Handle } from '../handles/Handle';
 import { selectionManager } from '../core/SelectionManager';
+import { eventBus } from '../core/EventBus';
+
+export interface SelectToolCallbacks {
+  findShapeAt: (point: Point) => Shape | null;
+  findHandleAt: (point: Point) => Handle | null;
+  updateHandles: () => void;
+}
 
 /**
- * Tool for selecting and moving shapes
+ * Tool for selecting, moving, and resizing shapes
  */
 export class SelectTool implements Tool {
   readonly name = 'select';
 
   private isDragging = false;
+  private isResizing = false;
   private dragStartPoint: Point | null = null;
   private draggedShape: Shape | null = null;
-  private findShapeAt: (point: Point) => Shape | null;
+  private activeHandle: Handle | null = null;
+  private callbacks: SelectToolCallbacks;
 
-  constructor(findShapeAt: (point: Point) => Shape | null) {
-    this.findShapeAt = findShapeAt;
+  constructor(callbacks: SelectToolCallbacks) {
+    this.callbacks = callbacks;
   }
 
   onMouseDown(point: Point, event: MouseEvent): void {
-    const shape = this.findShapeAt(point);
+    // First, check if clicking on a handle
+    const handle = this.callbacks.findHandleAt(point);
+    if (handle) {
+      this.isResizing = true;
+      this.activeHandle = handle;
+      this.dragStartPoint = point;
+      return;
+    }
+
+    const shape = this.callbacks.findShapeAt(point);
 
     if (shape) {
       // Check if clicking on already selected shape
@@ -48,6 +67,14 @@ export class SelectTool implements Tool {
   }
 
   onMouseMove(point: Point, _event: MouseEvent): void {
+    // Handle resizing
+    if (this.isResizing && this.activeHandle) {
+      this.activeHandle.onDrag(point);
+      this.callbacks.updateHandles();
+      return;
+    }
+
+    // Handle dragging
     if (!this.isDragging || !this.dragStartPoint || !this.draggedShape) return;
 
     // Calculate delta
@@ -60,25 +87,34 @@ export class SelectTool implements Tool {
       shape.move(dx, dy);
     });
 
+    // Update handles
+    this.callbacks.updateHandles();
+
     // Update drag start point for next move
     this.dragStartPoint = point;
   }
 
   onMouseUp(_point: Point, _event: MouseEvent): void {
     this.isDragging = false;
+    this.isResizing = false;
     this.dragStartPoint = null;
     this.draggedShape = null;
+    this.activeHandle = null;
   }
 
   onMouseLeave(): void {
     this.isDragging = false;
+    this.isResizing = false;
     this.dragStartPoint = null;
     this.draggedShape = null;
+    this.activeHandle = null;
   }
 
   onDeactivate(): void {
     this.isDragging = false;
+    this.isResizing = false;
     this.dragStartPoint = null;
     this.draggedShape = null;
+    this.activeHandle = null;
   }
 }

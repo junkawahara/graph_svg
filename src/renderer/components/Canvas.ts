@@ -1,14 +1,20 @@
 import { Point, ToolType } from '../../shared/types';
 import { eventBus } from '../core/EventBus';
 import { editorState } from '../core/EditorState';
+import { selectionManager } from '../core/SelectionManager';
 import { Tool } from '../tools/Tool';
 import { SelectTool } from '../tools/SelectTool';
 import { LineTool } from '../tools/LineTool';
 import { EllipseTool } from '../tools/EllipseTool';
 import { Shape } from '../shapes/Shape';
+import { Line } from '../shapes/Line';
+import { Ellipse } from '../shapes/Ellipse';
+import { Handle, HandleSet } from '../handles/Handle';
+import { LineHandles } from '../handles/LineHandles';
+import { EllipseHandles } from '../handles/EllipseHandles';
 
 /**
- * Canvas component - manages SVG element, tools, and shapes
+ * Canvas component - manages SVG element, tools, shapes, and handles
  */
 export class Canvas {
   private svg: SVGSVGElement;
@@ -16,6 +22,7 @@ export class Canvas {
   private tools: Map<ToolType, Tool> = new Map();
   private currentTool: Tool | null = null;
   private shapes: Shape[] = [];
+  private handleSets: Map<Shape, HandleSet> = new Map();
 
   constructor(svgElement: SVGSVGElement, containerElement: HTMLElement) {
     this.svg = svgElement;
@@ -37,6 +44,11 @@ export class Canvas {
     eventBus.on('shape:added', (shape: Shape) => {
       this.addShape(shape);
     });
+
+    // Listen for selection changes
+    eventBus.on('selection:changed', (shapes: Shape[]) => {
+      this.updateHandlesForSelection(shapes);
+    });
   }
 
   /**
@@ -44,7 +56,11 @@ export class Canvas {
    */
   private initializeTools(): void {
     console.log('Canvas: Initializing tools');
-    this.tools.set('select', new SelectTool((point) => this.findShapeAt(point)));
+    this.tools.set('select', new SelectTool({
+      findShapeAt: (point) => this.findShapeAt(point),
+      findHandleAt: (point) => this.findHandleAt(point),
+      updateHandles: () => this.updateHandles()
+    }));
     this.tools.set('line', new LineTool(this.svg));
     this.tools.set('ellipse', new EllipseTool(this.svg));
     console.log('Canvas: All tools registered');
@@ -64,12 +80,74 @@ export class Canvas {
       this.currentTool.onDeactivate();
     }
 
+    // Clear handles when switching away from select tool
+    if (toolType !== 'select') {
+      this.clearHandles();
+    }
+
     // Activate new tool
     this.currentTool = this.tools.get(toolType) || null;
     console.log(`Canvas: currentTool is now`, this.currentTool);
     if (this.currentTool?.onActivate) {
       this.currentTool.onActivate();
     }
+  }
+
+  /**
+   * Update handles for current selection
+   */
+  private updateHandlesForSelection(shapes: Shape[]): void {
+    // Clear existing handles
+    this.clearHandles();
+
+    // Create handles for selected shapes (only in select mode)
+    if (editorState.currentTool !== 'select') return;
+
+    shapes.forEach(shape => {
+      const handleSet = this.createHandleSet(shape);
+      if (handleSet) {
+        handleSet.render(this.svg);
+        this.handleSets.set(shape, handleSet);
+      }
+    });
+  }
+
+  /**
+   * Create appropriate handle set for shape
+   */
+  private createHandleSet(shape: Shape): HandleSet | null {
+    if (shape instanceof Line) {
+      return new LineHandles(shape);
+    } else if (shape instanceof Ellipse) {
+      return new EllipseHandles(shape);
+    }
+    return null;
+  }
+
+  /**
+   * Find handle at point
+   */
+  findHandleAt(point: Point): Handle | null {
+    for (const handleSet of this.handleSets.values()) {
+      const handle = handleSet.findHandleAt(point);
+      if (handle) return handle;
+    }
+    return null;
+  }
+
+  /**
+   * Update all handle positions
+   */
+  updateHandles(): void {
+    this.handleSets.forEach(handleSet => handleSet.update());
+  }
+
+  /**
+   * Clear all handles
+   */
+  private clearHandles(): void {
+    this.handleSets.forEach(handleSet => handleSet.remove());
+    this.handleSets.clear();
   }
 
   /**
@@ -89,6 +167,12 @@ export class Canvas {
     if (index !== -1) {
       this.shapes.splice(index, 1);
       shape.element?.remove();
+      // Remove handles for this shape
+      const handleSet = this.handleSets.get(shape);
+      if (handleSet) {
+        handleSet.remove();
+        this.handleSets.delete(shape);
+      }
     }
   }
 
