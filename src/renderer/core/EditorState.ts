@@ -19,8 +19,10 @@ export class EditorState {
    * Set current tool and emit event
    */
   setTool(tool: ToolType): void {
+    console.log(`EditorState: setTool called with ${tool}, current is ${this._currentTool}`);
     if (this._currentTool !== tool) {
       this._currentTool = tool;
+      console.log(`EditorState: Emitting tool:changed event`);
       eventBus.emit('tool:changed', tool);
     }
   }

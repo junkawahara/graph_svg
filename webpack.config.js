@@ -51,6 +51,7 @@ const preloadConfig = {
 
 const rendererConfig = {
   mode: 'development',
+  devtool: 'source-map',
   entry: './src/renderer/index.ts',
   target: 'electron-renderer',
   output: {

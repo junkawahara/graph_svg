@@ -25,9 +25,11 @@ export class Toolbar {
 
     tools.forEach(({ id, type }) => {
       const button = document.getElementById(id) as HTMLButtonElement;
+      console.log(`Toolbar: Looking for button #${id}:`, button);
       if (button) {
         this.toolButtons.set(type, button);
         button.addEventListener('click', () => {
+          console.log(`Toolbar: Button clicked, setting tool to ${type}`);
           editorState.setTool(type);
         });
       }

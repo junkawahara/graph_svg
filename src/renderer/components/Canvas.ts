@@ -1,24 +1,112 @@
-import { Point } from '../../shared/types';
+import { Point, ToolType } from '../../shared/types';
 import { eventBus } from '../core/EventBus';
 import { editorState } from '../core/EditorState';
+import { Tool } from '../tools/Tool';
+import { LineTool } from '../tools/LineTool';
+import { Shape } from '../shapes/Shape';
 
 /**
- * Canvas component - manages SVG element and mouse events
+ * Canvas component - manages SVG element, tools, and shapes
  */
 export class Canvas {
   private svg: SVGSVGElement;
   private container: HTMLElement;
+  private tools: Map<ToolType, Tool> = new Map();
+  private currentTool: Tool | null = null;
+  private shapes: Shape[] = [];
 
   constructor(svgElement: SVGSVGElement, containerElement: HTMLElement) {
     this.svg = svgElement;
     this.container = containerElement;
 
+    this.initializeTools();
     this.setupEventListeners();
     this.updateSize();
     this.updateCursor();
 
-    // Listen for tool changes to update cursor
-    eventBus.on('tool:changed', () => this.updateCursor());
+    // Listen for tool changes
+    eventBus.on('tool:changed', (tool: ToolType) => {
+      console.log(`Canvas: Received tool:changed event for ${tool}`);
+      this.switchTool(tool);
+      this.updateCursor();
+    });
+
+    // Listen for shape additions
+    eventBus.on('shape:added', (shape: Shape) => {
+      this.addShape(shape);
+    });
+  }
+
+  /**
+   * Initialize available tools
+   */
+  private initializeTools(): void {
+    console.log('Canvas: Initializing tools');
+    this.tools.set('line', new LineTool(this.svg));
+    console.log('Canvas: LineTool registered');
+    // SelectTool and EllipseTool will be added in later phases
+
+    // Set initial tool
+    console.log(`Canvas: Setting initial tool to ${editorState.currentTool}`);
+    this.switchTool(editorState.currentTool);
+  }
+
+  /**
+   * Switch to a different tool
+   */
+  private switchTool(toolType: ToolType): void {
+    console.log(`Canvas: switchTool to ${toolType}`);
+    // Deactivate current tool
+    if (this.currentTool?.onDeactivate) {
+      this.currentTool.onDeactivate();
+    }
+
+    // Activate new tool
+    this.currentTool = this.tools.get(toolType) || null;
+    console.log(`Canvas: currentTool is now`, this.currentTool);
+    if (this.currentTool?.onActivate) {
+      this.currentTool.onActivate();
+    }
+  }
+
+  /**
+   * Add a shape to the canvas
+   */
+  addShape(shape: Shape): void {
+    this.shapes.push(shape);
+    const element = shape.render();
+    this.svg.appendChild(element);
+  }
+
+  /**
+   * Remove a shape from the canvas
+   */
+  removeShape(shape: Shape): void {
+    const index = this.shapes.indexOf(shape);
+    if (index !== -1) {
+      this.shapes.splice(index, 1);
+      shape.element?.remove();
+    }
+  }
+
+  /**
+   * Get all shapes
+   */
+  getShapes(): Shape[] {
+    return [...this.shapes];
+  }
+
+  /**
+   * Find shape at point
+   */
+  findShapeAt(point: Point): Shape | null {
+    // Search in reverse order (top-most first)
+    for (let i = this.shapes.length - 1; i >= 0; i--) {
+      if (this.shapes[i].hitTest(point)) {
+        return this.shapes[i];
+      }
+    }
+    return null;
   }
 
   /**
@@ -82,23 +170,22 @@ export class Canvas {
   private setupEventListeners(): void {
     this.svg.addEventListener('mousedown', (e) => {
       const point = this.getPointFromEvent(e);
-      console.log(`Canvas mousedown at (${point.x}, ${point.y}), tool: ${editorState.currentTool}`);
-      // Tool handling will be added in Phase 3
+      console.log(`Canvas: mousedown at (${point.x}, ${point.y}), currentTool:`, this.currentTool);
+      this.currentTool?.onMouseDown(point, e);
     });
 
     this.svg.addEventListener('mousemove', (e) => {
       const point = this.getPointFromEvent(e);
-      // Tool handling will be added in Phase 3
+      this.currentTool?.onMouseMove(point, e);
     });
 
     this.svg.addEventListener('mouseup', (e) => {
       const point = this.getPointFromEvent(e);
-      console.log(`Canvas mouseup at (${point.x}, ${point.y})`);
-      // Tool handling will be added in Phase 3
+      this.currentTool?.onMouseUp(point, e);
     });
 
     this.svg.addEventListener('mouseleave', () => {
-      // Tool handling will be added in Phase 3
+      this.currentTool?.onMouseLeave();
     });
 
     // Handle window resize
