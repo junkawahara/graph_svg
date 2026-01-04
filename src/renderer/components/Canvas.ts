@@ -2,6 +2,7 @@ import { Point, ToolType } from '../../shared/types';
 import { eventBus } from '../core/EventBus';
 import { editorState } from '../core/EditorState';
 import { selectionManager } from '../core/SelectionManager';
+import { historyManager } from '../core/HistoryManager';
 import { Tool } from '../tools/Tool';
 import { SelectTool } from '../tools/SelectTool';
 import { LineTool } from '../tools/LineTool';
@@ -12,6 +13,7 @@ import { Ellipse } from '../shapes/Ellipse';
 import { Handle, HandleSet } from '../handles/Handle';
 import { LineHandles } from '../handles/LineHandles';
 import { EllipseHandles } from '../handles/EllipseHandles';
+import { AddShapeCommand } from '../commands/AddShapeCommand';
 
 /**
  * Canvas component - manages SVG element, tools, shapes, and handles
@@ -42,7 +44,8 @@ export class Canvas {
 
     // Listen for shape additions
     eventBus.on('shape:added', (shape: Shape) => {
-      this.addShape(shape);
+      const command = new AddShapeCommand(this, shape);
+      historyManager.execute(command);
     });
 
     // Listen for selection changes

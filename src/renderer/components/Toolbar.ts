@@ -1,15 +1,19 @@
 import { ToolType } from '../../shared/types';
 import { eventBus } from '../core/EventBus';
 import { editorState } from '../core/EditorState';
+import { historyManager } from '../core/HistoryManager';
 
 /**
- * Toolbar component - handles tool selection
+ * Toolbar component - handles tool selection and undo/redo
  */
 export class Toolbar {
   private toolButtons: Map<ToolType, HTMLButtonElement> = new Map();
+  private undoButton: HTMLButtonElement | null = null;
+  private redoButton: HTMLButtonElement | null = null;
 
   constructor() {
     this.setupToolButtons();
+    this.setupUndoRedoButtons();
     this.setupEventListeners();
   }
 
@@ -37,6 +41,29 @@ export class Toolbar {
   }
 
   /**
+   * Setup Undo/Redo buttons
+   */
+  private setupUndoRedoButtons(): void {
+    this.undoButton = document.getElementById('btn-undo') as HTMLButtonElement;
+    this.redoButton = document.getElementById('btn-redo') as HTMLButtonElement;
+
+    if (this.undoButton) {
+      this.undoButton.addEventListener('click', () => {
+        historyManager.undo();
+      });
+    }
+
+    if (this.redoButton) {
+      this.redoButton.addEventListener('click', () => {
+        historyManager.redo();
+      });
+    }
+
+    // Initial state
+    this.updateUndoRedoButtons({ canUndo: false, canRedo: false });
+  }
+
+  /**
    * Setup event listeners
    */
   private setupEventListeners(): void {
@@ -45,10 +72,29 @@ export class Toolbar {
       this.updateActiveButton(tool);
     });
 
+    // Update undo/redo buttons when history changes
+    eventBus.on('history:changed', (state: { canUndo: boolean; canRedo: boolean }) => {
+      this.updateUndoRedoButtons(state);
+    });
+
     // Keyboard shortcuts
     document.addEventListener('keydown', (e) => {
       // Don't handle shortcuts if typing in an input
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement) {
+        return;
+      }
+
+      // Undo: Ctrl+Z
+      if (e.ctrlKey && e.key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        historyManager.undo();
+        return;
+      }
+
+      // Redo: Ctrl+Y or Ctrl+Shift+Z
+      if ((e.ctrlKey && e.key === 'y') || (e.ctrlKey && e.shiftKey && e.key === 'z')) {
+        e.preventDefault();
+        historyManager.redo();
         return;
       }
 
@@ -77,5 +123,17 @@ export class Toolbar {
         button.classList.remove('active');
       }
     });
+  }
+
+  /**
+   * Update Undo/Redo button states
+   */
+  private updateUndoRedoButtons(state: { canUndo: boolean; canRedo: boolean }): void {
+    if (this.undoButton) {
+      this.undoButton.disabled = !state.canUndo;
+    }
+    if (this.redoButton) {
+      this.redoButton.disabled = !state.canRedo;
+    }
   }
 }

@@ -1,0 +1,79 @@
+# DrawSVG
+
+Electron + TypeScript で構築された SVG 編集ドローツール。
+
+## プロジェクト概要
+
+直線と楕円を描画し、選択・移動・リサイズができるシンプルな SVG エディタ。
+
+## コマンド
+
+```bash
+npm install    # 依存関係のインストール
+npm run build  # ビルド
+npm start      # ビルド＆起動
+npm run dev    # ウォッチモードでビルド
+```
+
+## プロジェクト構造
+
+```
+src/
+├── main/                    # Electron メインプロセス
+│   └── main.ts
+├── preload/                 # プリロードスクリプト
+│   └── preload.ts
+├── renderer/                # レンダラープロセス
+│   ├── index.html
+│   ├── index.ts
+│   ├── components/          # UI コンポーネント
+│   │   ├── Canvas.ts        # SVG キャンバス管理
+│   │   └── Toolbar.ts       # ツールバー
+│   ├── core/                # コアロジック
+│   │   ├── EventBus.ts      # イベント通信
+│   │   ├── EditorState.ts   # 状態管理
+│   │   └── SelectionManager.ts  # 選択管理
+│   ├── shapes/              # 図形クラス
+│   │   ├── Shape.ts         # インターフェース
+│   │   ├── Line.ts          # 直線
+│   │   └── Ellipse.ts       # 楕円
+│   ├── tools/               # ツール
+│   │   ├── Tool.ts          # インターフェース
+│   │   ├── SelectTool.ts    # 選択・移動・リサイズ
+│   │   ├── LineTool.ts      # 直線描画
+│   │   └── EllipseTool.ts   # 楕円描画
+│   ├── handles/             # リサイズハンドル
+│   │   ├── Handle.ts        # インターフェース
+│   │   ├── LineHandles.ts   # 直線用（2点）
+│   │   └── EllipseHandles.ts # 楕円用（4隅）
+│   └── styles/              # CSS
+└── shared/
+    └── types.ts             # 共有型定義
+```
+
+## 設計パターン
+
+- **EventBus**: コンポーネント間の疎結合通信
+- **Tool パターン**: 各描画モードを Tool クラスに分離、Canvas がアクティブなツールにイベント委譲
+- **Shape 抽象化**: 共通インターフェースで図形を扱い、新規図形追加を容易に
+- **HandleSet**: 図形ごとに適切なハンドルセットを生成
+
+## 主要なイベント
+
+- `tool:changed` - ツール切り替え
+- `style:changed` - スタイル変更
+- `shape:added` - 図形追加
+- `selection:changed` - 選択変更
+
+## キーボードショートカット
+
+- `V` - 選択ツール
+- `L` - 直線ツール
+- `E` - 楕円ツール
+
+## 未実装機能（Phase 7以降）
+
+- Undo/Redo（コマンドパターン）
+- 削除機能
+- スタイル変更の図形への適用
+- ファイル保存/読み込み
