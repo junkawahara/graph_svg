@@ -4,7 +4,8 @@ Electron + TypeScript で構築された SVG 編集ドローツール。
 
 ## プロジェクト概要
 
-直線と楕円を描画し、選択・移動・リサイズができるシンプルな SVG エディタ。
+直線と楕円を描画し、選択・移動・リサイズ・スタイル変更ができる SVG エディタ。
+Undo/Redo、ファイル保存/読み込みに対応。
 
 ## コマンド
 
@@ -20,19 +21,29 @@ npm run dev    # ウォッチモードでビルド
 ```
 src/
 ├── main/                    # Electron メインプロセス
-│   └── main.ts
+│   └── main.ts              # ウィンドウ作成、ファイルダイアログIPC
 ├── preload/                 # プリロードスクリプト
-│   └── preload.ts
+│   └── preload.ts           # electronAPI公開
 ├── renderer/                # レンダラープロセス
 │   ├── index.html
-│   ├── index.ts
+│   ├── index.ts             # エントリポイント、ファイル操作ハンドラ
 │   ├── components/          # UI コンポーネント
 │   │   ├── Canvas.ts        # SVG キャンバス管理
-│   │   └── Toolbar.ts       # ツールバー
+│   │   ├── Toolbar.ts       # ツールバー（ツール選択、Undo/Redo、削除、ファイル操作）
+│   │   └── Sidebar.ts       # サイドバー（スタイル編集）
 │   ├── core/                # コアロジック
 │   │   ├── EventBus.ts      # イベント通信
 │   │   ├── EditorState.ts   # 状態管理
-│   │   └── SelectionManager.ts  # 選択管理
+│   │   ├── SelectionManager.ts  # 選択管理
+│   │   ├── HistoryManager.ts    # Undo/Redo履歴管理
+│   │   └── FileManager.ts       # SVGシリアライズ/パース
+│   ├── commands/            # コマンドパターン（Undo/Redo）
+│   │   ├── Command.ts           # インターフェース
+│   │   ├── AddShapeCommand.ts   # 図形追加
+│   │   ├── DeleteShapeCommand.ts # 図形削除
+│   │   ├── MoveShapeCommand.ts  # 図形移動
+│   │   ├── ResizeShapeCommand.ts # 図形リサイズ
+│   │   └── StyleChangeCommand.ts # スタイル変更
 │   ├── shapes/              # 図形クラス
 │   │   ├── Shape.ts         # インターフェース
 │   │   ├── Line.ts          # 直線
@@ -57,23 +68,35 @@ src/
 - **Tool パターン**: 各描画モードを Tool クラスに分離、Canvas がアクティブなツールにイベント委譲
 - **Shape 抽象化**: 共通インターフェースで図形を扱い、新規図形追加を容易に
 - **HandleSet**: 図形ごとに適切なハンドルセットを生成
+- **Command パターン**: すべての編集操作をコマンドオブジェクト化し、Undo/Redo を実現
 
 ## 主要なイベント
 
 - `tool:changed` - ツール切り替え
 - `style:changed` - スタイル変更
 - `shape:added` - 図形追加
+- `shapes:delete` - 図形削除リクエスト
 - `selection:changed` - 選択変更
+- `history:changed` - Undo/Redo状態変更
+- `file:save` - ファイル保存リクエスト
+- `file:open` - ファイル読み込みリクエスト
 
 ## キーボードショートカット
 
 - `V` - 選択ツール
 - `L` - 直線ツール
 - `E` - 楕円ツール
+- `Delete` / `Backspace` - 選択図形を削除
+- `Ctrl+Z` - 元に戻す（Undo）
+- `Ctrl+Y` / `Ctrl+Shift+Z` - やり直し（Redo）
+- `Ctrl+S` - ファイル保存
+- `Ctrl+O` - ファイルを開く
 
-## 未実装機能（Phase 7以降）
+## スタイルプロパティ
 
-- Undo/Redo（コマンドパターン）
-- 削除機能
-- スタイル変更の図形への適用
-- ファイル保存/読み込み
+- Fill（塗りつぶし色、None対応）
+- Stroke（線色）
+- Stroke Width（線幅）
+- Opacity（不透明度）
+- Stroke Dasharray（破線スタイル）
+- Stroke Linecap（線端スタイル）
