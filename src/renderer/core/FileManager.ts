@@ -1,9 +1,17 @@
-import { ShapeStyle, DEFAULT_STYLE, StrokeLinecap } from '../../shared/types';
+import { ShapeStyle, DEFAULT_STYLE, StrokeLinecap, MarkerType } from '../../shared/types';
 import { Shape } from '../shapes/Shape';
 import { Line } from '../shapes/Line';
 import { Ellipse } from '../shapes/Ellipse';
 import { Rectangle } from '../shapes/Rectangle';
 import { Text } from '../shapes/Text';
+
+// Marker definitions for SVG export
+const MARKER_SVG_DEFS: Record<Exclude<MarkerType, 'none'>, { path: string; filled: boolean; strokeWidth?: number }> = {
+  'triangle': { path: 'M 0 0 L 10 5 L 0 10 Z', filled: true },
+  'triangle-open': { path: 'M 0 1 L 8 5 L 0 9', filled: false, strokeWidth: 1.5 },
+  'circle': { path: 'M 5 0 A 5 5 0 1 1 5 10 A 5 5 0 1 1 5 0 Z', filled: true },
+  'diamond': { path: 'M 5 0 L 10 5 L 5 10 L 0 5 Z', filled: true }
+};
 
 /**
  * Manages file save/load operations for SVG files
@@ -19,6 +27,12 @@ export class FileManager {
       `  <!-- Created with DrawSVG -->`
     ];
 
+    // Add marker defs if any lines use markers
+    const markerDefs = this.generateMarkerDefs(shapes);
+    if (markerDefs) {
+      svgLines.push(markerDefs);
+    }
+
     shapes.forEach(shape => {
       svgLines.push(this.shapeToSvgElement(shape));
     });
@@ -28,13 +42,64 @@ export class FileManager {
   }
 
   /**
+   * Generate marker definitions for lines that use them
+   */
+  private static generateMarkerDefs(shapes: Shape[]): string | null {
+    const usedMarkers = new Set<string>();
+
+    // Collect all used markers
+    shapes.forEach(shape => {
+      if (shape instanceof Line) {
+        if (shape.markerStart !== 'none') {
+          usedMarkers.add(`${shape.markerStart}-start`);
+        }
+        if (shape.markerEnd !== 'none') {
+          usedMarkers.add(`${shape.markerEnd}-end`);
+        }
+      }
+    });
+
+    if (usedMarkers.size === 0) return null;
+
+    const defsLines: string[] = ['  <defs>'];
+
+    usedMarkers.forEach(markerKey => {
+      const [type, position] = markerKey.split('-') as [Exclude<MarkerType, 'none'>, string];
+      const def = MARKER_SVG_DEFS[type];
+      if (!def) return;
+
+      const orient = position === 'start' ? 'auto-start-reverse' : 'auto';
+      const refX = type === 'circle' || type === 'diamond' ? 5 : 9;
+      const refY = 5;
+
+      const fillAttr = def.filled
+        ? 'fill="currentColor" stroke="none"'
+        : `fill="none" stroke="currentColor" stroke-width="${def.strokeWidth || 1}" stroke-linecap="round" stroke-linejoin="round"`;
+
+      defsLines.push(`    <marker id="marker-${type}-${position}" viewBox="0 0 10 10" refX="${refX}" refY="${refY}" markerWidth="4" markerHeight="4" markerUnits="strokeWidth" orient="${orient}">`);
+      defsLines.push(`      <path d="${def.path}" ${fillAttr}/>`);
+      defsLines.push(`    </marker>`);
+    });
+
+    defsLines.push('  </defs>');
+    return defsLines.join('\n');
+  }
+
+  /**
    * Convert a shape to SVG element string
    */
   private static shapeToSvgElement(shape: Shape): string {
     const style = this.styleToAttributes(shape.style);
 
     if (shape instanceof Line) {
-      return `  <line id="${shape.id}" x1="${shape.x1}" y1="${shape.y1}" x2="${shape.x2}" y2="${shape.y2}" ${style}/>`;
+      let markerAttrs = '';
+      if (shape.markerStart !== 'none') {
+        markerAttrs += ` marker-start="url(#marker-${shape.markerStart}-start)"`;
+      }
+      if (shape.markerEnd !== 'none') {
+        markerAttrs += ` marker-end="url(#marker-${shape.markerEnd}-end)"`;
+      }
+      return `  <line id="${shape.id}" x1="${shape.x1}" y1="${shape.y1}" x2="${shape.x2}" y2="${shape.y2}" ${style}${markerAttrs}/>`;
     } else if (shape instanceof Ellipse) {
       return `  <ellipse id="${shape.id}" cx="${shape.cx}" cy="${shape.cy}" rx="${shape.rx}" ry="${shape.ry}" ${style}/>`;
     } else if (shape instanceof Rectangle) {
@@ -96,7 +161,9 @@ export class FileManager {
     const lines = svg.querySelectorAll('line');
     lines.forEach(el => {
       const style = this.parseStyleFromElement(el);
-      const line = Line.fromElement(el, style);
+      const markerStart = this.parseMarkerType(el.getAttribute('marker-start'));
+      const markerEnd = this.parseMarkerType(el.getAttribute('marker-end'));
+      const line = Line.fromElement(el, style, markerStart, markerEnd);
       shapes.push(line);
     });
 
@@ -154,6 +221,23 @@ export class FileManager {
       strokeDasharray: el.getAttribute('stroke-dasharray') || '',
       strokeLinecap: (el.getAttribute('stroke-linecap') as StrokeLinecap) || DEFAULT_STYLE.strokeLinecap
     };
+  }
+
+  /**
+   * Parse marker type from marker-start/marker-end attribute value
+   */
+  private static parseMarkerType(markerAttr: string | null): MarkerType {
+    if (!markerAttr) return 'none';
+
+    // Extract marker type from url(#marker-{type}-{position})
+    const match = markerAttr.match(/url\(#marker-([^-]+(?:-open)?)-(?:start|end)\)/);
+    if (match) {
+      const type = match[1];
+      if (type === 'triangle' || type === 'triangle-open' || type === 'circle' || type === 'diamond') {
+        return type;
+      }
+    }
+    return 'none';
   }
 
   /**

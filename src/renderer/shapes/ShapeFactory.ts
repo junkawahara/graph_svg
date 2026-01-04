@@ -19,6 +19,8 @@ export function createShapeFromData(data: ShapeData, offsetX: number = 0, offset
         data.y1 + offsetY,
         data.x2 + offsetX,
         data.y2 + offsetY,
+        data.markerStart || 'none',
+        data.markerEnd || 'none',
         { ...data.style }
       );
 

@@ -1,12 +1,14 @@
-import { ShapeStyle, StrokeLinecap } from '../../shared/types';
+import { ShapeStyle, StrokeLinecap, MarkerType } from '../../shared/types';
 import { eventBus } from '../core/EventBus';
 import { editorState } from '../core/EditorState';
 import { selectionManager } from '../core/SelectionManager';
 import { historyManager } from '../core/HistoryManager';
 import { Shape } from '../shapes/Shape';
 import { Text } from '../shapes/Text';
+import { Line } from '../shapes/Line';
 import { StyleChangeCommand } from '../commands/StyleChangeCommand';
 import { TextPropertyChangeCommand, TextPropertyUpdates } from '../commands/TextPropertyChangeCommand';
+import { MarkerChangeCommand, MarkerUpdates } from '../commands/MarkerChangeCommand';
 
 /**
  * Sidebar component - handles style property editing
@@ -28,6 +30,11 @@ export class Sidebar {
   private fontFamily: HTMLSelectElement;
   private fontBold: HTMLInputElement;
 
+  // Line-specific properties (arrows)
+  private linePropertiesContainer: HTMLDivElement;
+  private markerStart: HTMLSelectElement;
+  private markerEnd: HTMLSelectElement;
+
   private isUpdatingUI = false; // Prevent feedback loop
 
   constructor() {
@@ -48,8 +55,14 @@ export class Sidebar {
     this.fontFamily = document.getElementById('prop-font-family') as HTMLSelectElement;
     this.fontBold = document.getElementById('prop-font-bold') as HTMLInputElement;
 
+    // Line-specific elements
+    this.linePropertiesContainer = document.getElementById('line-properties') as HTMLDivElement;
+    this.markerStart = document.getElementById('prop-marker-start') as HTMLSelectElement;
+    this.markerEnd = document.getElementById('prop-marker-end') as HTMLSelectElement;
+
     this.setupInputListeners();
     this.setupTextInputListeners();
+    this.setupLineInputListeners();
     this.setupEventListeners();
 
     // Initialize with default style
@@ -128,6 +141,21 @@ export class Sidebar {
   }
 
   /**
+   * Setup line property input listeners
+   */
+  private setupLineInputListeners(): void {
+    this.markerStart.addEventListener('change', () => {
+      if (this.isUpdatingUI) return;
+      this.applyMarkerChange({ markerStart: this.markerStart.value as MarkerType });
+    });
+
+    this.markerEnd.addEventListener('change', () => {
+      if (this.isUpdatingUI) return;
+      this.applyMarkerChange({ markerEnd: this.markerEnd.value as MarkerType });
+    });
+  }
+
+  /**
    * Setup event listeners
    */
   private setupEventListeners(): void {
@@ -144,13 +172,22 @@ export class Sidebar {
         } else {
           this.hideTextProperties();
         }
+
+        // Show/hide line properties based on shape type
+        if (shape instanceof Line) {
+          this.showLineProperties(shape);
+        } else {
+          this.hideLineProperties();
+        }
       } else if (shapes.length === 0) {
         // Show editor's current style (for new shapes)
         this.updateUIFromStyle(editorState.currentStyle);
         this.hideTextProperties();
+        this.hideLineProperties();
       } else {
-        // Multiple selection - hide text properties
+        // Multiple selection - hide special properties
         this.hideTextProperties();
+        this.hideLineProperties();
       }
     });
   }
@@ -185,6 +222,19 @@ export class Sidebar {
   }
 
   /**
+   * Apply marker change to selected Line shape
+   */
+  private applyMarkerChange(updates: MarkerUpdates): void {
+    const selectedShapes = selectionManager.getSelection();
+
+    if (selectedShapes.length === 1 && selectedShapes[0] instanceof Line) {
+      const lineShape = selectedShapes[0] as Line;
+      const command = new MarkerChangeCommand(lineShape, updates);
+      historyManager.execute(command);
+    }
+  }
+
+  /**
    * Show text properties and populate with shape values
    */
   private showTextProperties(text: Text): void {
@@ -204,6 +254,26 @@ export class Sidebar {
    */
   private hideTextProperties(): void {
     this.textPropertiesContainer.style.display = 'none';
+  }
+
+  /**
+   * Show line properties and populate with shape values
+   */
+  private showLineProperties(line: Line): void {
+    this.isUpdatingUI = true;
+
+    this.linePropertiesContainer.style.display = 'block';
+    this.markerStart.value = line.markerStart;
+    this.markerEnd.value = line.markerEnd;
+
+    this.isUpdatingUI = false;
+  }
+
+  /**
+   * Hide line properties
+   */
+  private hideLineProperties(): void {
+    this.linePropertiesContainer.style.display = 'none';
   }
 
   /**

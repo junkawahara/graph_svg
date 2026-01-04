@@ -32,6 +32,11 @@ export interface Bounds {
 export type StrokeLinecap = 'butt' | 'round' | 'square';
 
 /**
+ * Marker/arrow types for line endpoints
+ */
+export type MarkerType = 'none' | 'triangle' | 'triangle-open' | 'circle' | 'diamond';
+
+/**
  * Style properties for shapes
  */
 export interface ShapeStyle {
@@ -75,6 +80,8 @@ export interface LineData extends BaseShapeData {
   y1: number;
   x2: number;
   y2: number;
+  markerStart: MarkerType;
+  markerEnd: MarkerType;
 }
 
 /**

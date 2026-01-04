@@ -21,6 +21,7 @@ import { RectangleHandles } from '../handles/RectangleHandles';
 import { TextHandles } from '../handles/TextHandles';
 import { AddShapeCommand } from '../commands/AddShapeCommand';
 import { DeleteShapeCommand } from '../commands/DeleteShapeCommand';
+import { initMarkerManager } from '../core/MarkerManager';
 
 /**
  * Canvas component - manages SVG element, tools, shapes, and handles
@@ -36,6 +37,9 @@ export class Canvas {
   constructor(svgElement: SVGSVGElement, containerElement: HTMLElement) {
     this.svg = svgElement;
     this.container = containerElement;
+
+    // Initialize marker manager for arrow heads
+    initMarkerManager(this.svg);
 
     this.initializeTools();
     this.setupEventListeners();

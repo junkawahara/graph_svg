@@ -1,5 +1,6 @@
-import { Point, Bounds, ShapeStyle, LineData, generateId } from '../../shared/types';
+import { Point, Bounds, ShapeStyle, LineData, MarkerType, generateId } from '../../shared/types';
 import { Shape, applyStyle } from './Shape';
+import { getMarkerManager } from '../core/MarkerManager';
 
 /**
  * Line shape implementation
@@ -14,6 +15,8 @@ export class Line implements Shape {
     public y1: number,
     public x2: number,
     public y2: number,
+    public markerStart: MarkerType,
+    public markerEnd: MarkerType,
     public style: ShapeStyle
   ) {}
 
@@ -21,19 +24,21 @@ export class Line implements Shape {
    * Create line from two points
    */
   static fromPoints(start: Point, end: Point, style: ShapeStyle): Line {
-    return new Line(generateId(), start.x, start.y, end.x, end.y, style);
+    return new Line(generateId(), start.x, start.y, end.x, end.y, 'none', 'none', style);
   }
 
   /**
    * Create line from SVG element
    */
-  static fromElement(el: SVGLineElement, style: ShapeStyle): Line {
+  static fromElement(el: SVGLineElement, style: ShapeStyle, markerStart: MarkerType = 'none', markerEnd: MarkerType = 'none'): Line {
     return new Line(
       el.id || generateId(),
       parseFloat(el.getAttribute('x1') || '0'),
       parseFloat(el.getAttribute('y1') || '0'),
       parseFloat(el.getAttribute('x2') || '0'),
       parseFloat(el.getAttribute('y2') || '0'),
+      markerStart,
+      markerEnd,
       style
     );
   }
@@ -46,9 +51,30 @@ export class Line implements Shape {
     line.setAttribute('x2', String(this.x2));
     line.setAttribute('y2', String(this.y2));
     applyStyle(line, this.style);
+    this.applyMarkers(line);
 
     this.element = line;
     return line;
+  }
+
+  /**
+   * Apply marker attributes to line element
+   */
+  private applyMarkers(line: SVGLineElement): void {
+    const manager = getMarkerManager();
+    if (!manager) return;
+
+    if (this.markerStart !== 'none') {
+      line.setAttribute('marker-start', manager.getMarkerUrl(this.markerStart, 'start'));
+    } else {
+      line.removeAttribute('marker-start');
+    }
+
+    if (this.markerEnd !== 'none') {
+      line.setAttribute('marker-end', manager.getMarkerUrl(this.markerEnd, 'end'));
+    } else {
+      line.removeAttribute('marker-end');
+    }
   }
 
   updateElement(): void {
@@ -59,6 +85,7 @@ export class Line implements Shape {
     this.element.setAttribute('x2', String(this.x2));
     this.element.setAttribute('y2', String(this.y2));
     applyStyle(this.element, this.style);
+    this.applyMarkers(this.element);
   }
 
   hitTest(point: Point, tolerance: number = 5): boolean {
@@ -119,6 +146,8 @@ export class Line implements Shape {
       y1: this.y1,
       x2: this.x2,
       y2: this.y2,
+      markerStart: this.markerStart,
+      markerEnd: this.markerEnd,
       style: { ...this.style }
     };
   }
@@ -130,6 +159,8 @@ export class Line implements Shape {
       this.y1,
       this.x2,
       this.y2,
+      this.markerStart,
+      this.markerEnd,
       { ...this.style }
     );
   }
