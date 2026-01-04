@@ -49,7 +49,8 @@ src/
 │   │   ├── StyleChangeCommand.ts # スタイル変更
 │   │   ├── PasteShapesCommand.ts # 図形ペースト
 │   │   ├── TextPropertyChangeCommand.ts # テキストプロパティ変更
-│   │   └── MarkerChangeCommand.ts # 矢印マーカー変更
+│   │   ├── MarkerChangeCommand.ts # 矢印マーカー変更
+│   │   └── ZOrderCommand.ts       # 重ね順変更
 │   ├── shapes/              # 図形クラス
 │   │   ├── Shape.ts         # インターフェース
 │   │   ├── Line.ts          # 直線
@@ -90,8 +91,11 @@ src/
 - `shape:added` - 図形追加
 - `shapes:delete` - 図形削除リクエスト
 - `shapes:paste` - 図形ペーストリクエスト
+- `shapes:zorder` - 重ね順変更リクエスト
 - `selection:changed` - 選択変更
 - `history:changed` - Undo/Redo状態変更
+- `canvas:zoomChanged` - ズーム/パン変更
+- `canvas:zoomReset` - ズームリセットリクエスト
 - `file:save` - ファイル保存リクエスト
 - `file:open` - ファイル読み込みリクエスト
 
@@ -109,6 +113,11 @@ src/
 - `Ctrl+V` - ペースト
 - `Ctrl+S` - ファイル保存
 - `Ctrl+O` - ファイルを開く
+- `Ctrl+]` - 1つ前面へ
+- `Ctrl+[` - 1つ背面へ
+- `Ctrl+Shift+]` - 最前面へ
+- `Ctrl+Shift+[` - 最背面へ
+- `Ctrl+0` - ズームリセット（100%）
 
 ## 選択操作
 
@@ -149,3 +158,11 @@ src/
 - Diamond（ひし形）
 
 ※ マーカーの色は線の色（Stroke）に連動
+
+## ズーム・パン
+
+- マウスホイール - ズームイン/アウト（カーソル位置中心）
+- `Space` + ドラッグ - パン（キャンバス移動）
+- ツールバー「1:1」ボタン - ズームリセット
+- ズーム範囲: 10% ～ 1000%
+- ズームインジケーターで現在の倍率を表示
