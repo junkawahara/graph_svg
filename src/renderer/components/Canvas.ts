@@ -2,6 +2,7 @@ import { Point, ToolType } from '../../shared/types';
 import { eventBus } from '../core/EventBus';
 import { editorState } from '../core/EditorState';
 import { Tool } from '../tools/Tool';
+import { SelectTool } from '../tools/SelectTool';
 import { LineTool } from '../tools/LineTool';
 import { EllipseTool } from '../tools/EllipseTool';
 import { Shape } from '../shapes/Shape';
@@ -43,10 +44,10 @@ export class Canvas {
    */
   private initializeTools(): void {
     console.log('Canvas: Initializing tools');
+    this.tools.set('select', new SelectTool((point) => this.findShapeAt(point)));
     this.tools.set('line', new LineTool(this.svg));
     this.tools.set('ellipse', new EllipseTool(this.svg));
-    console.log('Canvas: LineTool and EllipseTool registered');
-    // SelectTool will be added in later phases
+    console.log('Canvas: All tools registered');
 
     // Set initial tool
     console.log(`Canvas: Setting initial tool to ${editorState.currentTool}`);

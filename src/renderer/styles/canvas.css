@@ -12,10 +12,9 @@
   cursor: crosshair;
 }
 
-/* Selection indicator styles (for future use) */
-.shape-selected {
-  outline: 2px solid #0e639c;
-  outline-offset: 2px;
+/* Selection indicator styles */
+.selected {
+  filter: drop-shadow(0 0 3px #0e639c) drop-shadow(0 0 1px #0e639c);
 }
 
 /* Handle styles (for future use) */
