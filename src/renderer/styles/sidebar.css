@@ -1,0 +1,98 @@
+#sidebar {
+  width: 240px;
+  min-width: 240px;
+  background-color: #252526;
+  border-left: 1px solid #3e3e3e;
+  padding: 16px;
+  overflow-y: auto;
+}
+
+#sidebar h3 {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: #888888;
+  margin-bottom: 16px;
+  letter-spacing: 0.5px;
+}
+
+.property-group {
+  margin-bottom: 16px;
+}
+
+.property-group label {
+  display: block;
+  font-size: 12px;
+  color: #aaaaaa;
+  margin-bottom: 6px;
+}
+
+.property-group input[type="color"] {
+  width: 36px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid #4a4a4a;
+  border-radius: 4px;
+  cursor: pointer;
+  background-color: transparent;
+}
+
+.property-group input[type="color"]::-webkit-color-swatch-wrapper {
+  padding: 2px;
+}
+
+.property-group input[type="color"]::-webkit-color-swatch {
+  border: none;
+  border-radius: 2px;
+}
+
+.property-group input[type="number"],
+.property-group select {
+  width: 100%;
+  padding: 6px 10px;
+  background-color: #3c3c3c;
+  border: 1px solid #4a4a4a;
+  border-radius: 4px;
+  color: #cccccc;
+  font-size: 13px;
+}
+
+.property-group input[type="number"]:focus,
+.property-group select:focus {
+  outline: none;
+  border-color: #0e639c;
+}
+
+.property-group input[type="range"] {
+  width: calc(100% - 50px);
+  vertical-align: middle;
+}
+
+.property-group span {
+  display: inline-block;
+  width: 45px;
+  text-align: right;
+  font-size: 12px;
+  color: #888888;
+}
+
+.color-input-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.checkbox-label {
+  display: flex !important;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: #aaaaaa;
+  cursor: pointer;
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+}
