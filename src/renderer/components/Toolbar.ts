@@ -5,6 +5,7 @@ import { historyManager } from '../core/HistoryManager';
 import { selectionManager } from '../core/SelectionManager';
 import { clipboardManager } from '../core/ClipboardManager';
 import { Shape } from '../shapes/Shape';
+import { ZOrderOperation } from '../commands/ZOrderCommand';
 
 /**
  * Toolbar component - handles tool selection, undo/redo, and delete
@@ -15,10 +16,17 @@ export class Toolbar {
   private redoButton: HTMLButtonElement | null = null;
   private deleteButton: HTMLButtonElement | null = null;
 
+  // Z-order buttons
+  private bringFrontButton: HTMLButtonElement | null = null;
+  private bringForwardButton: HTMLButtonElement | null = null;
+  private sendBackwardButton: HTMLButtonElement | null = null;
+  private sendBackButton: HTMLButtonElement | null = null;
+
   constructor() {
     this.setupToolButtons();
     this.setupUndoRedoButtons();
     this.setupDeleteButton();
+    this.setupZOrderButtons();
     this.setupFileButtons();
     this.setupEventListeners();
   }
@@ -88,6 +96,42 @@ export class Toolbar {
   }
 
   /**
+   * Setup Z-order buttons
+   */
+  private setupZOrderButtons(): void {
+    this.bringFrontButton = document.getElementById('btn-bring-front') as HTMLButtonElement;
+    this.bringForwardButton = document.getElementById('btn-bring-forward') as HTMLButtonElement;
+    this.sendBackwardButton = document.getElementById('btn-send-backward') as HTMLButtonElement;
+    this.sendBackButton = document.getElementById('btn-send-back') as HTMLButtonElement;
+
+    if (this.bringFrontButton) {
+      this.bringFrontButton.addEventListener('click', () => this.changeZOrder('bringToFront'));
+    }
+    if (this.bringForwardButton) {
+      this.bringForwardButton.addEventListener('click', () => this.changeZOrder('bringForward'));
+    }
+    if (this.sendBackwardButton) {
+      this.sendBackwardButton.addEventListener('click', () => this.changeZOrder('sendBackward'));
+    }
+    if (this.sendBackButton) {
+      this.sendBackButton.addEventListener('click', () => this.changeZOrder('sendToBack'));
+    }
+
+    // Initial state
+    this.updateZOrderButtons(false);
+  }
+
+  /**
+   * Change z-order of selected shapes
+   */
+  private changeZOrder(operation: ZOrderOperation): void {
+    const selectedShapes = selectionManager.getSelection();
+    if (selectedShapes.length > 0) {
+      eventBus.emit('shapes:zorder', { shapes: selectedShapes, operation });
+    }
+  }
+
+  /**
    * Setup Open/Save buttons
    */
   private setupFileButtons(): void {
@@ -132,9 +176,11 @@ export class Toolbar {
       this.updateUndoRedoButtons(state);
     });
 
-    // Update delete button when selection changes
+    // Update delete and z-order buttons when selection changes
     eventBus.on('selection:changed', (shapes: Shape[]) => {
-      this.updateDeleteButton(shapes.length > 0);
+      const hasSelection = shapes.length > 0;
+      this.updateDeleteButton(hasSelection);
+      this.updateZOrderButtons(hasSelection);
     });
 
     // Keyboard shortcuts
@@ -193,6 +239,35 @@ export class Toolbar {
         return;
       }
 
+      // Z-order shortcuts
+      // Bring to Front: Ctrl+Shift+]
+      if (e.ctrlKey && e.shiftKey && e.key === ']') {
+        e.preventDefault();
+        this.changeZOrder('bringToFront');
+        return;
+      }
+
+      // Bring Forward: Ctrl+]
+      if (e.ctrlKey && !e.shiftKey && e.key === ']') {
+        e.preventDefault();
+        this.changeZOrder('bringForward');
+        return;
+      }
+
+      // Send to Back: Ctrl+Shift+[
+      if (e.ctrlKey && e.shiftKey && e.key === '[') {
+        e.preventDefault();
+        this.changeZOrder('sendToBack');
+        return;
+      }
+
+      // Send Backward: Ctrl+[
+      if (e.ctrlKey && !e.shiftKey && e.key === '[') {
+        e.preventDefault();
+        this.changeZOrder('sendBackward');
+        return;
+      }
+
       switch (e.key.toLowerCase()) {
         case 'v':
           editorState.setTool('select');
@@ -244,6 +319,24 @@ export class Toolbar {
   private updateDeleteButton(hasSelection: boolean): void {
     if (this.deleteButton) {
       this.deleteButton.disabled = !hasSelection;
+    }
+  }
+
+  /**
+   * Update Z-order button states
+   */
+  private updateZOrderButtons(hasSelection: boolean): void {
+    if (this.bringFrontButton) {
+      this.bringFrontButton.disabled = !hasSelection;
+    }
+    if (this.bringForwardButton) {
+      this.bringForwardButton.disabled = !hasSelection;
+    }
+    if (this.sendBackwardButton) {
+      this.sendBackwardButton.disabled = !hasSelection;
+    }
+    if (this.sendBackButton) {
+      this.sendBackButton.disabled = !hasSelection;
     }
   }
 

@@ -135,6 +135,7 @@ export type EventName =
   | 'shape:updated'
   | 'shapes:delete'
   | 'shapes:paste'
+  | 'shapes:zorder'
   | 'selection:changed'
   | 'history:changed'
   | 'canvas:render'

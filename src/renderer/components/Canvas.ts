@@ -21,6 +21,7 @@ import { RectangleHandles } from '../handles/RectangleHandles';
 import { TextHandles } from '../handles/TextHandles';
 import { AddShapeCommand } from '../commands/AddShapeCommand';
 import { DeleteShapeCommand } from '../commands/DeleteShapeCommand';
+import { ZOrderCommand, ZOrderOperation } from '../commands/ZOrderCommand';
 import { initMarkerManager } from '../core/MarkerManager';
 
 /**
@@ -67,6 +68,17 @@ export class Canvas {
     // Listen for delete requests
     eventBus.on('shapes:delete', (shapes: Shape[]) => {
       const command = new DeleteShapeCommand(this, [...shapes]);
+      historyManager.execute(command);
+    });
+
+    // Listen for z-order requests
+    eventBus.on('shapes:zorder', (data: { shapes: Shape[]; operation: ZOrderOperation }) => {
+      const command = new ZOrderCommand(
+        data.shapes,
+        data.operation,
+        () => this.getShapes(),
+        (newOrder) => this.reorderShapes(newOrder)
+      );
       historyManager.execute(command);
     });
   }
@@ -202,6 +214,31 @@ export class Canvas {
         this.handleSets.delete(shape);
       }
     }
+  }
+
+  /**
+   * Reorder shapes (for z-order operations)
+   */
+  reorderShapes(newOrder: Shape[]): void {
+    this.shapes = newOrder;
+
+    // Reorder SVG elements to match new order
+    // Get the defs element (marker definitions) to insert shapes after it
+    const defs = this.svg.querySelector('defs');
+
+    newOrder.forEach(shape => {
+      if (shape.element) {
+        // Re-append in order (moves element to end)
+        this.svg.appendChild(shape.element);
+      }
+    });
+
+    // Re-append handles on top
+    this.handleSets.forEach(handleSet => {
+      if (handleSet.element) {
+        this.svg.appendChild(handleSet.element);
+      }
+    });
   }
 
   /**
