@@ -14,6 +14,7 @@ import { Handle, HandleSet } from '../handles/Handle';
 import { LineHandles } from '../handles/LineHandles';
 import { EllipseHandles } from '../handles/EllipseHandles';
 import { AddShapeCommand } from '../commands/AddShapeCommand';
+import { DeleteShapeCommand } from '../commands/DeleteShapeCommand';
 
 /**
  * Canvas component - manages SVG element, tools, shapes, and handles
@@ -51,6 +52,12 @@ export class Canvas {
     // Listen for selection changes
     eventBus.on('selection:changed', (shapes: Shape[]) => {
       this.updateHandlesForSelection(shapes);
+    });
+
+    // Listen for delete requests
+    eventBus.on('shapes:delete', (shapes: Shape[]) => {
+      const command = new DeleteShapeCommand(this, [...shapes]);
+      historyManager.execute(command);
     });
   }
 

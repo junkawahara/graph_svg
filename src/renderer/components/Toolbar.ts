@@ -2,18 +2,22 @@ import { ToolType } from '../../shared/types';
 import { eventBus } from '../core/EventBus';
 import { editorState } from '../core/EditorState';
 import { historyManager } from '../core/HistoryManager';
+import { selectionManager } from '../core/SelectionManager';
+import { Shape } from '../shapes/Shape';
 
 /**
- * Toolbar component - handles tool selection and undo/redo
+ * Toolbar component - handles tool selection, undo/redo, and delete
  */
 export class Toolbar {
   private toolButtons: Map<ToolType, HTMLButtonElement> = new Map();
   private undoButton: HTMLButtonElement | null = null;
   private redoButton: HTMLButtonElement | null = null;
+  private deleteButton: HTMLButtonElement | null = null;
 
   constructor() {
     this.setupToolButtons();
     this.setupUndoRedoButtons();
+    this.setupDeleteButton();
     this.setupEventListeners();
   }
 
@@ -64,6 +68,33 @@ export class Toolbar {
   }
 
   /**
+   * Setup Delete button
+   */
+  private setupDeleteButton(): void {
+    this.deleteButton = document.getElementById('btn-delete') as HTMLButtonElement;
+
+    if (this.deleteButton) {
+      this.deleteButton.addEventListener('click', () => {
+        this.deleteSelectedShapes();
+      });
+    }
+
+    // Initial state
+    this.updateDeleteButton(false);
+  }
+
+  /**
+   * Delete currently selected shapes
+   */
+  private deleteSelectedShapes(): void {
+    const selectedShapes = selectionManager.getSelection();
+    if (selectedShapes.length > 0) {
+      eventBus.emit('shapes:delete', selectedShapes);
+      selectionManager.clearSelection();
+    }
+  }
+
+  /**
    * Setup event listeners
    */
   private setupEventListeners(): void {
@@ -75,6 +106,11 @@ export class Toolbar {
     // Update undo/redo buttons when history changes
     eventBus.on('history:changed', (state: { canUndo: boolean; canRedo: boolean }) => {
       this.updateUndoRedoButtons(state);
+    });
+
+    // Update delete button when selection changes
+    eventBus.on('selection:changed', (shapes: Shape[]) => {
+      this.updateDeleteButton(shapes.length > 0);
     });
 
     // Keyboard shortcuts
@@ -95,6 +131,13 @@ export class Toolbar {
       if ((e.ctrlKey && e.key === 'y') || (e.ctrlKey && e.shiftKey && e.key === 'z')) {
         e.preventDefault();
         historyManager.redo();
+        return;
+      }
+
+      // Delete: Delete or Backspace
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        e.preventDefault();
+        this.deleteSelectedShapes();
         return;
       }
 
@@ -134,6 +177,15 @@ export class Toolbar {
     }
     if (this.redoButton) {
       this.redoButton.disabled = !state.canRedo;
+    }
+  }
+
+  /**
+   * Update Delete button state
+   */
+  private updateDeleteButton(hasSelection: boolean): void {
+    if (this.deleteButton) {
+      this.deleteButton.disabled = !hasSelection;
     }
   }
 }

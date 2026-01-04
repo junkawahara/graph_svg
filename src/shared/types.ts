@@ -102,6 +102,7 @@ export type EventName =
   | 'shape:added'
   | 'shape:removed'
   | 'shape:updated'
+  | 'shapes:delete'
   | 'selection:changed'
   | 'history:changed'
   | 'canvas:render';
