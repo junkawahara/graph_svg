@@ -22,11 +22,16 @@ export class Toolbar {
   private sendBackwardButton: HTMLButtonElement | null = null;
   private sendBackButton: HTMLButtonElement | null = null;
 
+  // Zoom controls
+  private zoomIndicator: HTMLSpanElement | null = null;
+  private zoomResetButton: HTMLButtonElement | null = null;
+
   constructor() {
     this.setupToolButtons();
     this.setupUndoRedoButtons();
     this.setupDeleteButton();
     this.setupZOrderButtons();
+    this.setupZoomControls();
     this.setupFileButtons();
     this.setupEventListeners();
   }
@@ -132,6 +137,29 @@ export class Toolbar {
   }
 
   /**
+   * Setup zoom controls
+   */
+  private setupZoomControls(): void {
+    this.zoomIndicator = document.getElementById('zoom-indicator') as HTMLSpanElement;
+    this.zoomResetButton = document.getElementById('btn-zoom-reset') as HTMLButtonElement;
+
+    if (this.zoomResetButton) {
+      this.zoomResetButton.addEventListener('click', () => {
+        eventBus.emit('canvas:zoomReset', null);
+      });
+    }
+  }
+
+  /**
+   * Update zoom indicator display
+   */
+  private updateZoomIndicator(scale: number): void {
+    if (this.zoomIndicator) {
+      this.zoomIndicator.textContent = `${Math.round(scale * 100)}%`;
+    }
+  }
+
+  /**
    * Setup Open/Save buttons
    */
   private setupFileButtons(): void {
@@ -181,6 +209,11 @@ export class Toolbar {
       const hasSelection = shapes.length > 0;
       this.updateDeleteButton(hasSelection);
       this.updateZOrderButtons(hasSelection);
+    });
+
+    // Update zoom indicator when zoom changes
+    eventBus.on('canvas:zoomChanged', (data: { scale: number }) => {
+      this.updateZoomIndicator(data.scale);
     });
 
     // Keyboard shortcuts
@@ -265,6 +298,13 @@ export class Toolbar {
       if (e.ctrlKey && !e.shiftKey && e.key === '[') {
         e.preventDefault();
         this.changeZOrder('sendBackward');
+        return;
+      }
+
+      // Zoom reset: Ctrl+0
+      if (e.ctrlKey && e.key === '0') {
+        e.preventDefault();
+        eventBus.emit('canvas:zoomReset', null);
         return;
       }
 

@@ -57,3 +57,18 @@
   font-size: 16px;
   line-height: 1;
 }
+
+.zoom-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 50px;
+  height: 36px;
+  padding: 0 8px;
+  background-color: #3c3c3c;
+  border: 1px solid #4a4a4a;
+  border-radius: 4px;
+  color: #cccccc;
+  font-size: 12px;
+  font-family: monospace;
+}

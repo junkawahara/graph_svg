@@ -35,6 +35,19 @@ export class Canvas {
   private shapes: Shape[] = [];
   private handleSets: Map<Shape, HandleSet> = new Map();
 
+  // Zoom/Pan state
+  private scale: number = 1;
+  private panX: number = 0;
+  private panY: number = 0;
+  private isPanning: boolean = false;
+  private isSpacePressed: boolean = false;
+  private lastPanPoint: Point | null = null;
+
+  // Zoom constraints
+  private readonly MIN_SCALE = 0.1;
+  private readonly MAX_SCALE = 10;
+  private readonly ZOOM_FACTOR = 0.1;
+
   constructor(svgElement: SVGSVGElement, containerElement: HTMLElement) {
     this.svg = svgElement;
     this.container = containerElement;
@@ -80,6 +93,11 @@ export class Canvas {
         (newOrder) => this.reorderShapes(newOrder)
       );
       historyManager.execute(command);
+    });
+
+    // Listen for zoom reset requests
+    eventBus.on('canvas:zoomReset', () => {
+      this.resetZoom();
     });
   }
 
@@ -317,17 +335,87 @@ export class Canvas {
     const rect = this.container.getBoundingClientRect();
     this.svg.setAttribute('width', String(rect.width));
     this.svg.setAttribute('height', String(rect.height));
+
+    // Update viewBox to reflect current zoom/pan state
+    this.updateViewBox();
   }
 
   /**
-   * Convert mouse event to SVG coordinates
+   * Convert mouse event to SVG coordinates (accounting for zoom/pan)
    */
   private getPointFromEvent(event: MouseEvent): Point {
     const rect = this.svg.getBoundingClientRect();
+    const screenX = event.clientX - rect.left;
+    const screenY = event.clientY - rect.top;
+
+    // Convert screen coordinates to SVG coordinates
     return {
-      x: event.clientX - rect.left,
-      y: event.clientY - rect.top
+      x: screenX / this.scale + this.panX,
+      y: screenY / this.scale + this.panY
     };
+  }
+
+  /**
+   * Convert screen coordinates to SVG coordinates
+   */
+  screenToSvg(screenX: number, screenY: number): Point {
+    return {
+      x: screenX / this.scale + this.panX,
+      y: screenY / this.scale + this.panY
+    };
+  }
+
+  /**
+   * Update the SVG viewBox based on current zoom/pan state
+   */
+  private updateViewBox(): void {
+    const rect = this.container.getBoundingClientRect();
+    const viewWidth = rect.width / this.scale;
+    const viewHeight = rect.height / this.scale;
+    this.svg.setAttribute('viewBox', `${this.panX} ${this.panY} ${viewWidth} ${viewHeight}`);
+
+    // Emit zoom changed event
+    eventBus.emit('canvas:zoomChanged', { scale: this.scale, panX: this.panX, panY: this.panY });
+  }
+
+  /**
+   * Zoom at a specific point (keeps that point stationary)
+   */
+  private zoomAt(screenX: number, screenY: number, delta: number): void {
+    const oldScale = this.scale;
+    const newScale = Math.min(this.MAX_SCALE, Math.max(this.MIN_SCALE, this.scale * (1 + delta)));
+
+    if (newScale === oldScale) return;
+
+    // Calculate the SVG point under the cursor before zoom
+    const svgX = screenX / oldScale + this.panX;
+    const svgY = screenY / oldScale + this.panY;
+
+    // Update scale
+    this.scale = newScale;
+
+    // Adjust pan so the point under cursor stays in the same place
+    this.panX = svgX - screenX / newScale;
+    this.panY = svgY - screenY / newScale;
+
+    this.updateViewBox();
+  }
+
+  /**
+   * Reset zoom and pan to default
+   */
+  resetZoom(): void {
+    this.scale = 1;
+    this.panX = 0;
+    this.panY = 0;
+    this.updateViewBox();
+  }
+
+  /**
+   * Get current zoom level
+   */
+  getZoom(): number {
+    return this.scale;
   }
 
   /**
@@ -357,26 +445,97 @@ export class Canvas {
    */
   private setupEventListeners(): void {
     this.svg.addEventListener('mousedown', (e) => {
+      // Handle panning with space+drag
+      if (this.isSpacePressed) {
+        e.preventDefault();
+        this.isPanning = true;
+        this.lastPanPoint = { x: e.clientX, y: e.clientY };
+        this.svg.style.cursor = 'grabbing';
+        return;
+      }
+
       const point = this.getPointFromEvent(e);
       console.log(`Canvas: mousedown at (${point.x}, ${point.y}), currentTool:`, this.currentTool);
       this.currentTool?.onMouseDown(point, e);
     });
 
     this.svg.addEventListener('mousemove', (e) => {
+      // Handle panning
+      if (this.isPanning && this.lastPanPoint) {
+        const dx = (e.clientX - this.lastPanPoint.x) / this.scale;
+        const dy = (e.clientY - this.lastPanPoint.y) / this.scale;
+        this.panX -= dx;
+        this.panY -= dy;
+        this.lastPanPoint = { x: e.clientX, y: e.clientY };
+        this.updateViewBox();
+        return;
+      }
+
       const point = this.getPointFromEvent(e);
       this.currentTool?.onMouseMove(point, e);
     });
 
     this.svg.addEventListener('mouseup', (e) => {
+      if (this.isPanning) {
+        this.isPanning = false;
+        this.lastPanPoint = null;
+        if (this.isSpacePressed) {
+          this.svg.style.cursor = 'grab';
+        }
+        return;
+      }
+
       const point = this.getPointFromEvent(e);
       this.currentTool?.onMouseUp(point, e);
     });
 
     this.svg.addEventListener('mouseleave', () => {
+      if (this.isPanning) {
+        this.isPanning = false;
+        this.lastPanPoint = null;
+        return;
+      }
       this.currentTool?.onMouseLeave();
     });
 
+    // Mouse wheel for zooming
+    this.svg.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const rect = this.svg.getBoundingClientRect();
+      const screenX = e.clientX - rect.left;
+      const screenY = e.clientY - rect.top;
+
+      // Zoom in/out based on wheel direction
+      const delta = e.deltaY < 0 ? this.ZOOM_FACTOR : -this.ZOOM_FACTOR;
+      this.zoomAt(screenX, screenY, delta);
+    }, { passive: false });
+
+    // Keyboard events for space key (panning)
+    document.addEventListener('keydown', (e) => {
+      if (e.code === 'Space' && !this.isSpacePressed) {
+        // Don't intercept if user is typing in an input
+        if (e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement || e.target instanceof HTMLTextAreaElement) {
+          return;
+        }
+        e.preventDefault();
+        this.isSpacePressed = true;
+        this.svg.style.cursor = 'grab';
+      }
+    });
+
+    document.addEventListener('keyup', (e) => {
+      if (e.code === 'Space') {
+        this.isSpacePressed = false;
+        this.isPanning = false;
+        this.lastPanPoint = null;
+        this.updateCursor();
+      }
+    });
+
     // Handle window resize
-    window.addEventListener('resize', () => this.updateSize());
+    window.addEventListener('resize', () => {
+      this.updateSize();
+      this.updateViewBox();
+    });
   }
 }

@@ -139,6 +139,8 @@ export type EventName =
   | 'selection:changed'
   | 'history:changed'
   | 'canvas:render'
+  | 'canvas:zoomChanged'
+  | 'canvas:zoomReset'
   | 'file:save'
   | 'file:open';
 
