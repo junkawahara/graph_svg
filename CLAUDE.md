@@ -51,7 +51,7 @@ src/
 │   │   └── Rectangle.ts     # 長方形
 │   ├── tools/               # ツール
 │   │   ├── Tool.ts          # インターフェース
-│   │   ├── SelectTool.ts    # 選択・移動・リサイズ
+│   │   ├── SelectTool.ts    # 選択・移動・リサイズ・範囲選択
 │   │   ├── LineTool.ts      # 直線描画
 │   │   ├── EllipseTool.ts   # 楕円描画
 │   │   └── RectangleTool.ts # 長方形描画
@@ -95,6 +95,14 @@ src/
 - `Ctrl+Y` / `Ctrl+Shift+Z` - やり直し（Redo）
 - `Ctrl+S` - ファイル保存
 - `Ctrl+O` - ファイルを開く
+
+## 選択操作
+
+- クリック - 図形を選択
+- `Shift`+クリック - 選択に追加
+- ドラッグ（空白から） - 範囲選択（完全包含）
+- `Alt`+ドラッグ - 範囲選択（交差モード）
+- `Shift`+ドラッグ - 既存選択に追加
 
 ## スタイルプロパティ
 
