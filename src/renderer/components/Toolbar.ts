@@ -3,6 +3,7 @@ import { eventBus } from '../core/EventBus';
 import { editorState } from '../core/EditorState';
 import { historyManager } from '../core/HistoryManager';
 import { selectionManager } from '../core/SelectionManager';
+import { clipboardManager } from '../core/ClipboardManager';
 import { Shape } from '../shapes/Shape';
 
 /**
@@ -177,6 +178,20 @@ export class Toolbar {
         return;
       }
 
+      // Copy: Ctrl+C
+      if (e.ctrlKey && e.key === 'c') {
+        e.preventDefault();
+        this.copySelectedShapes();
+        return;
+      }
+
+      // Paste: Ctrl+V
+      if (e.ctrlKey && e.key === 'v') {
+        e.preventDefault();
+        this.pasteShapes();
+        return;
+      }
+
       switch (e.key.toLowerCase()) {
         case 'v':
           editorState.setTool('select');
@@ -225,6 +240,26 @@ export class Toolbar {
   private updateDeleteButton(hasSelection: boolean): void {
     if (this.deleteButton) {
       this.deleteButton.disabled = !hasSelection;
+    }
+  }
+
+  /**
+   * Copy selected shapes to clipboard
+   */
+  private copySelectedShapes(): void {
+    const selectedShapes = selectionManager.getSelection();
+    if (selectedShapes.length > 0) {
+      clipboardManager.copy(selectedShapes);
+      console.log(`Copied ${selectedShapes.length} shape(s) to clipboard`);
+    }
+  }
+
+  /**
+   * Paste shapes from clipboard
+   */
+  private pasteShapes(): void {
+    if (clipboardManager.hasContent()) {
+      eventBus.emit('shapes:paste', null);
     }
   }
 }

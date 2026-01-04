@@ -114,6 +114,7 @@ export type EventName =
   | 'shape:removed'
   | 'shape:updated'
   | 'shapes:delete'
+  | 'shapes:paste'
   | 'selection:changed'
   | 'history:changed'
   | 'canvas:render'

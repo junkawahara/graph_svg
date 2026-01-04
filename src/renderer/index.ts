@@ -9,6 +9,11 @@ import { Sidebar } from './components/Sidebar';
 import { eventBus } from './core/EventBus';
 import { historyManager } from './core/HistoryManager';
 import { FileManager } from './core/FileManager';
+import { clipboardManager } from './core/ClipboardManager';
+import { selectionManager } from './core/SelectionManager';
+import { createShapeFromData } from './shapes/ShapeFactory';
+import { PasteShapesCommand } from './commands/PasteShapesCommand';
+import { Shape } from './shapes/Shape';
 
 document.addEventListener('DOMContentLoaded', () => {
   console.log('DrawSVG initialized');
@@ -43,6 +48,40 @@ document.addEventListener('DOMContentLoaded', () => {
       // Clear history when loading a new file
       historyManager.clear();
       console.log('File loaded:', result.path, `(${shapes.length} shapes)`);
+    }
+  });
+
+  // Paste handler
+  eventBus.on('shapes:paste', () => {
+    const clipboardContent = clipboardManager.getContent();
+    if (clipboardContent.length === 0) return;
+
+    const offset = clipboardManager.getPasteOffset();
+    const newShapes: Shape[] = [];
+
+    clipboardContent.forEach(data => {
+      const shape = createShapeFromData(data, offset, offset);
+      if (shape) {
+        newShapes.push(shape);
+      }
+    });
+
+    if (newShapes.length > 0) {
+      // Execute paste command
+      const command = new PasteShapesCommand(canvas, newShapes);
+      historyManager.execute(command);
+
+      // Select the pasted shapes
+      selectionManager.clearSelection();
+      newShapes.forEach((shape, index) => {
+        if (index === 0) {
+          selectionManager.select(shape);
+        } else {
+          selectionManager.addToSelection(shape);
+        }
+      });
+
+      console.log(`Pasted ${newShapes.length} shape(s)`);
     }
   });
 
