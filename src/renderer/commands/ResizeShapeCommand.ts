@@ -2,6 +2,8 @@ import { Command } from './Command';
 import { Shape } from '../shapes/Shape';
 import { Line } from '../shapes/Line';
 import { Ellipse } from '../shapes/Ellipse';
+import { Rectangle } from '../shapes/Rectangle';
+import { Text } from '../shapes/Text';
 
 interface LineState {
   x1: number;
@@ -17,7 +19,19 @@ interface EllipseState {
   ry: number;
 }
 
-type ShapeState = LineState | EllipseState;
+interface RectangleState {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+interface TextState {
+  x: number;
+  y: number;
+}
+
+type ShapeState = LineState | EllipseState | RectangleState | TextState;
 
 /**
  * Command for resizing a shape
@@ -53,6 +67,18 @@ export class ResizeShapeCommand implements Command {
         rx: shape.rx,
         ry: shape.ry
       };
+    } else if (shape instanceof Rectangle) {
+      return {
+        x: shape.x,
+        y: shape.y,
+        width: shape.width,
+        height: shape.height
+      };
+    } else if (shape instanceof Text) {
+      return {
+        x: shape.x,
+        y: shape.y
+      };
     }
     throw new Error('Unknown shape type');
   }
@@ -76,6 +102,14 @@ export class ResizeShapeCommand implements Command {
       this.shape.cy = state.cy;
       this.shape.rx = state.rx;
       this.shape.ry = state.ry;
+    } else if (this.shape instanceof Rectangle && 'width' in state) {
+      this.shape.x = state.x;
+      this.shape.y = state.y;
+      this.shape.width = state.width;
+      this.shape.height = state.height;
+    } else if (this.shape instanceof Text && 'x' in state && !('width' in state)) {
+      this.shape.x = state.x;
+      this.shape.y = state.y;
     }
     this.shape.updateElement();
   }
