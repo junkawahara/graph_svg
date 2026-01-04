@@ -3,6 +3,7 @@ import { eventBus } from '../core/EventBus';
 import { editorState } from '../core/EditorState';
 import { Tool } from '../tools/Tool';
 import { LineTool } from '../tools/LineTool';
+import { EllipseTool } from '../tools/EllipseTool';
 import { Shape } from '../shapes/Shape';
 
 /**
@@ -43,8 +44,9 @@ export class Canvas {
   private initializeTools(): void {
     console.log('Canvas: Initializing tools');
     this.tools.set('line', new LineTool(this.svg));
-    console.log('Canvas: LineTool registered');
-    // SelectTool and EllipseTool will be added in later phases
+    this.tools.set('ellipse', new EllipseTool(this.svg));
+    console.log('Canvas: LineTool and EllipseTool registered');
+    // SelectTool will be added in later phases
 
     // Set initial tool
     console.log(`Canvas: Setting initial tool to ${editorState.currentTool}`);
