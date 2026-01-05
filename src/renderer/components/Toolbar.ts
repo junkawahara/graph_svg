@@ -244,12 +244,19 @@ export class Toolbar {
   }
 
   /**
-   * Setup Open/Save buttons
+   * Setup File buttons (New/Open/Save/Save As)
    */
   private setupFileButtons(): void {
+    const newButton = document.getElementById('btn-new') as HTMLButtonElement;
     const openButton = document.getElementById('btn-open') as HTMLButtonElement;
     const saveButton = document.getElementById('btn-save') as HTMLButtonElement;
     const saveAsButton = document.getElementById('btn-save-as') as HTMLButtonElement;
+
+    if (newButton) {
+      newButton.addEventListener('click', () => {
+        eventBus.emit('file:new', null);
+      });
+    }
 
     if (openButton) {
       openButton.addEventListener('click', () => {
@@ -342,6 +349,13 @@ export class Toolbar {
       if (e.key === 'Delete' || e.key === 'Backspace') {
         e.preventDefault();
         this.deleteSelectedShapes();
+        return;
+      }
+
+      // New: Ctrl+N
+      if (e.ctrlKey && !e.shiftKey && e.key === 'n') {
+        e.preventDefault();
+        eventBus.emit('file:new', null);
         return;
       }
 

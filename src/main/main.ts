@@ -5,6 +5,7 @@ import Store from 'electron-store';
 import { AppSettings, WindowState, DEFAULT_SETTINGS, DEFAULT_WINDOW_STATE, StoreSchema } from '../shared/settings';
 
 let mainWindow: BrowserWindow | null = null;
+let isQuitting = false;
 
 // Initialize store
 const store = new Store<StoreSchema>({
@@ -57,6 +58,11 @@ function createMenu(): void {
     {
       label: 'File',
       submenu: [
+        {
+          label: 'New',
+          accelerator: 'CmdOrCtrl+N',
+          click: () => mainWindow?.webContents.send('menu:new')
+        },
         {
           label: 'Open...',
           accelerator: 'CmdOrCtrl+O',
@@ -145,9 +151,14 @@ function createWindow(): void {
   // Open DevTools in development
   mainWindow.webContents.openDevTools();
 
-  // Save window state before closing
-  mainWindow.on('close', () => {
-    saveWindowState();
+  // Handle close event - check for unsaved changes
+  mainWindow.on('close', (e) => {
+    if (!isQuitting) {
+      e.preventDefault();
+      mainWindow?.webContents.send('app:beforeClose');
+    } else {
+      saveWindowState();
+    }
   });
 
   mainWindow.on('closed', () => {
@@ -248,6 +259,14 @@ ipcMain.handle('file:open', async (): Promise<{ path: string; content: string } 
 ipcMain.handle('window:setTitle', (_event, title: string): void => {
   if (mainWindow) {
     mainWindow.setTitle(title);
+  }
+});
+
+// Allow app to close (called after user confirms or chooses to discard)
+ipcMain.handle('app:allowClose', (): void => {
+  isQuitting = true;
+  if (mainWindow) {
+    mainWindow.close();
   }
 });
 

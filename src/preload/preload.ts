@@ -12,6 +12,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // Window operations
   setWindowTitle: (title: string) => ipcRenderer.invoke('window:setTitle', title),
+  allowClose: () => ipcRenderer.invoke('app:allowClose'),
 
   // Settings operations
   readSettings: () => ipcRenderer.invoke('settings:read'),
@@ -22,6 +23,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
     const handler = (_event: IpcRendererEvent) => callback();
     ipcRenderer.on('open-settings', handler);
     return () => ipcRenderer.removeListener('open-settings', handler);
+  },
+  onMenuNew: (callback: () => void) => {
+    const handler = (_event: IpcRendererEvent) => callback();
+    ipcRenderer.on('menu:new', handler);
+    return () => ipcRenderer.removeListener('menu:new', handler);
   },
   onMenuOpen: (callback: () => void) => {
     const handler = (_event: IpcRendererEvent) => callback();
@@ -47,6 +53,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
     const handler = (_event: IpcRendererEvent) => callback();
     ipcRenderer.on('menu:redo', handler);
     return () => ipcRenderer.removeListener('menu:redo', handler);
+  },
+  onBeforeClose: (callback: () => void) => {
+    const handler = (_event: IpcRendererEvent) => callback();
+    ipcRenderer.on('app:beforeClose', handler);
+    return () => ipcRenderer.removeListener('app:beforeClose', handler);
   }
 });
 
@@ -59,14 +70,17 @@ declare global {
       saveFileToPath: (filePath: string, content: string) => Promise<boolean>;
       openFile: () => Promise<{ path: string; content: string } | null>;
       setWindowTitle: (title: string) => Promise<void>;
+      allowClose: () => Promise<void>;
       readSettings: () => Promise<AppSettings>;
       writeSettings: (settings: Partial<AppSettings>) => Promise<AppSettings>;
       onOpenSettings: (callback: () => void) => () => void;
+      onMenuNew: (callback: () => void) => () => void;
       onMenuOpen: (callback: () => void) => () => void;
       onMenuSave: (callback: () => void) => () => void;
       onMenuSaveAs: (callback: () => void) => () => void;
       onMenuUndo: (callback: () => void) => () => void;
       onMenuRedo: (callback: () => void) => () => void;
+      onBeforeClose: (callback: () => void) => () => void;
     };
   }
 }

@@ -129,3 +129,37 @@
 .dialog-btn-ok:hover {
   background: #1976D2;
 }
+
+/* Confirm Dialog */
+.confirm-dialog {
+  min-width: 400px;
+}
+
+.confirm-message {
+  margin: 0;
+  font-size: 14px;
+  color: #333;
+  line-height: 1.5;
+}
+
+.dialog-footer-confirm {
+  gap: 8px;
+}
+
+.dialog-btn-discard {
+  background: #ff5722;
+  color: #fff;
+}
+
+.dialog-btn-discard:hover {
+  background: #e64a19;
+}
+
+.dialog-btn-save {
+  background: #4caf50;
+  color: #fff;
+}
+
+.dialog-btn-save:hover {
+  background: #388e3c;
+}

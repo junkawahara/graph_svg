@@ -186,10 +186,12 @@ export type EventName =
   | 'graph:edgeRemoved'
   | 'graph:edgeDirectionChanged'
   | 'graph:autoLayout'
+  | 'file:new'
   | 'file:save'
   | 'file:saveAs'
   | 'file:open'
-  | 'file:dirtyChanged';
+  | 'file:dirtyChanged'
+  | 'app:beforeClose';
 
 /**
  * Generate unique ID

@@ -9,6 +9,7 @@ import { Toolbar } from './components/Toolbar';
 import { Sidebar } from './components/Sidebar';
 import { StatusBar } from './components/StatusBar';
 import { SettingsDialog } from './components/SettingsDialog';
+import { ConfirmDialog, ConfirmResult } from './components/ConfirmDialog';
 import { eventBus } from './core/EventBus';
 import { historyManager } from './core/HistoryManager';
 import { FileManager } from './core/FileManager';
@@ -31,6 +32,65 @@ document.addEventListener('DOMContentLoaded', () => {
   const toolbar = new Toolbar();
   const sidebar = new Sidebar();
   const statusBar = new StatusBar();
+
+  /**
+   * Helper function to check for unsaved changes and show confirmation dialog
+   * Returns true if it's okay to proceed, false if cancelled
+   */
+  async function checkUnsavedChanges(): Promise<boolean> {
+    if (!editorState.isDirty) {
+      return true;
+    }
+
+    const dialog = new ConfirmDialog();
+    const result = await dialog.show({
+      title: '未保存の変更',
+      message: '現在の図に未保存の変更があります。保存しますか？',
+      saveButtonText: '保存',
+      discardButtonText: '保存しない',
+      cancelButtonText: 'キャンセル'
+    });
+
+    if (result === 'cancel') {
+      return false;
+    }
+
+    if (result === 'save') {
+      // Save the file first
+      const shapes = canvas.getShapes();
+      const size = canvas.getSize();
+      const svgContent = FileManager.serialize(shapes, size.width, size.height);
+
+      const currentPath = editorState.currentFilePath;
+      if (currentPath) {
+        const success = await window.electronAPI.saveFileToPath(currentPath, svgContent);
+        if (!success) {
+          return false;
+        }
+      } else {
+        const filePath = await window.electronAPI.saveFileAs(svgContent);
+        if (!filePath) {
+          return false;
+        }
+        editorState.setCurrentFilePath(filePath);
+      }
+      editorState.markClean();
+    }
+
+    return true;
+  }
+
+  // File new handler
+  eventBus.on('file:new', async () => {
+    const canProceed = await checkUnsavedChanges();
+    if (!canProceed) return;
+
+    // Clear the canvas
+    canvas.clearAll();
+    historyManager.clear();
+    editorState.resetFileState();
+    console.log('New file created');
+  });
 
   // File save handler (save to existing path or show dialog for new file)
   eventBus.on('file:save', async () => {
@@ -75,6 +135,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // File open handler
   eventBus.on('file:open', async () => {
+    const canProceed = await checkUnsavedChanges();
+    if (!canProceed) return;
+
     const result = await window.electronAPI.openFile();
     if (result) {
       const shapes = FileManager.parse(result.content);
@@ -173,6 +236,11 @@ function setupMenuListeners(canvas: Canvas): void {
     }
   });
 
+  // Menu: New
+  window.electronAPI.onMenuNew(() => {
+    eventBus.emit('file:new', null);
+  });
+
   // Menu: Open
   window.electronAPI.onMenuOpen(() => {
     eventBus.emit('file:open', null);
@@ -196,5 +264,51 @@ function setupMenuListeners(canvas: Canvas): void {
   // Menu: Redo
   window.electronAPI.onMenuRedo(() => {
     historyManager.redo();
+  });
+
+  // App: Before Close
+  window.electronAPI.onBeforeClose(async () => {
+    if (!editorState.isDirty) {
+      // No unsaved changes, allow close
+      await window.electronAPI.allowClose();
+      return;
+    }
+
+    const dialog = new ConfirmDialog();
+    const result = await dialog.show({
+      title: 'アプリケーションを終了',
+      message: '未保存の変更があります。保存しますか？',
+      saveButtonText: '保存',
+      discardButtonText: '保存しない',
+      cancelButtonText: 'キャンセル'
+    });
+
+    if (result === 'cancel') {
+      // User cancelled, don't close
+      return;
+    }
+
+    if (result === 'save') {
+      // Save the file first
+      const shapes = canvas.getShapes();
+      const size = canvas.getSize();
+      const svgContent = FileManager.serialize(shapes, size.width, size.height);
+
+      const currentPath = editorState.currentFilePath;
+      if (currentPath) {
+        const success = await window.electronAPI.saveFileToPath(currentPath, svgContent);
+        if (!success) {
+          return;
+        }
+      } else {
+        const filePath = await window.electronAPI.saveFileAs(svgContent);
+        if (!filePath) {
+          return;
+        }
+      }
+    }
+
+    // Allow close (either saved or discarded)
+    await window.electronAPI.allowClose();
   });
 }

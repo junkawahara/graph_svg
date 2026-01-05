@@ -111,6 +111,7 @@ src/
 - `canvas:zoomChanged` - ズーム/パン変更
 - `canvas:zoomReset` - ズームリセットリクエスト
 - `snap:changed` - グリッドスナップ状態変更
+- `file:new` - 新規ファイル作成リクエスト
 - `file:save` - ファイル保存リクエスト
 - `file:saveAs` - 別名で保存リクエスト
 - `file:open` - ファイル読み込みリクエスト
@@ -138,6 +139,7 @@ src/
 - `Ctrl+Y` / `Ctrl+Shift+Z` - やり直し（Redo）
 - `Ctrl+C` - コピー
 - `Ctrl+V` - ペースト
+- `Ctrl+N` - 新規作成
 - `Ctrl+S` - ファイル保存
 - `Ctrl+Shift+S` - 別名で保存
 - `Ctrl+O` - ファイルを開く
