@@ -56,6 +56,8 @@ export class Toolbar {
       { id: 'tool-text', type: 'text' },
       { id: 'tool-node', type: 'node' },
       { id: 'tool-edge', type: 'edge' },
+      { id: 'tool-delete-node', type: 'delete-node' },
+      { id: 'tool-delete-edge', type: 'delete-edge' },
       { id: 'tool-pan', type: 'pan' }
     ];
 

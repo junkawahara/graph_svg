@@ -31,6 +31,12 @@
   - SelectTool 修正: ノード移動時に接続エッジを自動更新
   - ノードリサイズ時もエッジ位置を自動更新
 
+- グラフ機能 Phase 5: 削除機能
+  - DeleteNodeTool（クリックでノードと接続エッジを削除）
+  - DeleteEdgeTool（クリックでエッジを削除）
+  - DeleteNodeCommand/DeleteEdgeCommand（Undo/Redo対応）
+  - 削除ホバー時の赤ハイライト表示
+
 ---
 
 ## [1.0.0] - 2026-01-05

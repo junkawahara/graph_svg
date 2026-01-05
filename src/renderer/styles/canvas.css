@@ -67,3 +67,17 @@
   pointer-events: none;
   opacity: 0.7;
 }
+
+/* Graph node delete hover state */
+.node-delete-hover ellipse {
+  stroke: #ff0000 !important;
+  stroke-width: 3 !important;
+  filter: drop-shadow(0 0 5px #ff0000);
+}
+
+/* Graph edge delete hover state */
+.edge-delete-hover {
+  stroke: #ff0000 !important;
+  stroke-width: 4 !important;
+  filter: drop-shadow(0 0 5px #ff0000);
+}

@@ -11,6 +11,8 @@ import { RectangleTool } from '../tools/RectangleTool';
 import { TextTool } from '../tools/TextTool';
 import { NodeTool } from '../tools/NodeTool';
 import { EdgeTool } from '../tools/EdgeTool';
+import { DeleteNodeTool } from '../tools/DeleteNodeTool';
+import { DeleteEdgeTool } from '../tools/DeleteEdgeTool';
 import { Shape } from '../shapes/Shape';
 import { Line } from '../shapes/Line';
 import { Ellipse } from '../shapes/Ellipse';
@@ -27,6 +29,8 @@ import { NodeHandles } from '../handles/NodeHandles';
 import { AddShapeCommand } from '../commands/AddShapeCommand';
 import { AddNodeCommand } from '../commands/AddNodeCommand';
 import { AddEdgeCommand } from '../commands/AddEdgeCommand';
+import { DeleteNodeCommand } from '../commands/DeleteNodeCommand';
+import { DeleteEdgeCommand } from '../commands/DeleteEdgeCommand';
 import { getGraphManager } from '../core/GraphManager';
 import { DeleteShapeCommand } from '../commands/DeleteShapeCommand';
 import { ZOrderCommand, ZOrderOperation } from '../commands/ZOrderCommand';
@@ -95,6 +99,18 @@ export class Canvas {
     // Listen for edge additions
     eventBus.on('edge:added', (edge: Edge) => {
       const command = new AddEdgeCommand(this, edge);
+      historyManager.execute(command);
+    });
+
+    // Listen for node deletion
+    eventBus.on('node:delete', (node: Node) => {
+      const command = new DeleteNodeCommand(this, node);
+      historyManager.execute(command);
+    });
+
+    // Listen for edge deletion
+    eventBus.on('edge:delete', (edge: Edge) => {
+      const command = new DeleteEdgeCommand(this, edge);
       historyManager.execute(command);
     });
 
@@ -208,6 +224,12 @@ export class Canvas {
     this.tools.set('edge', new EdgeTool({
       svg: this.svg,
       findNodeAt: (point) => this.findNodeAt(point)
+    }));
+    this.tools.set('delete-node', new DeleteNodeTool({
+      findNodeAt: (point) => this.findNodeAt(point)
+    }));
+    this.tools.set('delete-edge', new DeleteEdgeTool({
+      findEdgeAt: (point) => this.findEdgeAt(point)
     }));
     console.log('Canvas: All tools registered');
 
@@ -428,6 +450,20 @@ export class Canvas {
   }
 
   /**
+   * Find edge at point (for delete edge tool)
+   */
+  findEdgeAt(point: Point): Edge | null {
+    // Search in reverse order (top-most first)
+    for (let i = this.shapes.length - 1; i >= 0; i--) {
+      const shape = this.shapes[i];
+      if (shape instanceof Edge && shape.hitTest(point)) {
+        return shape;
+      }
+    }
+    return null;
+  }
+
+  /**
    * Get SVG element
    */
   getSvgElement(): SVGSVGElement {
@@ -556,6 +592,10 @@ export class Canvas {
         break;
       case 'edge':
         this.svg.style.cursor = 'crosshair';
+        break;
+      case 'delete-node':
+      case 'delete-edge':
+        this.svg.style.cursor = 'not-allowed';
         break;
       case 'pan':
         this.svg.style.cursor = 'grab';

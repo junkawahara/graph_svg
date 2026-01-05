@@ -176,6 +176,8 @@ export type EventName =
   | 'canvas:zoomReset'
   | 'snap:changed'
   | 'edge:added'
+  | 'node:delete'
+  | 'edge:delete'
   | 'edgeDirection:changed'
   | 'graph:nodeAdded'
   | 'graph:nodeRemoved'
