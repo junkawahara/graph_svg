@@ -134,6 +134,7 @@ function createWindow(): void {
     y: windowState.y,
     width: windowState.width,
     height: windowState.height,
+    icon: path.join(__dirname, '../../assets/icon.png'),
     webPreferences: {
       preload: path.join(__dirname, '../preload/preload.js'),
       contextIsolation: true,
