@@ -29,6 +29,9 @@ export class Toolbar {
   // Snap control
   private snapButton: HTMLButtonElement | null = null;
 
+  // Directed edge toggle
+  private directedEdgeButton: HTMLButtonElement | null = null;
+
   constructor() {
     this.setupToolButtons();
     this.setupUndoRedoButtons();
@@ -36,6 +39,7 @@ export class Toolbar {
     this.setupZOrderButtons();
     this.setupZoomControls();
     this.setupSnapButton();
+    this.setupDirectedEdgeButton();
     this.setupFileButtons();
     this.setupEventListeners();
   }
@@ -51,6 +55,7 @@ export class Toolbar {
       { id: 'tool-rectangle', type: 'rectangle' },
       { id: 'tool-text', type: 'text' },
       { id: 'tool-node', type: 'node' },
+      { id: 'tool-edge', type: 'edge' },
       { id: 'tool-pan', type: 'pan' }
     ];
 
@@ -192,6 +197,34 @@ export class Toolbar {
   }
 
   /**
+   * Setup directed edge toggle button
+   */
+  private setupDirectedEdgeButton(): void {
+    this.directedEdgeButton = document.getElementById('btn-directed') as HTMLButtonElement;
+
+    if (this.directedEdgeButton) {
+      this.directedEdgeButton.addEventListener('click', () => {
+        editorState.toggleEdgeDirection();
+      });
+    }
+  }
+
+  /**
+   * Update directed edge button visual state
+   */
+  private updateDirectedEdgeButton(direction: string): void {
+    if (this.directedEdgeButton) {
+      if (direction === 'forward') {
+        this.directedEdgeButton.classList.add('active');
+        this.directedEdgeButton.innerHTML = '<span class="icon">→</span>';
+      } else {
+        this.directedEdgeButton.classList.remove('active');
+        this.directedEdgeButton.innerHTML = '<span class="icon">―</span>';
+      }
+    }
+  }
+
+  /**
    * Setup Open/Save buttons
    */
   private setupFileButtons(): void {
@@ -251,6 +284,11 @@ export class Toolbar {
     // Update snap button when snap state changes
     eventBus.on('snap:changed', (enabled: boolean) => {
       this.updateSnapButton(enabled);
+    });
+
+    // Update directed edge button when direction changes
+    eventBus.on('edgeDirection:changed', (direction: string) => {
+      this.updateDirectedEdgeButton(direction);
     });
 
     // Keyboard shortcuts
@@ -363,6 +401,9 @@ export class Toolbar {
           break;
         case 'n':
           editorState.setTool('node');
+          break;
+        case 'w':
+          editorState.setTool('edge');
           break;
         case 'h':
           editorState.setTool('pan');

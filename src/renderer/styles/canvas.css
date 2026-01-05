@@ -48,3 +48,22 @@
   fill: rgba(156, 99, 14, 0.1);
   stroke: #9c630e;
 }
+
+/* Graph node hover state */
+.node-hover ellipse {
+  stroke-width: 3 !important;
+  filter: drop-shadow(0 0 5px #0e639c);
+}
+
+/* Graph node selected as source for edge */
+.node-selected-source ellipse {
+  stroke: #00aa00 !important;
+  stroke-width: 3 !important;
+  filter: drop-shadow(0 0 5px #00aa00);
+}
+
+/* Edge preview line */
+.edge-preview {
+  pointer-events: none;
+  opacity: 0.7;
+}

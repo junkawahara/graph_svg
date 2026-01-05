@@ -99,7 +99,9 @@ export class Node implements Shape {
     this.element = group;
 
     // Register with GraphManager
-    getGraphManager().registerNode(this.id);
+    const gm = getGraphManager();
+    gm.registerNode(this.id);
+    gm.setNodeShape(this.id, this);
 
     return group;
   }

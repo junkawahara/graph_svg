@@ -1,4 +1,4 @@
-import { ToolType, ShapeStyle, DEFAULT_STYLE } from '../../shared/types';
+import { ToolType, ShapeStyle, EdgeDirection, DEFAULT_STYLE } from '../../shared/types';
 import { eventBus } from './EventBus';
 
 /**
@@ -9,6 +9,7 @@ export class EditorState {
   private _currentStyle: ShapeStyle = { ...DEFAULT_STYLE };
   private _snapEnabled: boolean = false;
   private _gridSize: number = 10;
+  private _edgeDirection: EdgeDirection = 'none';
 
   /**
    * Get current tool
@@ -101,6 +102,31 @@ export class EditorState {
       x: Math.round(point.x / this._gridSize) * this._gridSize,
       y: Math.round(point.y / this._gridSize) * this._gridSize
     };
+  }
+
+  /**
+   * Get current edge direction for new edges
+   */
+  get edgeDirection(): EdgeDirection {
+    return this._edgeDirection;
+  }
+
+  /**
+   * Set edge direction for new edges
+   */
+  setEdgeDirection(direction: EdgeDirection): void {
+    if (this._edgeDirection !== direction) {
+      this._edgeDirection = direction;
+      eventBus.emit('edgeDirection:changed', direction);
+    }
+  }
+
+  /**
+   * Toggle edge direction (none -> forward -> none)
+   */
+  toggleEdgeDirection(): void {
+    this._edgeDirection = this._edgeDirection === 'none' ? 'forward' : 'none';
+    eventBus.emit('edgeDirection:changed', this._edgeDirection);
   }
 }
 

@@ -1,5 +1,6 @@
 import { Point } from '../../shared/types';
 import { Shape } from '../shapes/Shape';
+import { Node } from '../shapes/Node';
 
 /**
  * GraphManager - Manages relationships between graph nodes and edges
@@ -17,14 +18,48 @@ export class GraphManager {
   // Maps edgeId -> { sourceId, targetId }
   private edgeConnections: Map<string, { sourceId: string; targetId: string }> = new Map();
 
+  // Maps nodeId -> Node shape reference
+  private nodeShapes: Map<string, Node> = new Map();
+
   // Callback to get all shapes from canvas
   private getShapes: (() => Shape[]) | null = null;
+
+  // Callback to update edge shapes
+  private updateEdgeCallback: ((edgeId: string) => void) | null = null;
 
   /**
    * Initialize with shape getter callback
    */
   initialize(getShapes: () => Shape[]): void {
     this.getShapes = getShapes;
+  }
+
+  /**
+   * Set callback for updating edge shapes
+   */
+  setUpdateEdgeCallback(callback: (edgeId: string) => void): void {
+    this.updateEdgeCallback = callback;
+  }
+
+  /**
+   * Register a node shape reference
+   */
+  setNodeShape(nodeId: string, node: Node): void {
+    this.nodeShapes.set(nodeId, node);
+  }
+
+  /**
+   * Get a node shape by ID
+   */
+  getNodeShape(nodeId: string): Node | null {
+    return this.nodeShapes.get(nodeId) || null;
+  }
+
+  /**
+   * Remove a node shape reference
+   */
+  removeNodeShape(nodeId: string): void {
+    this.nodeShapes.delete(nodeId);
   }
 
   /**
@@ -56,6 +91,9 @@ export class GraphManager {
     this.nodeEdges.forEach((edges, _nodeId) => {
       edgeIds.forEach(edgeId => edges.delete(edgeId));
     });
+
+    // Remove node shape reference
+    this.nodeShapes.delete(nodeId);
 
     return edgeIds;
   }
@@ -136,6 +174,37 @@ export class GraphManager {
     });
 
     return result;
+  }
+
+  /**
+   * Calculate the offset for a new edge being created between two nodes
+   * This is used when creating a new edge to determine its curve offset
+   */
+  calculateParallelOffset(sourceId: string, targetId: string): number {
+    const existingEdges = this.getEdgeIdsBetween(sourceId, targetId);
+    const count = existingEdges.length;
+
+    if (count === 0) return 0;
+
+    // Calculate offset: +25, -25, +50, -50, ...
+    const step = 25;
+    const multiplier = Math.ceil((count + 1) / 2);
+    const sign = count % 2 === 0 ? 1 : -1;
+
+    return sign * multiplier * step;
+  }
+
+  /**
+   * Update all edges connected to a node (called when node moves)
+   */
+  updateEdgesForNode(nodeId: string): void {
+    const edgeIds = this.getEdgeIdsForNode(nodeId);
+
+    edgeIds.forEach(edgeId => {
+      if (this.updateEdgeCallback) {
+        this.updateEdgeCallback(edgeId);
+      }
+    });
   }
 
   /**
@@ -238,6 +307,7 @@ export class GraphManager {
   clear(): void {
     this.nodeEdges.clear();
     this.edgeConnections.clear();
+    this.nodeShapes.clear();
   }
 
   /**

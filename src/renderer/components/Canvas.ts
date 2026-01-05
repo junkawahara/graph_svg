@@ -10,12 +10,14 @@ import { EllipseTool } from '../tools/EllipseTool';
 import { RectangleTool } from '../tools/RectangleTool';
 import { TextTool } from '../tools/TextTool';
 import { NodeTool } from '../tools/NodeTool';
+import { EdgeTool } from '../tools/EdgeTool';
 import { Shape } from '../shapes/Shape';
 import { Line } from '../shapes/Line';
 import { Ellipse } from '../shapes/Ellipse';
 import { Rectangle } from '../shapes/Rectangle';
 import { Text } from '../shapes/Text';
 import { Node } from '../shapes/Node';
+import { Edge } from '../shapes/Edge';
 import { Handle, HandleSet } from '../handles/Handle';
 import { LineHandles } from '../handles/LineHandles';
 import { EllipseHandles } from '../handles/EllipseHandles';
@@ -24,6 +26,8 @@ import { TextHandles } from '../handles/TextHandles';
 import { NodeHandles } from '../handles/NodeHandles';
 import { AddShapeCommand } from '../commands/AddShapeCommand';
 import { AddNodeCommand } from '../commands/AddNodeCommand';
+import { AddEdgeCommand } from '../commands/AddEdgeCommand';
+import { getGraphManager } from '../core/GraphManager';
 import { DeleteShapeCommand } from '../commands/DeleteShapeCommand';
 import { ZOrderCommand, ZOrderOperation } from '../commands/ZOrderCommand';
 import { initMarkerManager } from '../core/MarkerManager';
@@ -86,6 +90,12 @@ export class Canvas {
         const command = new AddShapeCommand(this, shape);
         historyManager.execute(command);
       }
+    });
+
+    // Listen for edge additions
+    eventBus.on('edge:added', (edge: Edge) => {
+      const command = new AddEdgeCommand(this, edge);
+      historyManager.execute(command);
     });
 
     // Listen for selection changes
@@ -195,7 +205,19 @@ export class Canvas {
     this.tools.set('rectangle', new RectangleTool(this.svg));
     this.tools.set('text', new TextTool());
     this.tools.set('node', new NodeTool());
+    this.tools.set('edge', new EdgeTool({
+      svg: this.svg,
+      findNodeAt: (point) => this.findNodeAt(point)
+    }));
     console.log('Canvas: All tools registered');
+
+    // Set up GraphManager callback for updating edges
+    getGraphManager().setUpdateEdgeCallback((edgeId) => {
+      const edge = this.shapes.find(s => s.id === edgeId) as Edge | undefined;
+      if (edge) {
+        edge.updateElement();
+      }
+    });
 
     // Set initial tool
     console.log(`Canvas: Setting initial tool to ${editorState.currentTool}`);
@@ -392,6 +414,20 @@ export class Canvas {
   }
 
   /**
+   * Find node at point (for edge tool)
+   */
+  findNodeAt(point: Point): Node | null {
+    // Search in reverse order (top-most first)
+    for (let i = this.shapes.length - 1; i >= 0; i--) {
+      const shape = this.shapes[i];
+      if (shape instanceof Node && shape.hitTest(point)) {
+        return shape;
+      }
+    }
+    return null;
+  }
+
+  /**
    * Get SVG element
    */
   getSvgElement(): SVGSVGElement {
@@ -516,6 +552,9 @@ export class Canvas {
         this.svg.style.cursor = 'text';
         break;
       case 'node':
+        this.svg.style.cursor = 'crosshair';
+        break;
+      case 'edge':
         this.svg.style.cursor = 'crosshair';
         break;
       case 'pan':
