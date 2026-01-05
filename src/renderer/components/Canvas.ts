@@ -435,6 +435,9 @@ export class Canvas {
       case 'text':
         this.svg.style.cursor = 'text';
         break;
+      case 'pan':
+        this.svg.style.cursor = 'grab';
+        break;
       default:
         this.svg.style.cursor = 'default';
     }
@@ -445,8 +448,8 @@ export class Canvas {
    */
   private setupEventListeners(): void {
     this.svg.addEventListener('mousedown', (e) => {
-      // Handle panning with space+drag
-      if (this.isSpacePressed) {
+      // Handle panning with space+drag or pan tool
+      if (this.isSpacePressed || editorState.currentTool === 'pan') {
         e.preventDefault();
         this.isPanning = true;
         this.lastPanPoint = { x: e.clientX, y: e.clientY };
@@ -455,7 +458,6 @@ export class Canvas {
       }
 
       const point = this.getPointFromEvent(e);
-      console.log(`Canvas: mousedown at (${point.x}, ${point.y}), currentTool:`, this.currentTool);
       this.currentTool?.onMouseDown(point, e);
     });
 
@@ -479,7 +481,7 @@ export class Canvas {
       if (this.isPanning) {
         this.isPanning = false;
         this.lastPanPoint = null;
-        if (this.isSpacePressed) {
+        if (this.isSpacePressed || editorState.currentTool === 'pan') {
           this.svg.style.cursor = 'grab';
         }
         return;

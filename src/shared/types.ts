@@ -1,7 +1,7 @@
 /**
  * Tool types available in the editor
  */
-export type ToolType = 'select' | 'line' | 'ellipse' | 'rectangle' | 'text';
+export type ToolType = 'select' | 'line' | 'ellipse' | 'rectangle' | 'text' | 'pan';
 
 /**
  * Shape types that can be created
