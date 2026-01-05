@@ -249,6 +249,7 @@ export class Toolbar {
   private setupFileButtons(): void {
     const openButton = document.getElementById('btn-open') as HTMLButtonElement;
     const saveButton = document.getElementById('btn-save') as HTMLButtonElement;
+    const saveAsButton = document.getElementById('btn-save-as') as HTMLButtonElement;
 
     if (openButton) {
       openButton.addEventListener('click', () => {
@@ -259,6 +260,12 @@ export class Toolbar {
     if (saveButton) {
       saveButton.addEventListener('click', () => {
         eventBus.emit('file:save', null);
+      });
+    }
+
+    if (saveAsButton) {
+      saveAsButton.addEventListener('click', () => {
+        eventBus.emit('file:saveAs', null);
       });
     }
   }
@@ -338,8 +345,15 @@ export class Toolbar {
         return;
       }
 
+      // Save As: Ctrl+Shift+S
+      if (e.ctrlKey && e.shiftKey && e.key === 'S') {
+        e.preventDefault();
+        eventBus.emit('file:saveAs', null);
+        return;
+      }
+
       // Save: Ctrl+S
-      if (e.ctrlKey && e.key === 's') {
+      if (e.ctrlKey && !e.shiftKey && e.key === 's') {
         e.preventDefault();
         eventBus.emit('file:save', null);
         return;

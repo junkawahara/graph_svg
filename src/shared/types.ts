@@ -186,7 +186,9 @@ export type EventName =
   | 'graph:edgeDirectionChanged'
   | 'graph:autoLayout'
   | 'file:save'
-  | 'file:open';
+  | 'file:saveAs'
+  | 'file:open'
+  | 'file:dirtyChanged';
 
 /**
  * Generate unique ID

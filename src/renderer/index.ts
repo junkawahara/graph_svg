@@ -30,15 +30,44 @@ document.addEventListener('DOMContentLoaded', () => {
   const toolbar = new Toolbar();
   const sidebar = new Sidebar();
 
-  // File save handler
+  // File save handler (save to existing path or show dialog for new file)
   eventBus.on('file:save', async () => {
     const shapes = canvas.getShapes();
     const size = canvas.getSize();
     const svgContent = FileManager.serialize(shapes, size.width, size.height);
 
-    const filePath = await window.electronAPI.saveFile(svgContent);
+    const currentPath = editorState.currentFilePath;
+
+    if (currentPath) {
+      // Save to existing path
+      const success = await window.electronAPI.saveFileToPath(currentPath, svgContent);
+      if (success) {
+        editorState.markClean();
+        console.log('File saved:', currentPath);
+      }
+    } else {
+      // No existing path, show save dialog
+      const filePath = await window.electronAPI.saveFileAs(svgContent);
+      if (filePath) {
+        editorState.setCurrentFilePath(filePath);
+        editorState.markClean();
+        console.log('File saved:', filePath);
+      }
+    }
+  });
+
+  // File save as handler (always show dialog)
+  eventBus.on('file:saveAs', async () => {
+    const shapes = canvas.getShapes();
+    const size = canvas.getSize();
+    const svgContent = FileManager.serialize(shapes, size.width, size.height);
+
+    const currentPath = editorState.currentFilePath;
+    const filePath = await window.electronAPI.saveFileAs(svgContent, currentPath || undefined);
     if (filePath) {
-      console.log('File saved:', filePath);
+      editorState.setCurrentFilePath(filePath);
+      editorState.markClean();
+      console.log('File saved as:', filePath);
     }
   });
 
@@ -50,7 +79,18 @@ document.addEventListener('DOMContentLoaded', () => {
       canvas.loadShapes(shapes);
       // Clear history when loading a new file
       historyManager.clear();
+      // Set file path and mark as clean
+      editorState.setCurrentFilePath(result.path);
+      editorState.markClean();
       console.log('File loaded:', result.path, `(${shapes.length} shapes)`);
+    }
+  });
+
+  // Mark as dirty when history changes (undo/redo stack modified)
+  eventBus.on('history:changed', () => {
+    // If there's any history (can undo), mark as dirty
+    if (historyManager.canUndo()) {
+      editorState.markDirty();
     }
   });
 
@@ -92,6 +132,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Initialize settings
   initializeSettings();
+
+  // Initialize window title
+  editorState.resetFileState();
 
   // Setup menu event listeners
   setupMenuListeners(canvas);
@@ -136,6 +179,11 @@ function setupMenuListeners(canvas: Canvas): void {
   // Menu: Save
   window.electronAPI.onMenuSave(() => {
     eventBus.emit('file:save', null);
+  });
+
+  // Menu: Save As
+  window.electronAPI.onMenuSaveAs(() => {
+    eventBus.emit('file:saveAs', null);
   });
 
   // Menu: Undo

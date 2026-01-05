@@ -112,7 +112,9 @@ src/
 - `canvas:zoomReset` - ズームリセットリクエスト
 - `snap:changed` - グリッドスナップ状態変更
 - `file:save` - ファイル保存リクエスト
+- `file:saveAs` - 別名で保存リクエスト
 - `file:open` - ファイル読み込みリクエスト
+- `file:dirtyChanged` - 未保存状態変更
 - `node:added` - ノード追加
 - `edge:added` - エッジ追加
 - `node:delete` - ノード削除リクエスト
@@ -137,6 +139,7 @@ src/
 - `Ctrl+C` - コピー
 - `Ctrl+V` - ペースト
 - `Ctrl+S` - ファイル保存
+- `Ctrl+Shift+S` - 別名で保存
 - `Ctrl+O` - ファイルを開く
 - `Ctrl+]` - 1つ前面へ
 - `Ctrl+[` - 1つ背面へ

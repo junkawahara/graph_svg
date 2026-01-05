@@ -10,6 +10,8 @@ export class EditorState {
   private _snapEnabled: boolean = false;
   private _gridSize: number = 10;
   private _edgeDirection: EdgeDirection = 'none';
+  private _currentFilePath: string | null = null;
+  private _isDirty: boolean = false;
 
   /**
    * Get current tool
@@ -127,6 +129,81 @@ export class EditorState {
   toggleEdgeDirection(): void {
     this._edgeDirection = this._edgeDirection === 'none' ? 'forward' : 'none';
     eventBus.emit('edgeDirection:changed', this._edgeDirection);
+  }
+
+  /**
+   * Get current file path
+   */
+  get currentFilePath(): string | null {
+    return this._currentFilePath;
+  }
+
+  /**
+   * Set current file path
+   */
+  setCurrentFilePath(path: string | null): void {
+    this._currentFilePath = path;
+    this.updateWindowTitle();
+  }
+
+  /**
+   * Get dirty state
+   */
+  get isDirty(): boolean {
+    return this._isDirty;
+  }
+
+  /**
+   * Set dirty state
+   */
+  setDirty(dirty: boolean): void {
+    if (this._isDirty !== dirty) {
+      this._isDirty = dirty;
+      this.updateWindowTitle();
+      eventBus.emit('file:dirtyChanged', dirty);
+    }
+  }
+
+  /**
+   * Mark as dirty (called when content changes)
+   */
+  markDirty(): void {
+    this.setDirty(true);
+  }
+
+  /**
+   * Mark as clean (called after save)
+   */
+  markClean(): void {
+    this.setDirty(false);
+  }
+
+  /**
+   * Update window title based on current state
+   */
+  private updateWindowTitle(): void {
+    const appName = 'DrawSVG';
+    let title = appName;
+
+    if (this._currentFilePath) {
+      const fileName = this._currentFilePath.split('/').pop() || this._currentFilePath.split('\\').pop() || this._currentFilePath;
+      title = `${this._isDirty ? '* ' : ''}${fileName} - ${appName}`;
+    } else if (this._isDirty) {
+      title = `* Untitled - ${appName}`;
+    } else {
+      title = `Untitled - ${appName}`;
+    }
+
+    window.electronAPI.setWindowTitle(title);
+  }
+
+  /**
+   * Reset file state (for new document)
+   */
+  resetFileState(): void {
+    this._currentFilePath = null;
+    this._isDirty = false;
+    this.updateWindowTitle();
   }
 }
 

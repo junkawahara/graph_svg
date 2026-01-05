@@ -63,9 +63,14 @@ function createMenu(): void {
           click: () => mainWindow?.webContents.send('menu:open')
         },
         {
-          label: 'Save...',
+          label: 'Save',
           accelerator: 'CmdOrCtrl+S',
           click: () => mainWindow?.webContents.send('menu:save')
+        },
+        {
+          label: 'Save As...',
+          accelerator: 'CmdOrCtrl+Shift+S',
+          click: () => mainWindow?.webContents.send('menu:saveAs')
         },
         { type: 'separator' },
         { role: 'quit' }
@@ -151,6 +156,43 @@ function createWindow(): void {
 }
 
 // IPC Handlers for file operations
+// Save to existing file path
+ipcMain.handle('file:saveToPath', async (_event, filePath: string, content: string): Promise<boolean> => {
+  try {
+    fs.writeFileSync(filePath, content, 'utf-8');
+    return true;
+  } catch (error) {
+    console.error('Failed to save file:', error);
+    return false;
+  }
+});
+
+// Save As - always show dialog
+ipcMain.handle('file:saveAs', async (_event, content: string, defaultPath?: string): Promise<string | null> => {
+  if (!mainWindow) return null;
+
+  const result = await dialog.showSaveDialog(mainWindow, {
+    title: 'Save SVG File',
+    defaultPath: defaultPath || 'drawing.svg',
+    filters: [
+      { name: 'SVG Files', extensions: ['svg'] },
+      { name: 'All Files', extensions: ['*'] }
+    ]
+  });
+
+  if (result.canceled || !result.filePath) {
+    return null;
+  }
+
+  try {
+    fs.writeFileSync(result.filePath, content, 'utf-8');
+    return result.filePath;
+  } catch (error) {
+    console.error('Failed to save file:', error);
+    return null;
+  }
+});
+
 ipcMain.handle('file:save', async (_event, content: string): Promise<string | null> => {
   if (!mainWindow) return null;
 
@@ -199,6 +241,13 @@ ipcMain.handle('file:open', async (): Promise<{ path: string; content: string } 
   } catch (error) {
     console.error('Failed to open file:', error);
     return null;
+  }
+});
+
+// Set window title
+ipcMain.handle('window:setTitle', (_event, title: string): void => {
+  if (mainWindow) {
+    mainWindow.setTitle(title);
   }
 });
 
