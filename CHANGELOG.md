@@ -17,6 +17,11 @@
   - デフォルトサイズ: 800 x 600
   - 最小サイズ: 100 x 100
 
+- グリッド間隔設定機能
+  - 設定画面でグリッド間隔を変更可能（5〜100px）
+  - デフォルト: 10px
+  - 設定変更後すぐにキャンバスに反映
+
 - グラフ機能 Phase 1: 型定義とGraphManager基盤
   - ToolType に node, edge, delete-node, delete-edge を追加
   - ShapeType に node, edge を追加

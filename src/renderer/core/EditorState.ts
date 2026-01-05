@@ -71,6 +71,17 @@ export class EditorState {
   }
 
   /**
+   * Set grid size
+   */
+  setGridSize(size: number): void {
+    const newSize = Math.max(5, Math.min(100, Math.round(size)));
+    if (this._gridSize !== newSize) {
+      this._gridSize = newSize;
+      eventBus.emit('grid:sizeChanged', newSize);
+    }
+  }
+
+  /**
    * Toggle snap enabled state
    */
   toggleSnap(): void {

@@ -216,6 +216,9 @@ async function initializeSettings(): Promise<void> {
     if (settings.snapOnStartup) {
       editorState.setSnapEnabled(true);
     }
+    if (settings.gridSize) {
+      editorState.setGridSize(settings.gridSize);
+    }
     console.log('Settings loaded:', settings);
   } catch (error) {
     console.error('Failed to load settings:', error);
@@ -234,6 +237,8 @@ function setupMenuListeners(canvas: Canvas): void {
 
     if (result) {
       await window.electronAPI.writeSettings(result);
+      // Apply grid size immediately
+      editorState.setGridSize(result.gridSize);
       console.log('Settings saved:', result);
     }
   });

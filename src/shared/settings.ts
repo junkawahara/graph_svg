@@ -3,13 +3,15 @@
  */
 export interface AppSettings {
   snapOnStartup: boolean;
+  gridSize: number;
 }
 
 /**
  * Default application settings
  */
 export const DEFAULT_SETTINGS: AppSettings = {
-  snapOnStartup: false
+  snapOnStartup: false,
+  gridSize: 10
 };
 
 /**

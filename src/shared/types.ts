@@ -193,6 +193,7 @@ export type EventName =
   | 'canvas:mouseMove'
   | 'canvas:sizeChanged'
   | 'snap:changed'
+  | 'grid:sizeChanged'
   | 'edge:added'
   | 'node:delete'
   | 'edge:delete'

@@ -157,6 +157,11 @@ export class Canvas {
       this.updateGridVisibility(enabled);
     });
 
+    // Listen for grid size changes
+    eventBus.on('grid:sizeChanged', (size: number) => {
+      this.updateGridPattern(size);
+    });
+
     // Listen for auto layout requests
     eventBus.on('graph:autoLayout', () => {
       this.applyAutoLayout();
@@ -193,7 +198,7 @@ export class Canvas {
     const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     path.setAttribute('d', pathD);
     path.setAttribute('fill', 'none');
-    path.setAttribute('stroke', '#cccccc');
+    path.setAttribute('stroke', '#aaaaaa');
     path.setAttribute('stroke-width', '0.5');
     pattern.appendChild(path);
 
@@ -226,6 +231,24 @@ export class Canvas {
   }
 
   /**
+   * Update grid pattern with new size
+   */
+  private updateGridPattern(gridSize: number): void {
+    const pattern = this.svg.querySelector('#grid-pattern');
+    if (pattern) {
+      pattern.setAttribute('width', String(gridSize));
+      pattern.setAttribute('height', String(gridSize));
+
+      // Update the path inside the pattern
+      const path = pattern.querySelector('path');
+      if (path) {
+        const pathD = `M ${gridSize} 0 L 0 0 0 ${gridSize}`;
+        path.setAttribute('d', pathD);
+      }
+    }
+  }
+
+  /**
    * Initialize canvas boundary visualization
    */
   private initializeCanvasBoundary(): void {
@@ -241,6 +264,7 @@ export class Canvas {
     this.canvasBoundaryRect.setAttribute('fill', '#ffffff');
     this.canvasBoundaryRect.setAttribute('stroke', '#cccccc');
     this.canvasBoundaryRect.setAttribute('stroke-width', '1');
+    this.canvasBoundaryRect.style.pointerEvents = 'none';
 
     // Create resize handle (blue circle at bottom-right corner)
     this.canvasResizeHandle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
@@ -253,9 +277,12 @@ export class Canvas {
     this.canvasResizeHandle.setAttribute('stroke-width', '2');
     this.canvasResizeHandle.style.cursor = 'nwse-resize';
 
-    // Insert after grid layer
-    const insertPoint = this.gridGroup?.nextSibling || this.svg.firstChild;
-    this.svg.insertBefore(this.canvasBoundaryRect, insertPoint);
+    // Insert canvas boundary BEFORE the grid layer (so grid appears on top)
+    if (this.gridGroup) {
+      this.svg.insertBefore(this.canvasBoundaryRect, this.gridGroup);
+    } else {
+      this.svg.appendChild(this.canvasBoundaryRect);
+    }
     // Handle goes on top (will be re-added after shapes)
     this.svg.appendChild(this.canvasResizeHandle);
   }

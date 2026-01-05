@@ -38,6 +38,10 @@ export class SettingsDialog {
           <input type="checkbox" id="snap-on-startup" ${currentSettings.snapOnStartup ? 'checked' : ''}>
           <label for="snap-on-startup">起動時にスナップをONにする</label>
         </div>
+        <div class="dialog-field">
+          <label for="grid-size">グリッド間隔 (px)</label>
+          <input type="number" id="grid-size" value="${currentSettings.gridSize}" min="5" max="100" step="5">
+        </div>
       </div>
       <div class="dialog-footer">
         <button class="dialog-btn dialog-btn-cancel">キャンセル</button>
@@ -50,6 +54,7 @@ export class SettingsDialog {
 
     // Setup event handlers
     const snapOnStartupCheckbox = this.dialog.querySelector('#snap-on-startup') as HTMLInputElement;
+    const gridSizeInput = this.dialog.querySelector('#grid-size') as HTMLInputElement;
     const okBtn = this.dialog.querySelector('.dialog-btn-ok') as HTMLButtonElement;
     const cancelBtn = this.dialog.querySelector('.dialog-btn-cancel') as HTMLButtonElement;
 
@@ -63,13 +68,13 @@ export class SettingsDialog {
         this.close(null);
       } else if (e.key === 'Enter') {
         e.preventDefault();
-        this.submitDialog(snapOnStartupCheckbox);
+        this.submitDialog(snapOnStartupCheckbox, gridSizeInput);
       }
     });
 
     // Button handlers
     okBtn.addEventListener('click', () => {
-      this.submitDialog(snapOnStartupCheckbox);
+      this.submitDialog(snapOnStartupCheckbox, gridSizeInput);
     });
 
     cancelBtn.addEventListener('click', () => {
@@ -77,9 +82,11 @@ export class SettingsDialog {
     });
   }
 
-  private submitDialog(snapOnStartupCheckbox: HTMLInputElement): void {
+  private submitDialog(snapOnStartupCheckbox: HTMLInputElement, gridSizeInput: HTMLInputElement): void {
+    const gridSize = Math.max(5, Math.min(100, parseInt(gridSizeInput.value, 10) || 10));
     const result: AppSettings = {
-      snapOnStartup: snapOnStartupCheckbox.checked
+      snapOnStartup: snapOnStartupCheckbox.checked,
+      gridSize
     };
 
     this.close(result);
