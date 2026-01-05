@@ -57,7 +57,9 @@ src/
 │   │   ├── DeleteNodeCommand.ts   # ノード削除（接続エッジも削除）
 │   │   ├── DeleteEdgeCommand.ts   # エッジ削除
 │   │   ├── NodeLabelChangeCommand.ts  # ノードラベル変更
-│   │   └── EdgeDirectionChangeCommand.ts # エッジ方向変更
+│   │   ├── EdgeDirectionChangeCommand.ts # エッジ方向変更
+│   │   ├── GroupShapesCommand.ts    # グループ化
+│   │   └── UngroupShapesCommand.ts  # グループ解除
 │   ├── shapes/              # 図形クラス
 │   │   ├── Shape.ts         # インターフェース
 │   │   ├── Line.ts          # 直線
@@ -68,6 +70,7 @@ src/
 │   │   ├── Text.ts          # テキスト
 │   │   ├── Node.ts          # グラフノード（楕円＋ラベル）
 │   │   ├── Edge.ts          # グラフエッジ（直線/曲線/自己ループ）
+│   │   ├── Group.ts         # グループ（複数図形をまとめる）
 │   │   └── ShapeFactory.ts  # 図形生成ファクトリ
 │   ├── tools/               # ツール
 │   │   ├── Tool.ts          # インターフェース
@@ -89,7 +92,8 @@ src/
 │   │   ├── RectangleHandles.ts # 長方形用（4隅）
 │   │   ├── TextHandles.ts   # テキスト用（中心点）
 │   │   ├── NodeHandles.ts   # ノード用（4隅）
-│   │   └── PolygonHandles.ts # 多角形/ポリライン用（各頂点）
+│   │   ├── PolygonHandles.ts # 多角形/ポリライン用（各頂点）
+│   │   └── GroupHandles.ts  # グループ用（4隅＋破線境界）
 │   └── styles/              # CSS（main, toolbar, sidebar, canvas, dialog）
 └── shared/
     └── types.ts             # 共有型定義
@@ -111,6 +115,8 @@ src/
 - `shapes:delete` - 図形削除リクエスト
 - `shapes:paste` - 図形ペーストリクエスト
 - `shapes:zorder` - 重ね順変更リクエスト
+- `shapes:group` - グループ化リクエスト
+- `shapes:ungroup` - グループ解除リクエスト
 - `selection:changed` - 選択変更
 - `history:changed` - Undo/Redo状態変更
 - `canvas:zoomChanged` - ズーム/パン変更
@@ -276,6 +282,46 @@ src/
       data-source-id="node-123" data-target-id="node-789"
       data-direction="forward" data-curve-offset="0"
       d="M 130 100 L 270 100" fill="none" stroke="..."/>
+```
+
+## グループ機能
+
+複数の図形をグループ化して、1つの単位として扱う機能。
+
+### グループ化
+
+- 2つ以上の図形を選択
+- `Ctrl+G` でグループ化
+- グループは1つの図形として扱われる
+
+### グループ解除
+
+- グループを選択
+- `Ctrl+Shift+G` でグループ解除
+- 元の図形が個別に選択された状態になる
+
+### グループの操作
+
+- **移動**: グループをドラッグで移動（全子要素が連動）
+- **リサイズ**: 4隅のハンドルでスケーリング（全子要素が比例変形）
+- **選択時表示**: 破線の境界ボックスでグループ範囲を表示
+
+### ネストしたグループ
+
+- グループ内にグループを含めることが可能
+- 再帰的に移動・リサイズが適用される
+
+### SVG保存形式
+
+```xml
+<g id="group-123" data-group-type="group">
+  <rect id="shape-1" x="10" y="10" width="50" height="30" .../>
+  <ellipse id="shape-2" cx="100" cy="50" rx="20" ry="20" .../>
+  <!-- ネストしたグループ -->
+  <g id="group-456" data-group-type="group">
+    <line id="shape-3" x1="0" y1="0" x2="50" y2="50" .../>
+  </g>
+</g>
 ```
 
 ## 開発ワークフロー
