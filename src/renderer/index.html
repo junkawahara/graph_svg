@@ -14,6 +14,9 @@
         <button id="tool-select" class="tool-btn active" title="Select (V)">
           <span class="icon">&#9654;</span>
         </button>
+        <button id="tool-pan" class="tool-btn" title="Pan (H)">
+          <span class="icon">&#9995;</span>
+        </button>
         <button id="tool-line" class="tool-btn" title="Line (L)">
           <span class="icon">&#9135;</span>
         </button>
@@ -46,9 +49,6 @@
         </button>
         <button id="tool-delete-edge" class="tool-btn" title="Delete Edge">
           <span class="icon">&#8594;&#10005;</span>
-        </button>
-        <button id="tool-pan" class="tool-btn" title="Pan (H)">
-          <span class="icon">&#9995;</span>
         </button>
       </div>
       <div class="tool-group">
@@ -113,21 +113,6 @@
       <!-- Sidebar -->
       <div id="sidebar">
         <h3>Properties</h3>
-
-        <!-- Canvas Size -->
-        <div id="canvas-size-section" class="property-section">
-          <label class="section-label">Canvas Size</label>
-          <div class="property-row">
-            <div class="property-group small">
-              <label>W</label>
-              <input type="number" id="prop-canvas-width" step="10" min="100">
-            </div>
-            <div class="property-group small">
-              <label>H</label>
-              <input type="number" id="prop-canvas-height" step="10" min="100">
-            </div>
-          </div>
-        </div>
 
         <!-- Default Node Size (shown when node tool is active) -->
         <div id="default-node-size-section" class="property-section" style="display: none;">
@@ -399,6 +384,21 @@
               <option value="circle">Circle</option>
               <option value="diamond">Diamond</option>
             </select>
+          </div>
+        </div>
+
+        <!-- Canvas Size -->
+        <div id="canvas-size-section" class="property-section">
+          <label class="section-label">Canvas Size</label>
+          <div class="property-row">
+            <div class="property-group small">
+              <label>W</label>
+              <input type="number" id="prop-canvas-width" step="10" min="100">
+            </div>
+            <div class="property-group small">
+              <label>H</label>
+              <input type="number" id="prop-canvas-height" step="10" min="100">
+            </div>
           </div>
         </div>
       </div>
