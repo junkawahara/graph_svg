@@ -141,6 +141,7 @@ export type EventName =
   | 'canvas:render'
   | 'canvas:zoomChanged'
   | 'canvas:zoomReset'
+  | 'snap:changed'
   | 'file:save'
   | 'file:open';
 

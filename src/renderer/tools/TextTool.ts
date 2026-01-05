@@ -20,7 +20,7 @@ export class TextTool implements Tool {
   }
 
   onMouseDown(point: Point, _event: MouseEvent): void {
-    this.placementPoint = point;
+    this.placementPoint = editorState.snapPoint(point);
   }
 
   onMouseMove(_point: Point, _event: MouseEvent): void {

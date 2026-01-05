@@ -21,12 +21,13 @@ export class EllipseTool implements Tool {
 
   onMouseDown(point: Point, _event: MouseEvent): void {
     this.isDrawing = true;
-    this.startPoint = point;
+    const snappedPoint = editorState.snapPoint(point);
+    this.startPoint = snappedPoint;
 
     // Create preview ellipse
     this.previewEllipse = document.createElementNS('http://www.w3.org/2000/svg', 'ellipse');
-    this.previewEllipse.setAttribute('cx', String(point.x));
-    this.previewEllipse.setAttribute('cy', String(point.y));
+    this.previewEllipse.setAttribute('cx', String(snappedPoint.x));
+    this.previewEllipse.setAttribute('cy', String(snappedPoint.y));
     this.previewEllipse.setAttribute('rx', '0');
     this.previewEllipse.setAttribute('ry', '0');
 
@@ -48,11 +49,13 @@ export class EllipseTool implements Tool {
   onMouseMove(point: Point, _event: MouseEvent): void {
     if (!this.isDrawing || !this.previewEllipse || !this.startPoint) return;
 
+    const snappedPoint = editorState.snapPoint(point);
+
     // Calculate ellipse parameters from bounding box
-    const cx = (this.startPoint.x + point.x) / 2;
-    const cy = (this.startPoint.y + point.y) / 2;
-    const rx = Math.abs(point.x - this.startPoint.x) / 2;
-    const ry = Math.abs(point.y - this.startPoint.y) / 2;
+    const cx = (this.startPoint.x + snappedPoint.x) / 2;
+    const cy = (this.startPoint.y + snappedPoint.y) / 2;
+    const rx = Math.abs(snappedPoint.x - this.startPoint.x) / 2;
+    const ry = Math.abs(snappedPoint.y - this.startPoint.y) / 2;
 
     this.previewEllipse.setAttribute('cx', String(cx));
     this.previewEllipse.setAttribute('cy', String(cy));
@@ -69,14 +72,16 @@ export class EllipseTool implements Tool {
       this.previewEllipse = null;
     }
 
+    const snappedPoint = editorState.snapPoint(point);
+
     // Calculate size
-    const rx = Math.abs(point.x - this.startPoint.x) / 2;
-    const ry = Math.abs(point.y - this.startPoint.y) / 2;
+    const rx = Math.abs(snappedPoint.x - this.startPoint.x) / 2;
+    const ry = Math.abs(snappedPoint.y - this.startPoint.y) / 2;
 
     // Don't create ellipse if too small
     if (rx >= 3 && ry >= 3) {
       // Create actual ellipse
-      const ellipse = Ellipse.fromBoundingBox(this.startPoint, point, editorState.currentStyle);
+      const ellipse = Ellipse.fromBoundingBox(this.startPoint, snappedPoint, editorState.currentStyle);
       eventBus.emit('shape:added', ellipse);
     }
 

@@ -26,12 +26,16 @@ export class Toolbar {
   private zoomIndicator: HTMLSpanElement | null = null;
   private zoomResetButton: HTMLButtonElement | null = null;
 
+  // Snap control
+  private snapButton: HTMLButtonElement | null = null;
+
   constructor() {
     this.setupToolButtons();
     this.setupUndoRedoButtons();
     this.setupDeleteButton();
     this.setupZOrderButtons();
     this.setupZoomControls();
+    this.setupSnapButton();
     this.setupFileButtons();
     this.setupEventListeners();
   }
@@ -161,6 +165,32 @@ export class Toolbar {
   }
 
   /**
+   * Setup snap to grid button
+   */
+  private setupSnapButton(): void {
+    this.snapButton = document.getElementById('btn-snap') as HTMLButtonElement;
+
+    if (this.snapButton) {
+      this.snapButton.addEventListener('click', () => {
+        editorState.toggleSnap();
+      });
+    }
+  }
+
+  /**
+   * Update snap button visual state
+   */
+  private updateSnapButton(enabled: boolean): void {
+    if (this.snapButton) {
+      if (enabled) {
+        this.snapButton.classList.add('active');
+      } else {
+        this.snapButton.classList.remove('active');
+      }
+    }
+  }
+
+  /**
    * Setup Open/Save buttons
    */
   private setupFileButtons(): void {
@@ -215,6 +245,11 @@ export class Toolbar {
     // Update zoom indicator when zoom changes
     eventBus.on('canvas:zoomChanged', (data: { scale: number }) => {
       this.updateZoomIndicator(data.scale);
+    });
+
+    // Update snap button when snap state changes
+    eventBus.on('snap:changed', (enabled: boolean) => {
+      this.updateSnapButton(enabled);
     });
 
     // Keyboard shortcuts
@@ -327,6 +362,9 @@ export class Toolbar {
           break;
         case 'h':
           editorState.setTool('pan');
+          break;
+        case 'g':
+          editorState.toggleSnap();
           break;
       }
     });

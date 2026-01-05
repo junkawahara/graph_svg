@@ -21,12 +21,13 @@ export class RectangleTool implements Tool {
 
   onMouseDown(point: Point, _event: MouseEvent): void {
     this.isDrawing = true;
-    this.startPoint = point;
+    const snappedPoint = editorState.snapPoint(point);
+    this.startPoint = snappedPoint;
 
     // Create preview rectangle
     this.previewRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-    this.previewRect.setAttribute('x', String(point.x));
-    this.previewRect.setAttribute('y', String(point.y));
+    this.previewRect.setAttribute('x', String(snappedPoint.x));
+    this.previewRect.setAttribute('y', String(snappedPoint.y));
     this.previewRect.setAttribute('width', '0');
     this.previewRect.setAttribute('height', '0');
 
@@ -48,11 +49,13 @@ export class RectangleTool implements Tool {
   onMouseMove(point: Point, _event: MouseEvent): void {
     if (!this.isDrawing || !this.previewRect || !this.startPoint) return;
 
+    const snappedPoint = editorState.snapPoint(point);
+
     // Calculate rectangle parameters from bounding box
-    const x = Math.min(this.startPoint.x, point.x);
-    const y = Math.min(this.startPoint.y, point.y);
-    const width = Math.abs(point.x - this.startPoint.x);
-    const height = Math.abs(point.y - this.startPoint.y);
+    const x = Math.min(this.startPoint.x, snappedPoint.x);
+    const y = Math.min(this.startPoint.y, snappedPoint.y);
+    const width = Math.abs(snappedPoint.x - this.startPoint.x);
+    const height = Math.abs(snappedPoint.y - this.startPoint.y);
 
     this.previewRect.setAttribute('x', String(x));
     this.previewRect.setAttribute('y', String(y));
@@ -69,14 +72,16 @@ export class RectangleTool implements Tool {
       this.previewRect = null;
     }
 
+    const snappedPoint = editorState.snapPoint(point);
+
     // Calculate size
-    const width = Math.abs(point.x - this.startPoint.x);
-    const height = Math.abs(point.y - this.startPoint.y);
+    const width = Math.abs(snappedPoint.x - this.startPoint.x);
+    const height = Math.abs(snappedPoint.y - this.startPoint.y);
 
     // Don't create rectangle if too small
     if (width >= 3 && height >= 3) {
       // Create actual rectangle
-      const rectangle = Rectangle.fromBoundingBox(this.startPoint, point, editorState.currentStyle);
+      const rectangle = Rectangle.fromBoundingBox(this.startPoint, snappedPoint, editorState.currentStyle);
       eventBus.emit('shape:added', rectangle);
     }
 

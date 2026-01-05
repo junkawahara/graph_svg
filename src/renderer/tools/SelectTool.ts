@@ -4,6 +4,7 @@ import { Shape } from '../shapes/Shape';
 import { Handle } from '../handles/Handle';
 import { selectionManager } from '../core/SelectionManager';
 import { historyManager } from '../core/HistoryManager';
+import { editorState } from '../core/EditorState';
 import { MoveShapeCommand } from '../commands/MoveShapeCommand';
 import { ResizeShapeCommand } from '../commands/ResizeShapeCommand';
 
@@ -67,7 +68,7 @@ export class SelectTool implements Tool {
     if (handle) {
       this.isResizing = true;
       this.activeHandle = handle;
-      this.dragStartPoint = point;
+      this.dragStartPoint = editorState.snapPoint(point);
 
       // Get the shape being resized and save its state
       const selectedShapes = selectionManager.getSelection();
@@ -81,12 +82,13 @@ export class SelectTool implements Tool {
     const shape = this.callbacks.findShapeAt(point);
 
     if (shape) {
+      const snappedPoint = editorState.snapPoint(point);
       // Check if clicking on already selected shape
       if (selectionManager.isSelected(shape)) {
         // Start dragging
         this.isDragging = true;
-        this.dragStartPoint = point;
-        this.dragOriginPoint = point;
+        this.dragStartPoint = snappedPoint;
+        this.dragOriginPoint = snappedPoint;
         this.draggedShape = shape;
       } else {
         // Select the shape
@@ -98,8 +100,8 @@ export class SelectTool implements Tool {
         }
         // Start dragging immediately
         this.isDragging = true;
-        this.dragStartPoint = point;
-        this.dragOriginPoint = point;
+        this.dragStartPoint = snappedPoint;
+        this.dragOriginPoint = snappedPoint;
         this.draggedShape = shape;
       }
     } else {
@@ -120,7 +122,8 @@ export class SelectTool implements Tool {
 
     // Handle resizing
     if (this.isResizing && this.activeHandle) {
-      this.activeHandle.onDrag(point);
+      const snappedPoint = editorState.snapPoint(point);
+      this.activeHandle.onDrag(snappedPoint);
       this.callbacks.updateHandles();
       return;
     }
@@ -128,9 +131,12 @@ export class SelectTool implements Tool {
     // Handle dragging
     if (!this.isDragging || !this.dragStartPoint || !this.draggedShape) return;
 
+    // Apply snap to point
+    const snappedPoint = editorState.snapPoint(point);
+
     // Calculate delta from last position
-    const dx = point.x - this.dragStartPoint.x;
-    const dy = point.y - this.dragStartPoint.y;
+    const dx = snappedPoint.x - this.dragStartPoint.x;
+    const dy = snappedPoint.y - this.dragStartPoint.y;
 
     // Move all selected shapes
     const selectedShapes = selectionManager.getSelection();
@@ -142,7 +148,7 @@ export class SelectTool implements Tool {
     this.callbacks.updateHandles();
 
     // Update drag start point for next move
-    this.dragStartPoint = point;
+    this.dragStartPoint = snappedPoint;
   }
 
   onMouseUp(point: Point, event: MouseEvent): void {
@@ -155,8 +161,9 @@ export class SelectTool implements Tool {
 
     // Create move command if we were dragging
     if (this.isDragging && this.dragOriginPoint) {
-      const totalDx = point.x - this.dragOriginPoint.x;
-      const totalDy = point.y - this.dragOriginPoint.y;
+      const snappedPoint = editorState.snapPoint(point);
+      const totalDx = snappedPoint.x - this.dragOriginPoint.x;
+      const totalDy = snappedPoint.y - this.dragOriginPoint.y;
 
       // Only create command if actually moved
       if (Math.abs(totalDx) > 1 || Math.abs(totalDy) > 1) {

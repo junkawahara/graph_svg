@@ -48,12 +48,18 @@ export class Canvas {
   private readonly MAX_SCALE = 10;
   private readonly ZOOM_FACTOR = 0.1;
 
+  // Grid element
+  private gridGroup: SVGGElement | null = null;
+
   constructor(svgElement: SVGSVGElement, containerElement: HTMLElement) {
     this.svg = svgElement;
     this.container = containerElement;
 
     // Initialize marker manager for arrow heads
     initMarkerManager(this.svg);
+
+    // Initialize grid
+    this.initializeGrid();
 
     this.initializeTools();
     this.setupEventListeners();
@@ -99,6 +105,68 @@ export class Canvas {
     eventBus.on('canvas:zoomReset', () => {
       this.resetZoom();
     });
+
+    // Listen for snap state changes
+    eventBus.on('snap:changed', (enabled: boolean) => {
+      this.updateGridVisibility(enabled);
+    });
+  }
+
+  /**
+   * Initialize the grid pattern and group
+   */
+  private initializeGrid(): void {
+    const gridSize = editorState.gridSize;
+
+    // Get or create defs element
+    let defs = this.svg.querySelector('defs');
+    if (!defs) {
+      defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+      this.svg.insertBefore(defs, this.svg.firstChild);
+    }
+
+    // Create grid pattern
+    const pattern = document.createElementNS('http://www.w3.org/2000/svg', 'pattern');
+    pattern.setAttribute('id', 'grid-pattern');
+    pattern.setAttribute('width', String(gridSize));
+    pattern.setAttribute('height', String(gridSize));
+    pattern.setAttribute('patternUnits', 'userSpaceOnUse');
+
+    // Create grid lines
+    const pathD = `M ${gridSize} 0 L 0 0 0 ${gridSize}`;
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', pathD);
+    path.setAttribute('fill', 'none');
+    path.setAttribute('stroke', '#cccccc');
+    path.setAttribute('stroke-width', '0.5');
+    pattern.appendChild(path);
+
+    defs.appendChild(pattern);
+
+    // Create grid group with background rect
+    this.gridGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    this.gridGroup.setAttribute('id', 'grid-layer');
+    this.gridGroup.style.display = 'none';
+
+    const gridRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    gridRect.setAttribute('width', '10000');
+    gridRect.setAttribute('height', '10000');
+    gridRect.setAttribute('x', '-5000');
+    gridRect.setAttribute('y', '-5000');
+    gridRect.setAttribute('fill', 'url(#grid-pattern)');
+    this.gridGroup.appendChild(gridRect);
+
+    // Insert grid after defs, before shapes
+    this.svg.insertBefore(this.gridGroup, defs.nextSibling);
+  }
+
+  /**
+   * Update grid visibility
+   */
+  private updateGridVisibility(visible: boolean): void {
+    if (this.gridGroup) {
+      this.gridGroup.style.display = visible ? 'block' : 'none';
+    }
   }
 
   /**

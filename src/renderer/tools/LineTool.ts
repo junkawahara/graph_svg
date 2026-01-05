@@ -21,14 +21,15 @@ export class LineTool implements Tool {
 
   onMouseDown(point: Point, _event: MouseEvent): void {
     this.isDrawing = true;
-    this.startPoint = point;
+    const snappedPoint = editorState.snapPoint(point);
+    this.startPoint = snappedPoint;
 
     // Create preview line
     this.previewLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-    this.previewLine.setAttribute('x1', String(point.x));
-    this.previewLine.setAttribute('y1', String(point.y));
-    this.previewLine.setAttribute('x2', String(point.x));
-    this.previewLine.setAttribute('y2', String(point.y));
+    this.previewLine.setAttribute('x1', String(snappedPoint.x));
+    this.previewLine.setAttribute('y1', String(snappedPoint.y));
+    this.previewLine.setAttribute('x2', String(snappedPoint.x));
+    this.previewLine.setAttribute('y2', String(snappedPoint.y));
 
     const style = editorState.currentStyle;
     this.previewLine.setAttribute('stroke', style.stroke);
@@ -43,8 +44,9 @@ export class LineTool implements Tool {
   onMouseMove(point: Point, _event: MouseEvent): void {
     if (!this.isDrawing || !this.previewLine) return;
 
-    this.previewLine.setAttribute('x2', String(point.x));
-    this.previewLine.setAttribute('y2', String(point.y));
+    const snappedPoint = editorState.snapPoint(point);
+    this.previewLine.setAttribute('x2', String(snappedPoint.x));
+    this.previewLine.setAttribute('y2', String(snappedPoint.y));
   }
 
   onMouseUp(point: Point, _event: MouseEvent): void {
@@ -56,14 +58,16 @@ export class LineTool implements Tool {
       this.previewLine = null;
     }
 
+    const snappedPoint = editorState.snapPoint(point);
+
     // Don't create line if too small
-    const dx = point.x - this.startPoint.x;
-    const dy = point.y - this.startPoint.y;
+    const dx = snappedPoint.x - this.startPoint.x;
+    const dy = snappedPoint.y - this.startPoint.y;
     const length = Math.sqrt(dx * dx + dy * dy);
 
     if (length >= 5) {
       // Create actual line
-      const line = Line.fromPoints(this.startPoint, point, editorState.currentStyle);
+      const line = Line.fromPoints(this.startPoint, snappedPoint, editorState.currentStyle);
       eventBus.emit('shape:added', line);
     }
 
