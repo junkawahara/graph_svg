@@ -1,4 +1,4 @@
-import { ShapeStyle, DEFAULT_STYLE, StrokeLinecap, MarkerType, EdgeDirection } from '../../shared/types';
+import { ShapeStyle, DEFAULT_STYLE, StrokeLinecap, MarkerType, EdgeDirection, CanvasSize, DEFAULT_CANVAS_SIZE } from '../../shared/types';
 import { Shape } from '../shapes/Shape';
 import { Line } from '../shapes/Line';
 import { Ellipse } from '../shapes/Ellipse';
@@ -287,17 +287,33 @@ export class FileManager {
   }
 
   /**
-   * Parse SVG string and return shapes
+   * Parse result containing shapes and canvas size
    */
-  static parse(svgContent: string): Shape[] {
+  static parseResult: { shapes: Shape[]; canvasSize: CanvasSize } = {
+    shapes: [],
+    canvasSize: { ...DEFAULT_CANVAS_SIZE }
+  };
+
+  /**
+   * Parse SVG string and return shapes and canvas size
+   */
+  static parse(svgContent: string): { shapes: Shape[]; canvasSize: CanvasSize } {
     const parser = new DOMParser();
     const doc = parser.parseFromString(svgContent, 'image/svg+xml');
     const svg = doc.querySelector('svg');
 
     if (!svg) {
       console.error('No SVG element found in file');
-      return [];
+      return { shapes: [], canvasSize: { ...DEFAULT_CANVAS_SIZE } };
     }
+
+    // Extract canvas size from SVG width/height attributes
+    const width = parseFloat(svg.getAttribute('width') || '');
+    const height = parseFloat(svg.getAttribute('height') || '');
+    const canvasSize: CanvasSize = {
+      width: isNaN(width) || width <= 0 ? DEFAULT_CANVAS_SIZE.width : width,
+      height: isNaN(height) || height <= 0 ? DEFAULT_CANVAS_SIZE.height : height
+    };
 
     const shapes: Shape[] = [];
     const gm = getGraphManager();
@@ -381,7 +397,7 @@ export class FileManager {
       shapes.push(text);
     });
 
-    return shapes;
+    return { shapes, canvasSize };
   }
 
   /**

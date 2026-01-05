@@ -1,8 +1,9 @@
-import { Point, ToolType } from '../../shared/types';
+import { Point, ToolType, CanvasSize } from '../../shared/types';
 import { eventBus } from '../core/EventBus';
 import { editorState } from '../core/EditorState';
 import { selectionManager } from '../core/SelectionManager';
 import { historyManager } from '../core/HistoryManager';
+import { CanvasResizeCommand } from '../commands/CanvasResizeCommand';
 import { Tool } from '../tools/Tool';
 import { SelectTool } from '../tools/SelectTool';
 import { LineTool } from '../tools/LineTool';
@@ -64,6 +65,12 @@ export class Canvas {
   // Grid element
   private gridGroup: SVGGElement | null = null;
 
+  // Canvas boundary elements
+  private canvasBoundaryRect: SVGRectElement | null = null;
+  private canvasResizeHandle: SVGCircleElement | null = null;
+  private isResizingCanvas: boolean = false;
+  private canvasResizeStartSize: CanvasSize | null = null;
+
   constructor(svgElement: SVGSVGElement, containerElement: HTMLElement) {
     this.svg = svgElement;
     this.container = containerElement;
@@ -73,6 +80,9 @@ export class Canvas {
 
     // Initialize grid
     this.initializeGrid();
+
+    // Initialize canvas boundary (after grid, before shapes)
+    this.initializeCanvasBoundary();
 
     this.initializeTools();
     this.setupEventListeners();
@@ -151,6 +161,11 @@ export class Canvas {
     eventBus.on('graph:autoLayout', () => {
       this.applyAutoLayout();
     });
+
+    // Listen for canvas size changes
+    eventBus.on('canvas:sizeChanged', (size: CanvasSize) => {
+      this.updateCanvasBoundary();
+    });
   }
 
   /**
@@ -208,6 +223,74 @@ export class Canvas {
     if (this.gridGroup) {
       this.gridGroup.style.display = visible ? 'block' : 'none';
     }
+  }
+
+  /**
+   * Initialize canvas boundary visualization
+   */
+  private initializeCanvasBoundary(): void {
+    const canvasSize = editorState.canvasSize;
+
+    // Create canvas boundary rect (white area representing the document)
+    this.canvasBoundaryRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    this.canvasBoundaryRect.setAttribute('id', 'canvas-boundary');
+    this.canvasBoundaryRect.setAttribute('x', '0');
+    this.canvasBoundaryRect.setAttribute('y', '0');
+    this.canvasBoundaryRect.setAttribute('width', String(canvasSize.width));
+    this.canvasBoundaryRect.setAttribute('height', String(canvasSize.height));
+    this.canvasBoundaryRect.setAttribute('fill', '#ffffff');
+    this.canvasBoundaryRect.setAttribute('stroke', '#cccccc');
+    this.canvasBoundaryRect.setAttribute('stroke-width', '1');
+
+    // Create resize handle (blue circle at bottom-right corner)
+    this.canvasResizeHandle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    this.canvasResizeHandle.setAttribute('id', 'canvas-resize-handle');
+    this.canvasResizeHandle.setAttribute('cx', String(canvasSize.width));
+    this.canvasResizeHandle.setAttribute('cy', String(canvasSize.height));
+    this.canvasResizeHandle.setAttribute('r', '6');
+    this.canvasResizeHandle.setAttribute('fill', '#0e639c');
+    this.canvasResizeHandle.setAttribute('stroke', '#ffffff');
+    this.canvasResizeHandle.setAttribute('stroke-width', '2');
+    this.canvasResizeHandle.style.cursor = 'nwse-resize';
+
+    // Insert after grid layer
+    const insertPoint = this.gridGroup?.nextSibling || this.svg.firstChild;
+    this.svg.insertBefore(this.canvasBoundaryRect, insertPoint);
+    // Handle goes on top (will be re-added after shapes)
+    this.svg.appendChild(this.canvasResizeHandle);
+  }
+
+  /**
+   * Update canvas boundary size and handle position
+   */
+  private updateCanvasBoundary(): void {
+    const canvasSize = editorState.canvasSize;
+
+    if (this.canvasBoundaryRect) {
+      this.canvasBoundaryRect.setAttribute('width', String(canvasSize.width));
+      this.canvasBoundaryRect.setAttribute('height', String(canvasSize.height));
+    }
+
+    if (this.canvasResizeHandle) {
+      this.canvasResizeHandle.setAttribute('cx', String(canvasSize.width));
+      this.canvasResizeHandle.setAttribute('cy', String(canvasSize.height));
+      // Ensure handle is on top
+      this.svg.appendChild(this.canvasResizeHandle);
+    }
+  }
+
+  /**
+   * Check if a point hits the canvas resize handle
+   */
+  private hitTestCanvasResizeHandle(point: Point): boolean {
+    if (!this.canvasResizeHandle) return false;
+
+    const canvasSize = editorState.canvasSize;
+    const handleRadius = 8; // Slightly larger hit area
+    const dx = point.x - canvasSize.width;
+    const dy = point.y - canvasSize.height;
+
+    return dx * dx + dy * dy <= handleRadius * handleRadius;
   }
 
   /**
@@ -345,6 +428,11 @@ export class Canvas {
     this.shapes.push(shape);
     const element = shape.render();
     this.svg.appendChild(element);
+
+    // Ensure resize handle stays on top
+    if (this.canvasResizeHandle) {
+      this.svg.appendChild(this.canvasResizeHandle);
+    }
   }
 
   /**
@@ -426,6 +514,11 @@ export class Canvas {
       const element = shape.render();
       this.svg.appendChild(element);
     });
+
+    // Ensure resize handle stays on top
+    if (this.canvasResizeHandle) {
+      this.svg.appendChild(this.canvasResizeHandle);
+    }
   }
 
   /**
@@ -626,6 +719,16 @@ export class Canvas {
       }
 
       const point = this.getPointFromEvent(e);
+
+      // Check for canvas resize handle first
+      if (this.hitTestCanvasResizeHandle(point)) {
+        e.preventDefault();
+        this.isResizingCanvas = true;
+        this.canvasResizeStartSize = { ...editorState.canvasSize };
+        this.svg.style.cursor = 'nwse-resize';
+        return;
+      }
+
       this.currentTool?.onMouseDown(point, e);
     });
 
@@ -634,6 +737,14 @@ export class Canvas {
 
       // Emit mouse position for status bar
       eventBus.emit('canvas:mouseMove', point);
+
+      // Handle canvas resizing
+      if (this.isResizingCanvas) {
+        const newWidth = Math.max(100, Math.round(point.x));
+        const newHeight = Math.max(100, Math.round(point.y));
+        editorState.setCanvasSize(newWidth, newHeight);
+        return;
+      }
 
       // Handle panning
       if (this.isPanning && this.lastPanPoint) {
@@ -646,10 +757,37 @@ export class Canvas {
         return;
       }
 
+      // Update cursor for canvas resize handle hover
+      if (this.hitTestCanvasResizeHandle(point)) {
+        this.svg.style.cursor = 'nwse-resize';
+      } else if (!this.isPanning && !this.isSpacePressed) {
+        this.updateCursor();
+      }
+
       this.currentTool?.onMouseMove(point, e);
     });
 
     this.svg.addEventListener('mouseup', (e) => {
+      // Handle canvas resize end
+      if (this.isResizingCanvas) {
+        this.isResizingCanvas = false;
+        const newSize = editorState.canvasSize;
+
+        // Create undo command if size changed
+        if (this.canvasResizeStartSize &&
+            (this.canvasResizeStartSize.width !== newSize.width ||
+             this.canvasResizeStartSize.height !== newSize.height)) {
+          const command = new CanvasResizeCommand(
+            this.canvasResizeStartSize,
+            newSize
+          );
+          historyManager.execute(command);
+        }
+        this.canvasResizeStartSize = null;
+        this.updateCursor();
+        return;
+      }
+
       if (this.isPanning) {
         this.isPanning = false;
         this.lastPanPoint = null;
@@ -664,6 +802,14 @@ export class Canvas {
     });
 
     this.svg.addEventListener('mouseleave', () => {
+      // Cancel canvas resize on leave
+      if (this.isResizingCanvas && this.canvasResizeStartSize) {
+        editorState.setCanvasSize(this.canvasResizeStartSize.width, this.canvasResizeStartSize.height);
+        this.isResizingCanvas = false;
+        this.canvasResizeStartSize = null;
+        return;
+      }
+
       if (this.isPanning) {
         this.isPanning = false;
         this.lastPanPoint = null;

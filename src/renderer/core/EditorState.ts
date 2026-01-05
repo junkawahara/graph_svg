@@ -1,4 +1,4 @@
-import { ToolType, ShapeStyle, EdgeDirection, DEFAULT_STYLE } from '../../shared/types';
+import { ToolType, ShapeStyle, EdgeDirection, CanvasSize, DEFAULT_STYLE, DEFAULT_CANVAS_SIZE } from '../../shared/types';
 import { eventBus } from './EventBus';
 
 /**
@@ -12,6 +12,7 @@ export class EditorState {
   private _edgeDirection: EdgeDirection = 'none';
   private _currentFilePath: string | null = null;
   private _isDirty: boolean = false;
+  private _canvasSize: CanvasSize = { ...DEFAULT_CANVAS_SIZE };
 
   /**
    * Get current tool
@@ -132,6 +133,27 @@ export class EditorState {
   }
 
   /**
+   * Get canvas size
+   */
+  get canvasSize(): CanvasSize {
+    return { ...this._canvasSize };
+  }
+
+  /**
+   * Set canvas size
+   */
+  setCanvasSize(width: number, height: number): void {
+    // Enforce minimum size
+    const newWidth = Math.max(100, Math.round(width));
+    const newHeight = Math.max(100, Math.round(height));
+
+    if (this._canvasSize.width !== newWidth || this._canvasSize.height !== newHeight) {
+      this._canvasSize = { width: newWidth, height: newHeight };
+      eventBus.emit('canvas:sizeChanged', this._canvasSize);
+    }
+  }
+
+  /**
    * Get current file path
    */
   get currentFilePath(): string | null {
@@ -203,7 +225,9 @@ export class EditorState {
   resetFileState(): void {
     this._currentFilePath = null;
     this._isDirty = false;
+    this._canvasSize = { ...DEFAULT_CANVAS_SIZE };
     this.updateWindowTitle();
+    eventBus.emit('canvas:sizeChanged', this._canvasSize);
   }
 }
 

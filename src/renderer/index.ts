@@ -58,8 +58,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (result === 'save') {
       // Save the file first
       const shapes = canvas.getShapes();
-      const size = canvas.getSize();
-      const svgContent = FileManager.serialize(shapes, size.width, size.height);
+      const canvasSize = editorState.canvasSize;
+      const svgContent = FileManager.serialize(shapes, canvasSize.width, canvasSize.height);
 
       const currentPath = editorState.currentFilePath;
       if (currentPath) {
@@ -95,8 +95,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // File save handler (save to existing path or show dialog for new file)
   eventBus.on('file:save', async () => {
     const shapes = canvas.getShapes();
-    const size = canvas.getSize();
-    const svgContent = FileManager.serialize(shapes, size.width, size.height);
+    const canvasSize = editorState.canvasSize;
+    const svgContent = FileManager.serialize(shapes, canvasSize.width, canvasSize.height);
 
     const currentPath = editorState.currentFilePath;
 
@@ -121,8 +121,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // File save as handler (always show dialog)
   eventBus.on('file:saveAs', async () => {
     const shapes = canvas.getShapes();
-    const size = canvas.getSize();
-    const svgContent = FileManager.serialize(shapes, size.width, size.height);
+    const canvasSize = editorState.canvasSize;
+    const svgContent = FileManager.serialize(shapes, canvasSize.width, canvasSize.height);
 
     const currentPath = editorState.currentFilePath;
     const filePath = await window.electronAPI.saveFileAs(svgContent, currentPath || undefined);
@@ -140,14 +140,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const result = await window.electronAPI.openFile();
     if (result) {
-      const shapes = FileManager.parse(result.content);
+      const { shapes, canvasSize } = FileManager.parse(result.content);
+      // Set canvas size before loading shapes
+      editorState.setCanvasSize(canvasSize.width, canvasSize.height);
       canvas.loadShapes(shapes);
       // Clear history when loading a new file
       historyManager.clear();
       // Set file path and mark as clean
       editorState.setCurrentFilePath(result.path);
       editorState.markClean();
-      console.log('File loaded:', result.path, `(${shapes.length} shapes)`);
+      console.log('File loaded:', result.path, `(${shapes.length} shapes, ${canvasSize.width}x${canvasSize.height})`);
     }
   });
 
@@ -291,8 +293,8 @@ function setupMenuListeners(canvas: Canvas): void {
     if (result === 'save') {
       // Save the file first
       const shapes = canvas.getShapes();
-      const size = canvas.getSize();
-      const svgContent = FileManager.serialize(shapes, size.width, size.height);
+      const canvasSize = editorState.canvasSize;
+      const svgContent = FileManager.serialize(shapes, canvasSize.width, canvasSize.height);
 
       const currentPath = editorState.currentFilePath;
       if (currentPath) {

@@ -33,6 +33,22 @@ export interface Bounds {
 }
 
 /**
+ * Canvas size
+ */
+export interface CanvasSize {
+  width: number;
+  height: number;
+}
+
+/**
+ * Default canvas size
+ */
+export const DEFAULT_CANVAS_SIZE: CanvasSize = {
+  width: 800,
+  height: 600
+};
+
+/**
  * Line cap style
  */
 export type StrokeLinecap = 'butt' | 'round' | 'square';
@@ -175,6 +191,7 @@ export type EventName =
   | 'canvas:zoomChanged'
   | 'canvas:zoomReset'
   | 'canvas:mouseMove'
+  | 'canvas:sizeChanged'
   | 'snap:changed'
   | 'edge:added'
   | 'node:delete'

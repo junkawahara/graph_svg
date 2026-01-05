@@ -1,4 +1,4 @@
-import { ShapeStyle, StrokeLinecap, MarkerType, EdgeDirection } from '../../shared/types';
+import { ShapeStyle, StrokeLinecap, MarkerType, EdgeDirection, CanvasSize } from '../../shared/types';
 import { eventBus } from '../core/EventBus';
 import { editorState } from '../core/EditorState';
 import { selectionManager } from '../core/SelectionManager';
@@ -16,6 +16,7 @@ import { MarkerChangeCommand, MarkerUpdates } from '../commands/MarkerChangeComm
 import { NodeLabelChangeCommand, NodePropertyUpdates } from '../commands/NodeLabelChangeCommand';
 import { EdgeDirectionChangeCommand } from '../commands/EdgeDirectionChangeCommand';
 import { ResizeShapeCommand } from '../commands/ResizeShapeCommand';
+import { CanvasResizeCommand } from '../commands/CanvasResizeCommand';
 
 /**
  * Sidebar component - handles style property editing
@@ -80,6 +81,10 @@ export class Sidebar {
   private nodeRxInput: HTMLInputElement | null = null;
   private nodeRyInput: HTMLInputElement | null = null;
 
+  // Canvas size inputs
+  private canvasWidthInput: HTMLInputElement | null = null;
+  private canvasHeightInput: HTMLInputElement | null = null;
+
   private isUpdatingUI = false; // Prevent feedback loop
 
   constructor() {
@@ -143,16 +148,24 @@ export class Sidebar {
     this.nodeRxInput = document.getElementById('prop-node-rx') as HTMLInputElement;
     this.nodeRyInput = document.getElementById('prop-node-ry') as HTMLInputElement;
 
+    // Canvas size inputs
+    this.canvasWidthInput = document.getElementById('prop-canvas-width') as HTMLInputElement;
+    this.canvasHeightInput = document.getElementById('prop-canvas-height') as HTMLInputElement;
+
     this.setupInputListeners();
     this.setupTextInputListeners();
     this.setupLineInputListeners();
     this.setupNodeInputListeners();
     this.setupEdgeInputListeners();
     this.setupPositionInputListeners();
+    this.setupCanvasSizeInputListeners();
     this.setupEventListeners();
 
     // Initialize with default style
     this.updateUIFromStyle(editorState.currentStyle);
+
+    // Initialize canvas size inputs
+    this.updateCanvasSizeInputs(editorState.canvasSize);
   }
 
   /**
@@ -318,6 +331,53 @@ export class Sidebar {
   }
 
   /**
+   * Setup canvas size input listeners
+   */
+  private setupCanvasSizeInputListeners(): void {
+    if (this.canvasWidthInput) {
+      this.canvasWidthInput.addEventListener('change', () => this.applyCanvasSizeChange());
+    }
+    if (this.canvasHeightInput) {
+      this.canvasHeightInput.addEventListener('change', () => this.applyCanvasSizeChange());
+    }
+  }
+
+  /**
+   * Update canvas size inputs from canvas size
+   */
+  private updateCanvasSizeInputs(size: CanvasSize): void {
+    this.isUpdatingUI = true;
+
+    if (this.canvasWidthInput) {
+      this.canvasWidthInput.value = String(size.width);
+    }
+    if (this.canvasHeightInput) {
+      this.canvasHeightInput.value = String(size.height);
+    }
+
+    this.isUpdatingUI = false;
+  }
+
+  /**
+   * Apply canvas size change from inputs
+   */
+  private applyCanvasSizeChange(): void {
+    if (this.isUpdatingUI) return;
+
+    const newWidth = Math.max(100, parseInt(this.canvasWidthInput?.value || '800', 10));
+    const newHeight = Math.max(100, parseInt(this.canvasHeightInput?.value || '600', 10));
+    const currentSize = editorState.canvasSize;
+
+    if (newWidth !== currentSize.width || newHeight !== currentSize.height) {
+      const command = new CanvasResizeCommand(
+        currentSize,
+        { width: newWidth, height: newHeight }
+      );
+      historyManager.execute(command);
+    }
+  }
+
+  /**
    * Setup event listeners
    */
   private setupEventListeners(): void {
@@ -382,6 +442,11 @@ export class Sidebar {
       if (selectedShapes.length === 1 && selectedShapes[0] === shape) {
         this.updatePositionInputs(shape);
       }
+    });
+
+    // Update canvas size inputs when canvas size changes
+    eventBus.on('canvas:sizeChanged', (size: CanvasSize) => {
+      this.updateCanvasSizeInputs(size);
     });
   }
 

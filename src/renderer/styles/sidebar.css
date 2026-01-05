@@ -97,6 +97,22 @@
   cursor: pointer;
 }
 
+/* Canvas size section */
+.property-section {
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #3e3e3e;
+}
+
+.section-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: #888888;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+}
+
 /* Position/Size property rows */
 .position-section {
   margin-bottom: 12px;

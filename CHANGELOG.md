@@ -5,6 +5,18 @@
 ## [Unreleased]
 
 ### 追加
+- キャンバスサイズ設定機能
+  - キャンバスサイズ（幅×高さ）を指定可能
+  - キャンバス範囲外はグレー色で表示
+  - 範囲外にもオブジェクトを配置可能
+  - 右下隅をドラッグしてリサイズ（青い円ハンドル）
+  - 左上隅は常に座標(0,0)固定
+  - サイドバーで数値入力による編集
+  - Undo/Redo対応（CanvasResizeCommand）
+  - ファイル保存/読み込み時にサイズを保持
+  - デフォルトサイズ: 800 x 600
+  - 最小サイズ: 100 x 100
+
 - グラフ機能 Phase 1: 型定義とGraphManager基盤
   - ToolType に node, edge, delete-node, delete-edge を追加
   - ShapeType に node, edge を追加
