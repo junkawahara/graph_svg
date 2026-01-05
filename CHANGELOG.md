@@ -58,6 +58,13 @@
   - イベント一覧にグラフ関連イベントを追加
   - SVG保存形式の説明を追加
 
+- グラフ自動レイアウト機能
+  - cytoscape.js を使用したグラフ自動レイアウト
+  - LayoutManager: cose (Force-directed) レイアウトアルゴリズム
+  - ApplyLayoutCommand: Undo/Redo 対応
+  - ツールバーに「Auto Layout」ボタン追加
+  - レイアウト結果をキャンバス中央に配置
+
 ---
 
 ## [1.0.0] - 2026-01-05

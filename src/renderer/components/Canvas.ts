@@ -34,6 +34,7 @@ import { DeleteEdgeCommand } from '../commands/DeleteEdgeCommand';
 import { getGraphManager } from '../core/GraphManager';
 import { DeleteShapeCommand } from '../commands/DeleteShapeCommand';
 import { ZOrderCommand, ZOrderOperation } from '../commands/ZOrderCommand';
+import { ApplyLayoutCommand } from '../commands/ApplyLayoutCommand';
 import { initMarkerManager } from '../core/MarkerManager';
 
 /**
@@ -144,6 +145,11 @@ export class Canvas {
     // Listen for snap state changes
     eventBus.on('snap:changed', (enabled: boolean) => {
       this.updateGridVisibility(enabled);
+    });
+
+    // Listen for auto layout requests
+    eventBus.on('graph:autoLayout', () => {
+      this.applyAutoLayout();
     });
   }
 
@@ -701,5 +707,31 @@ export class Canvas {
       this.updateSize();
       this.updateViewBox();
     });
+  }
+
+  /**
+   * Apply automatic graph layout using cytoscape.js
+   */
+  private applyAutoLayout(): void {
+    const gm = getGraphManager();
+    const nodeIds = gm.getAllNodeIds();
+
+    // Only apply if there are nodes to layout
+    if (nodeIds.length === 0) {
+      console.log('No graph nodes to layout');
+      return;
+    }
+
+    // Get canvas dimensions
+    const rect = this.container.getBoundingClientRect();
+    const canvasWidth = rect.width;
+    const canvasHeight = rect.height;
+
+    // Create and execute the layout command
+    const command = new ApplyLayoutCommand('cose', canvasWidth, canvasHeight);
+    historyManager.execute(command);
+
+    // Clear selection and update handles
+    selectionManager.clearSelection();
   }
 }

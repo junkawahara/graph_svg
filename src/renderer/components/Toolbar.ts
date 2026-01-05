@@ -32,6 +32,9 @@ export class Toolbar {
   // Directed edge toggle
   private directedEdgeButton: HTMLButtonElement | null = null;
 
+  // Auto layout button
+  private autoLayoutButton: HTMLButtonElement | null = null;
+
   constructor() {
     this.setupToolButtons();
     this.setupUndoRedoButtons();
@@ -40,6 +43,7 @@ export class Toolbar {
     this.setupZoomControls();
     this.setupSnapButton();
     this.setupDirectedEdgeButton();
+    this.setupAutoLayoutButton();
     this.setupFileButtons();
     this.setupEventListeners();
   }
@@ -223,6 +227,19 @@ export class Toolbar {
         this.directedEdgeButton.classList.remove('active');
         this.directedEdgeButton.innerHTML = '<span class="icon">―</span>';
       }
+    }
+  }
+
+  /**
+   * Setup auto layout button
+   */
+  private setupAutoLayoutButton(): void {
+    this.autoLayoutButton = document.getElementById('btn-auto-layout') as HTMLButtonElement;
+
+    if (this.autoLayoutButton) {
+      this.autoLayoutButton.addEventListener('click', () => {
+        eventBus.emit('graph:autoLayout', null);
+      });
     }
   }
 

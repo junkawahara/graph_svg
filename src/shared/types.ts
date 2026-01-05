@@ -184,6 +184,7 @@ export type EventName =
   | 'graph:edgeAdded'
   | 'graph:edgeRemoved'
   | 'graph:edgeDirectionChanged'
+  | 'graph:autoLayout'
   | 'file:save'
   | 'file:open';
 
