@@ -4,6 +4,8 @@ import { Line } from './Line';
 import { Ellipse } from './Ellipse';
 import { Rectangle } from './Rectangle';
 import { Text } from './Text';
+import { Node } from './Node';
+import { Edge } from './Edge';
 
 /**
  * Create a shape from serialized data
@@ -53,6 +55,31 @@ export function createShapeFromData(data: ShapeData, offsetX: number = 0, offset
         data.fontSize,
         data.fontFamily,
         data.fontWeight,
+        { ...data.style }
+      );
+
+    case 'node':
+      return new Node(
+        newId,
+        data.cx + offsetX,
+        data.cy + offsetY,
+        data.rx,
+        data.ry,
+        data.label,
+        data.fontSize,
+        data.fontFamily,
+        { ...data.style }
+      );
+
+    case 'edge':
+      return new Edge(
+        newId,
+        data.sourceNodeId,
+        data.targetNodeId,
+        data.direction,
+        data.curveOffset,
+        data.isSelfLoop,
+        data.selfLoopAngle,
         { ...data.style }
       );
 

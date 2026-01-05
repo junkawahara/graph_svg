@@ -42,6 +42,15 @@
   - エッジ選択時: 方向（有向/無向）変更
   - NodeLabelChangeCommand/EdgeDirectionChangeCommand（Undo/Redo対応）
 
+- グラフ機能 Phase 8: ファイル永続化
+  - FileManager にノード/エッジのシリアライズ機能追加
+  - ノード: `<g data-graph-type="node">` 形式でSVG保存
+  - エッジ: `<path data-graph-type="edge">` 形式でSVG保存
+  - data-* 属性でグラフ構造を保持（source-id, target-id, direction等）
+  - ファイル読み込み時にGraphManager関係を再構築
+  - ShapeFactory にNode/Edge対応追加
+  - Edge.fromElement() 静的メソッド追加
+
 ---
 
 ## [1.0.0] - 2026-01-05

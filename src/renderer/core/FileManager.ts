@@ -1,9 +1,12 @@
-import { ShapeStyle, DEFAULT_STYLE, StrokeLinecap, MarkerType } from '../../shared/types';
+import { ShapeStyle, DEFAULT_STYLE, StrokeLinecap, MarkerType, EdgeDirection } from '../../shared/types';
 import { Shape } from '../shapes/Shape';
 import { Line } from '../shapes/Line';
 import { Ellipse } from '../shapes/Ellipse';
 import { Rectangle } from '../shapes/Rectangle';
 import { Text } from '../shapes/Text';
+import { Node } from '../shapes/Node';
+import { Edge } from '../shapes/Edge';
+import { getGraphManager } from './GraphManager';
 
 // Marker definitions for SVG export
 const MARKER_SVG_DEFS: Record<Exclude<MarkerType, 'none'>, { path: string; filled: boolean; strokeWidth?: number }> = {
@@ -42,10 +45,11 @@ export class FileManager {
   }
 
   /**
-   * Generate marker definitions for lines that use them
+   * Generate marker definitions for lines and edges that use them
    */
   private static generateMarkerDefs(shapes: Shape[]): string | null {
     const usedMarkers = new Set<string>();
+    const usedEdgeColors = new Set<string>();
 
     // Collect all used markers
     shapes.forEach(shape => {
@@ -57,12 +61,19 @@ export class FileManager {
           usedMarkers.add(`${shape.markerEnd}-end`);
         }
       }
+      // Collect edge arrow colors
+      if (shape instanceof Edge) {
+        if (shape.direction === 'forward' || shape.direction === 'backward') {
+          usedEdgeColors.add(shape.style.stroke.replace('#', ''));
+        }
+      }
     });
 
-    if (usedMarkers.size === 0) return null;
+    if (usedMarkers.size === 0 && usedEdgeColors.size === 0) return null;
 
     const defsLines: string[] = ['  <defs>'];
 
+    // Line markers
     usedMarkers.forEach(markerKey => {
       const [type, position] = markerKey.split('-') as [Exclude<MarkerType, 'none'>, string];
       const def = MARKER_SVG_DEFS[type];
@@ -78,6 +89,13 @@ export class FileManager {
 
       defsLines.push(`    <marker id="marker-${type}-${position}" viewBox="0 0 10 10" refX="${refX}" refY="${refY}" markerWidth="4" markerHeight="4" markerUnits="strokeWidth" orient="${orient}">`);
       defsLines.push(`      <path d="${def.path}" ${fillAttr}/>`);
+      defsLines.push(`    </marker>`);
+    });
+
+    // Edge arrow markers (color-specific)
+    usedEdgeColors.forEach(colorHex => {
+      defsLines.push(`    <marker id="marker-triangle-${colorHex}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="4" markerHeight="4" markerUnits="strokeWidth" orient="auto">`);
+      defsLines.push(`      <path d="M 0 0 L 10 5 L 0 10 Z" fill="#${colorHex}" stroke="none"/>`);
       defsLines.push(`    </marker>`);
     });
 
@@ -107,9 +125,135 @@ export class FileManager {
     } else if (shape instanceof Text) {
       const escapedContent = this.escapeXml(shape.content);
       return `  <text id="${shape.id}" x="${shape.x}" y="${shape.y}" font-size="${shape.fontSize}" font-family="${shape.fontFamily}" font-weight="${shape.fontWeight}" dominant-baseline="hanging" ${style}>${escapedContent}</text>`;
+    } else if (shape instanceof Node) {
+      return this.nodeToSvgElement(shape);
+    } else if (shape instanceof Edge) {
+      return this.edgeToSvgElement(shape);
     }
 
     return '';
+  }
+
+  /**
+   * Convert a Node to SVG element string
+   */
+  private static nodeToSvgElement(node: Node): string {
+    const style = this.styleToAttributes(node.style);
+    const escapedLabel = this.escapeXml(node.label);
+    const lines: string[] = [];
+
+    lines.push(`  <g id="${node.id}" data-graph-type="node" data-label="${escapedLabel}">`);
+    lines.push(`    <ellipse cx="${node.cx}" cy="${node.cy}" rx="${node.rx}" ry="${node.ry}" ${style}/>`);
+    lines.push(`    <text x="${node.cx}" y="${node.cy}" text-anchor="middle" dominant-baseline="middle" font-size="${node.fontSize}" font-family="${node.fontFamily}" fill="${node.style.stroke}" pointer-events="none">${escapedLabel}</text>`);
+    lines.push(`  </g>`);
+
+    return lines.join('\n');
+  }
+
+  /**
+   * Convert an Edge to SVG element string
+   */
+  private static edgeToSvgElement(edge: Edge): string {
+    const gm = getGraphManager();
+    const sourceNode = gm.getNodeShape(edge.sourceNodeId);
+    const targetNode = gm.getNodeShape(edge.targetNodeId);
+
+    // Build data attributes
+    let dataAttrs = `data-graph-type="edge" data-source-id="${edge.sourceNodeId}" data-target-id="${edge.targetNodeId}" data-direction="${edge.direction}" data-curve-offset="${edge.curveOffset}"`;
+    if (edge.isSelfLoop) {
+      dataAttrs += ` data-is-self-loop="true" data-self-loop-angle="${edge.selfLoopAngle}"`;
+    }
+
+    // Build style attributes
+    const attrs: string[] = [];
+    attrs.push('fill="none"');
+    attrs.push(`stroke="${edge.style.stroke}"`);
+    attrs.push(`stroke-width="${edge.style.strokeWidth}"`);
+    if (edge.style.opacity !== 1) {
+      attrs.push(`opacity="${edge.style.opacity}"`);
+    }
+    if (edge.style.strokeDasharray) {
+      attrs.push(`stroke-dasharray="${edge.style.strokeDasharray}"`);
+    }
+    if (edge.style.strokeLinecap !== 'butt') {
+      attrs.push(`stroke-linecap="${edge.style.strokeLinecap}"`);
+    }
+
+    // Build marker attributes
+    let markerAttrs = '';
+    if (edge.direction === 'forward') {
+      const colorHex = edge.style.stroke.replace('#', '');
+      markerAttrs = ` marker-end="url(#marker-triangle-${colorHex})"`;
+    } else if (edge.direction === 'backward') {
+      const colorHex = edge.style.stroke.replace('#', '');
+      markerAttrs = ` marker-start="url(#marker-triangle-${colorHex})"`;
+    }
+
+    // Calculate path data
+    let pathData = '';
+    if (sourceNode && targetNode) {
+      pathData = this.calculateEdgePath(edge, sourceNode, targetNode);
+    }
+
+    return `  <path id="${edge.id}" ${dataAttrs} d="${pathData}" ${attrs.join(' ')}${markerAttrs}/>`;
+  }
+
+  /**
+   * Calculate edge path data
+   */
+  private static calculateEdgePath(edge: Edge, sourceNode: Node, targetNode: Node): string {
+    if (edge.isSelfLoop) {
+      return this.calculateSelfLoopPath(edge, sourceNode);
+    }
+
+    const start = sourceNode.getConnectionPoint(targetNode.cx, targetNode.cy);
+    const end = targetNode.getConnectionPoint(sourceNode.cx, sourceNode.cy);
+
+    if (edge.curveOffset === 0) {
+      return `M ${start.x} ${start.y} L ${end.x} ${end.y}`;
+    }
+
+    // Curved path for parallel edges
+    const midX = (start.x + end.x) / 2;
+    const midY = (start.y + end.y) / 2;
+    const dx = end.x - start.x;
+    const dy = end.y - start.y;
+    const len = Math.sqrt(dx * dx + dy * dy);
+
+    if (len === 0) return `M ${start.x} ${start.y} L ${end.x} ${end.y}`;
+
+    const perpX = -dy / len;
+    const perpY = dx / len;
+    const ctrlX = midX + perpX * edge.curveOffset;
+    const ctrlY = midY + perpY * edge.curveOffset;
+
+    const newStart = sourceNode.getConnectionPoint(ctrlX, ctrlY);
+    const newEnd = targetNode.getConnectionPoint(ctrlX, ctrlY);
+
+    return `M ${newStart.x} ${newStart.y} Q ${ctrlX} ${ctrlY} ${newEnd.x} ${newEnd.y}`;
+  }
+
+  /**
+   * Calculate self-loop path data
+   */
+  private static calculateSelfLoopPath(edge: Edge, node: Node): string {
+    const angle = edge.selfLoopAngle;
+    const loopSize = Math.max(node.rx, node.ry) * 1.5;
+
+    const startAngle = angle - Math.PI / 6;
+    const endAngle = angle + Math.PI / 6;
+
+    const startX = node.cx + node.rx * Math.cos(startAngle);
+    const startY = node.cy + node.ry * Math.sin(startAngle);
+    const endX = node.cx + node.rx * Math.cos(endAngle);
+    const endY = node.cy + node.ry * Math.sin(endAngle);
+
+    const ctrl1X = node.cx + (node.rx + loopSize) * Math.cos(startAngle);
+    const ctrl1Y = node.cy + (node.ry + loopSize) * Math.sin(startAngle);
+    const ctrl2X = node.cx + (node.rx + loopSize) * Math.cos(endAngle);
+    const ctrl2Y = node.cy + (node.ry + loopSize) * Math.sin(endAngle);
+
+    return `M ${startX} ${startY} C ${ctrl1X} ${ctrl1Y} ${ctrl2X} ${ctrl2Y} ${endX} ${endY}`;
   }
 
   /**
@@ -156,8 +300,37 @@ export class FileManager {
     }
 
     const shapes: Shape[] = [];
+    const gm = getGraphManager();
 
-    // Parse line elements
+    // First, parse nodes to register them with GraphManager
+    const nodeElements = svg.querySelectorAll('g[data-graph-type="node"]');
+    nodeElements.forEach(el => {
+      const ellipse = el.querySelector('ellipse');
+      if (ellipse) {
+        const style = this.parseStyleFromElement(ellipse);
+        const node = Node.fromElement(el as SVGGElement, style);
+        if (node) {
+          shapes.push(node);
+          // Register with GraphManager
+          gm.registerNode(node.id);
+          gm.setNodeShape(node.id, node);
+        }
+      }
+    });
+
+    // Parse edge elements (after nodes are registered)
+    const edgeElements = svg.querySelectorAll('path[data-graph-type="edge"]');
+    edgeElements.forEach(el => {
+      const style = this.parseEdgeStyleFromElement(el as SVGPathElement);
+      const edge = Edge.fromElement(el as SVGPathElement, style);
+      if (edge) {
+        shapes.push(edge);
+        // Register with GraphManager
+        gm.registerEdge(edge.id, edge.sourceNodeId, edge.targetNodeId);
+      }
+    });
+
+    // Parse line elements (excluding edges)
     const lines = svg.querySelectorAll('line');
     lines.forEach(el => {
       const style = this.parseStyleFromElement(el);
@@ -167,9 +340,12 @@ export class FileManager {
       shapes.push(line);
     });
 
-    // Parse ellipse elements
+    // Parse ellipse elements (excluding those inside nodes)
     const ellipses = svg.querySelectorAll('ellipse');
     ellipses.forEach(el => {
+      // Skip ellipses that are part of nodes
+      if (el.parentElement?.getAttribute('data-graph-type') === 'node') return;
+
       const style = this.parseStyleFromElement(el);
       const ellipse = Ellipse.fromElement(el, style);
       shapes.push(ellipse);
@@ -194,15 +370,33 @@ export class FileManager {
       shapes.push(rectangle);
     });
 
-    // Parse text elements
+    // Parse text elements (excluding those inside nodes)
     const texts = svg.querySelectorAll('text');
     texts.forEach(el => {
+      // Skip text elements that are part of nodes
+      if (el.parentElement?.getAttribute('data-graph-type') === 'node') return;
+
       const style = this.parseStyleFromElement(el);
       const text = Text.fromElement(el, style);
       shapes.push(text);
     });
 
     return shapes;
+  }
+
+  /**
+   * Parse style attributes from edge path element
+   */
+  private static parseEdgeStyleFromElement(el: SVGPathElement): ShapeStyle {
+    return {
+      fill: DEFAULT_STYLE.fill,
+      fillNone: true,
+      stroke: el.getAttribute('stroke') || DEFAULT_STYLE.stroke,
+      strokeWidth: parseFloat(el.getAttribute('stroke-width') || String(DEFAULT_STYLE.strokeWidth)),
+      opacity: parseFloat(el.getAttribute('opacity') || '1'),
+      strokeDasharray: el.getAttribute('stroke-dasharray') || '',
+      strokeLinecap: (el.getAttribute('stroke-linecap') as StrokeLinecap) || DEFAULT_STYLE.strokeLinecap
+    };
   }
 
   /**

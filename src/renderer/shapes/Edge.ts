@@ -52,6 +52,32 @@ export class Edge implements Shape {
   }
 
   /**
+   * Create edge from SVG path element
+   */
+  static fromElement(el: SVGPathElement, style: ShapeStyle): Edge | null {
+    const sourceNodeId = el.getAttribute('data-source-id');
+    const targetNodeId = el.getAttribute('data-target-id');
+
+    if (!sourceNodeId || !targetNodeId) return null;
+
+    const direction = (el.getAttribute('data-direction') || 'none') as EdgeDirection;
+    const curveOffset = parseFloat(el.getAttribute('data-curve-offset') || '0');
+    const isSelfLoop = el.getAttribute('data-is-self-loop') === 'true' || sourceNodeId === targetNodeId;
+    const selfLoopAngle = parseFloat(el.getAttribute('data-self-loop-angle') || '0');
+
+    return new Edge(
+      el.id || generateId(),
+      sourceNodeId,
+      targetNodeId,
+      direction,
+      curveOffset,
+      isSelfLoop,
+      selfLoopAngle,
+      style
+    );
+  }
+
+  /**
    * Get the path data for the edge
    */
   private getPathData(sourceNode: Node, targetNode: Node): string {
@@ -143,6 +169,10 @@ export class Edge implements Shape {
     path.setAttribute('data-target-id', this.targetNodeId);
     path.setAttribute('data-direction', this.direction);
     path.setAttribute('data-curve-offset', String(this.curveOffset));
+    if (this.isSelfLoop) {
+      path.setAttribute('data-is-self-loop', 'true');
+      path.setAttribute('data-self-loop-angle', String(this.selfLoopAngle));
+    }
 
     if (sourceNode && targetNode) {
       path.setAttribute('d', this.getPathData(sourceNode, targetNode));
