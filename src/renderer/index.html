@@ -179,6 +179,30 @@
           </select>
         </div>
 
+        <!-- Node-specific properties (hidden by default) -->
+        <div id="node-properties" style="display: none;">
+          <div class="property-group">
+            <label>Node Label</label>
+            <input type="text" id="prop-node-label" placeholder="Label">
+          </div>
+          <div class="property-group">
+            <label>Font Size</label>
+            <input type="number" id="prop-node-font-size" value="14" min="8" max="72">
+          </div>
+        </div>
+
+        <!-- Edge-specific properties (hidden by default) -->
+        <div id="edge-properties" style="display: none;">
+          <div class="property-group">
+            <label>Direction</label>
+            <select id="prop-edge-direction">
+              <option value="none">Undirected</option>
+              <option value="forward">Forward (→)</option>
+              <option value="backward">Backward (←)</option>
+            </select>
+          </div>
+        </div>
+
         <!-- Line-specific properties (hidden by default) -->
         <div id="line-properties" style="display: none;">
           <div class="property-group">

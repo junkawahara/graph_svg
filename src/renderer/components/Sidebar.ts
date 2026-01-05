@@ -1,4 +1,4 @@
-import { ShapeStyle, StrokeLinecap, MarkerType } from '../../shared/types';
+import { ShapeStyle, StrokeLinecap, MarkerType, EdgeDirection } from '../../shared/types';
 import { eventBus } from '../core/EventBus';
 import { editorState } from '../core/EditorState';
 import { selectionManager } from '../core/SelectionManager';
@@ -6,9 +6,13 @@ import { historyManager } from '../core/HistoryManager';
 import { Shape } from '../shapes/Shape';
 import { Text } from '../shapes/Text';
 import { Line } from '../shapes/Line';
+import { Node } from '../shapes/Node';
+import { Edge } from '../shapes/Edge';
 import { StyleChangeCommand } from '../commands/StyleChangeCommand';
 import { TextPropertyChangeCommand, TextPropertyUpdates } from '../commands/TextPropertyChangeCommand';
 import { MarkerChangeCommand, MarkerUpdates } from '../commands/MarkerChangeCommand';
+import { NodeLabelChangeCommand, NodePropertyUpdates } from '../commands/NodeLabelChangeCommand';
+import { EdgeDirectionChangeCommand } from '../commands/EdgeDirectionChangeCommand';
 
 /**
  * Sidebar component - handles style property editing
@@ -35,6 +39,15 @@ export class Sidebar {
   private markerStart: HTMLSelectElement;
   private markerEnd: HTMLSelectElement;
 
+  // Node-specific properties
+  private nodePropertiesContainer: HTMLDivElement | null = null;
+  private nodeLabel: HTMLInputElement | null = null;
+  private nodeFontSize: HTMLInputElement | null = null;
+
+  // Edge-specific properties
+  private edgePropertiesContainer: HTMLDivElement | null = null;
+  private edgeDirection: HTMLSelectElement | null = null;
+
   private isUpdatingUI = false; // Prevent feedback loop
 
   constructor() {
@@ -60,9 +73,20 @@ export class Sidebar {
     this.markerStart = document.getElementById('prop-marker-start') as HTMLSelectElement;
     this.markerEnd = document.getElementById('prop-marker-end') as HTMLSelectElement;
 
+    // Node-specific elements
+    this.nodePropertiesContainer = document.getElementById('node-properties') as HTMLDivElement;
+    this.nodeLabel = document.getElementById('prop-node-label') as HTMLInputElement;
+    this.nodeFontSize = document.getElementById('prop-node-font-size') as HTMLInputElement;
+
+    // Edge-specific elements
+    this.edgePropertiesContainer = document.getElementById('edge-properties') as HTMLDivElement;
+    this.edgeDirection = document.getElementById('prop-edge-direction') as HTMLSelectElement;
+
     this.setupInputListeners();
     this.setupTextInputListeners();
     this.setupLineInputListeners();
+    this.setupNodeInputListeners();
+    this.setupEdgeInputListeners();
     this.setupEventListeners();
 
     // Initialize with default style
@@ -156,6 +180,37 @@ export class Sidebar {
   }
 
   /**
+   * Setup node property input listeners
+   */
+  private setupNodeInputListeners(): void {
+    if (this.nodeLabel) {
+      this.nodeLabel.addEventListener('change', () => {
+        if (this.isUpdatingUI) return;
+        this.applyNodePropertyChange({ label: this.nodeLabel!.value });
+      });
+    }
+
+    if (this.nodeFontSize) {
+      this.nodeFontSize.addEventListener('change', () => {
+        if (this.isUpdatingUI) return;
+        this.applyNodePropertyChange({ fontSize: parseInt(this.nodeFontSize!.value, 10) || 14 });
+      });
+    }
+  }
+
+  /**
+   * Setup edge property input listeners
+   */
+  private setupEdgeInputListeners(): void {
+    if (this.edgeDirection) {
+      this.edgeDirection.addEventListener('change', () => {
+        if (this.isUpdatingUI) return;
+        this.applyEdgeDirectionChange(this.edgeDirection!.value as EdgeDirection);
+      });
+    }
+  }
+
+  /**
    * Setup event listeners
    */
   private setupEventListeners(): void {
@@ -179,15 +234,33 @@ export class Sidebar {
         } else {
           this.hideLineProperties();
         }
+
+        // Show/hide node properties based on shape type
+        if (shape instanceof Node) {
+          this.showNodeProperties(shape);
+        } else {
+          this.hideNodeProperties();
+        }
+
+        // Show/hide edge properties based on shape type
+        if (shape instanceof Edge) {
+          this.showEdgeProperties(shape);
+        } else {
+          this.hideEdgeProperties();
+        }
       } else if (shapes.length === 0) {
         // Show editor's current style (for new shapes)
         this.updateUIFromStyle(editorState.currentStyle);
         this.hideTextProperties();
         this.hideLineProperties();
+        this.hideNodeProperties();
+        this.hideEdgeProperties();
       } else {
         // Multiple selection - hide special properties
         this.hideTextProperties();
         this.hideLineProperties();
+        this.hideNodeProperties();
+        this.hideEdgeProperties();
       }
     });
   }
@@ -274,6 +347,79 @@ export class Sidebar {
    */
   private hideLineProperties(): void {
     this.linePropertiesContainer.style.display = 'none';
+  }
+
+  /**
+   * Apply node property change
+   */
+  private applyNodePropertyChange(updates: NodePropertyUpdates): void {
+    const selectedShapes = selectionManager.getSelection();
+
+    if (selectedShapes.length === 1 && selectedShapes[0] instanceof Node) {
+      const node = selectedShapes[0] as Node;
+      const command = new NodeLabelChangeCommand(node, updates);
+      historyManager.execute(command);
+    }
+  }
+
+  /**
+   * Apply edge direction change
+   */
+  private applyEdgeDirectionChange(direction: EdgeDirection): void {
+    const selectedShapes = selectionManager.getSelection();
+
+    if (selectedShapes.length === 1 && selectedShapes[0] instanceof Edge) {
+      const edge = selectedShapes[0] as Edge;
+      const command = new EdgeDirectionChangeCommand(edge, direction);
+      historyManager.execute(command);
+    }
+  }
+
+  /**
+   * Show node properties and populate with shape values
+   */
+  private showNodeProperties(node: Node): void {
+    if (!this.nodePropertiesContainer) return;
+
+    this.isUpdatingUI = true;
+
+    this.nodePropertiesContainer.style.display = 'block';
+    if (this.nodeLabel) this.nodeLabel.value = node.label;
+    if (this.nodeFontSize) this.nodeFontSize.value = String(node.fontSize);
+
+    this.isUpdatingUI = false;
+  }
+
+  /**
+   * Hide node properties
+   */
+  private hideNodeProperties(): void {
+    if (this.nodePropertiesContainer) {
+      this.nodePropertiesContainer.style.display = 'none';
+    }
+  }
+
+  /**
+   * Show edge properties and populate with values
+   */
+  private showEdgeProperties(edge: Edge): void {
+    if (!this.edgePropertiesContainer) return;
+
+    this.isUpdatingUI = true;
+
+    this.edgePropertiesContainer.style.display = 'block';
+    if (this.edgeDirection) this.edgeDirection.value = edge.direction;
+
+    this.isUpdatingUI = false;
+  }
+
+  /**
+   * Hide edge properties
+   */
+  private hideEdgeProperties(): void {
+    if (this.edgePropertiesContainer) {
+      this.edgePropertiesContainer.style.display = 'none';
+    }
   }
 
   /**

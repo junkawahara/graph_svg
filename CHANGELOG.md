@@ -37,6 +37,11 @@
   - DeleteNodeCommand/DeleteEdgeCommand（Undo/Redo対応）
   - 削除ホバー時の赤ハイライト表示
 
+- グラフ機能 Phase 7: プロパティ編集
+  - ノード選択時: ラベル、フォントサイズ編集
+  - エッジ選択時: 方向（有向/無向）変更
+  - NodeLabelChangeCommand/EdgeDirectionChangeCommand（Undo/Redo対応）
+
 ---
 
 ## [1.0.0] - 2026-01-05
