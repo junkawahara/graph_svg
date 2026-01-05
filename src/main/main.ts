@@ -129,12 +129,16 @@ function createMenu(): void {
 function createWindow(): void {
   const windowState = getWindowState();
 
+  // Use app.getAppPath() for reliable icon path resolution on Linux
+  const iconPath = path.join(app.getAppPath(), 'assets/icon-512.png');
+  console.log('Icon path:', iconPath);
+
   mainWindow = new BrowserWindow({
     x: windowState.x,
     y: windowState.y,
     width: windowState.width,
     height: windowState.height,
-    icon: path.join(__dirname, '../../assets/icon.png'),
+    icon: iconPath,
     webPreferences: {
       preload: path.join(__dirname, '../preload/preload.js'),
       contextIsolation: true,
