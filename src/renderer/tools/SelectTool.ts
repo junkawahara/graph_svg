@@ -1,10 +1,12 @@
 import { Point, Bounds } from '../../shared/types';
 import { Tool } from './Tool';
 import { Shape } from '../shapes/Shape';
+import { Node } from '../shapes/Node';
 import { Handle } from '../handles/Handle';
 import { selectionManager } from '../core/SelectionManager';
 import { historyManager } from '../core/HistoryManager';
 import { editorState } from '../core/EditorState';
+import { getGraphManager } from '../core/GraphManager';
 import { MoveShapeCommand } from '../commands/MoveShapeCommand';
 import { ResizeShapeCommand } from '../commands/ResizeShapeCommand';
 
@@ -125,6 +127,10 @@ export class SelectTool implements Tool {
       const snappedPoint = editorState.snapPoint(point);
       this.activeHandle.onDrag(snappedPoint);
       this.callbacks.updateHandles();
+      // Update connected edges if resizing a graph node
+      if (this.resizeShape instanceof Node) {
+        getGraphManager().updateEdgesForNode(this.resizeShape.id);
+      }
       return;
     }
 
@@ -140,8 +146,13 @@ export class SelectTool implements Tool {
 
     // Move all selected shapes
     const selectedShapes = selectionManager.getSelection();
+    const gm = getGraphManager();
     selectedShapes.forEach(shape => {
       shape.move(dx, dy);
+      // Update connected edges if this is a graph node
+      if (shape instanceof Node) {
+        gm.updateEdgesForNode(shape.id);
+      }
     });
 
     // Update handles
