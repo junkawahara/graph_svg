@@ -1,13 +1,128 @@
-import { app, BrowserWindow, ipcMain, dialog } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog, Menu } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
+import Store from 'electron-store';
+import { AppSettings, WindowState, DEFAULT_SETTINGS, DEFAULT_WINDOW_STATE, StoreSchema } from '../shared/settings';
 
 let mainWindow: BrowserWindow | null = null;
 
+// Initialize store
+const store = new Store<StoreSchema>({
+  defaults: {
+    settings: DEFAULT_SETTINGS,
+    windowState: DEFAULT_WINDOW_STATE
+  }
+});
+
+/**
+ * Get saved window state
+ */
+function getWindowState(): WindowState {
+  return store.get('windowState', DEFAULT_WINDOW_STATE);
+}
+
+/**
+ * Save current window state
+ */
+function saveWindowState(): void {
+  if (!mainWindow) return;
+
+  const isMaximized = mainWindow.isMaximized();
+
+  // Only save bounds if not maximized
+  if (!isMaximized) {
+    const bounds = mainWindow.getBounds();
+    store.set('windowState', {
+      x: bounds.x,
+      y: bounds.y,
+      width: bounds.width,
+      height: bounds.height,
+      isMaximized: false
+    });
+  } else {
+    // Keep existing position/size but mark as maximized
+    const current = store.get('windowState', DEFAULT_WINDOW_STATE);
+    store.set('windowState', {
+      ...current,
+      isMaximized: true
+    });
+  }
+}
+
+/**
+ * Create application menu
+ */
+function createMenu(): void {
+  const template: Electron.MenuItemConstructorOptions[] = [
+    {
+      label: 'File',
+      submenu: [
+        {
+          label: 'Open...',
+          accelerator: 'CmdOrCtrl+O',
+          click: () => mainWindow?.webContents.send('menu:open')
+        },
+        {
+          label: 'Save...',
+          accelerator: 'CmdOrCtrl+S',
+          click: () => mainWindow?.webContents.send('menu:save')
+        },
+        { type: 'separator' },
+        { role: 'quit' }
+      ]
+    },
+    {
+      label: 'Edit',
+      submenu: [
+        {
+          label: 'Undo',
+          accelerator: 'CmdOrCtrl+Z',
+          click: () => mainWindow?.webContents.send('menu:undo')
+        },
+        {
+          label: 'Redo',
+          accelerator: 'CmdOrCtrl+Y',
+          click: () => mainWindow?.webContents.send('menu:redo')
+        },
+        { type: 'separator' },
+        { role: 'cut' },
+        { role: 'copy' },
+        { role: 'paste' },
+        { type: 'separator' },
+        {
+          label: 'Settings...',
+          click: () => mainWindow?.webContents.send('open-settings')
+        }
+      ]
+    },
+    {
+      label: 'View',
+      submenu: [
+        { role: 'reload' },
+        { role: 'forceReload' },
+        { role: 'toggleDevTools' },
+        { type: 'separator' },
+        { role: 'resetZoom' },
+        { role: 'zoomIn' },
+        { role: 'zoomOut' },
+        { type: 'separator' },
+        { role: 'togglefullscreen' }
+      ]
+    }
+  ];
+
+  const menu = Menu.buildFromTemplate(template);
+  Menu.setApplicationMenu(menu);
+}
+
 function createWindow(): void {
+  const windowState = getWindowState();
+
   mainWindow = new BrowserWindow({
-    width: 1200,
-    height: 800,
+    x: windowState.x,
+    y: windowState.y,
+    width: windowState.width,
+    height: windowState.height,
     webPreferences: {
       preload: path.join(__dirname, '../preload/preload.js'),
       contextIsolation: true,
@@ -15,10 +130,20 @@ function createWindow(): void {
     }
   });
 
+  // Restore maximized state
+  if (windowState.isMaximized) {
+    mainWindow.maximize();
+  }
+
   mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
 
   // Open DevTools in development
   mainWindow.webContents.openDevTools();
+
+  // Save window state before closing
+  mainWindow.on('close', () => {
+    saveWindowState();
+  });
 
   mainWindow.on('closed', () => {
     mainWindow = null;
@@ -77,7 +202,20 @@ ipcMain.handle('file:open', async (): Promise<{ path: string; content: string } 
   }
 });
 
+// IPC Handlers for settings
+ipcMain.handle('settings:read', (): AppSettings => {
+  return store.get('settings', DEFAULT_SETTINGS);
+});
+
+ipcMain.handle('settings:write', (_event, settings: Partial<AppSettings>): AppSettings => {
+  const current = store.get('settings', DEFAULT_SETTINGS);
+  const updated = { ...current, ...settings };
+  store.set('settings', updated);
+  return updated;
+});
+
 app.whenReady().then(() => {
+  createMenu();
   createWindow();
 
   app.on('activate', () => {

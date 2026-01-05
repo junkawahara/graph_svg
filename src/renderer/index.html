@@ -103,6 +103,117 @@
       <div id="sidebar">
         <h3>Properties</h3>
 
+        <!-- Position/Size properties (hidden by default) -->
+        <!-- Line position -->
+        <div id="line-position" class="position-section" style="display: none;">
+          <div class="property-row">
+            <div class="property-group small">
+              <label>X1</label>
+              <input type="number" id="prop-line-x1" step="1">
+            </div>
+            <div class="property-group small">
+              <label>Y1</label>
+              <input type="number" id="prop-line-y1" step="1">
+            </div>
+          </div>
+          <div class="property-row">
+            <div class="property-group small">
+              <label>X2</label>
+              <input type="number" id="prop-line-x2" step="1">
+            </div>
+            <div class="property-group small">
+              <label>Y2</label>
+              <input type="number" id="prop-line-y2" step="1">
+            </div>
+          </div>
+        </div>
+
+        <!-- Ellipse position -->
+        <div id="ellipse-position" class="position-section" style="display: none;">
+          <div class="property-row">
+            <div class="property-group small">
+              <label>CX</label>
+              <input type="number" id="prop-ellipse-cx" step="1">
+            </div>
+            <div class="property-group small">
+              <label>CY</label>
+              <input type="number" id="prop-ellipse-cy" step="1">
+            </div>
+          </div>
+          <div class="property-row">
+            <div class="property-group small">
+              <label>RX</label>
+              <input type="number" id="prop-ellipse-rx" step="1" min="1">
+            </div>
+            <div class="property-group small">
+              <label>RY</label>
+              <input type="number" id="prop-ellipse-ry" step="1" min="1">
+            </div>
+          </div>
+        </div>
+
+        <!-- Rectangle position -->
+        <div id="rectangle-position" class="position-section" style="display: none;">
+          <div class="property-row">
+            <div class="property-group small">
+              <label>X</label>
+              <input type="number" id="prop-rect-x" step="1">
+            </div>
+            <div class="property-group small">
+              <label>Y</label>
+              <input type="number" id="prop-rect-y" step="1">
+            </div>
+          </div>
+          <div class="property-row">
+            <div class="property-group small">
+              <label>W</label>
+              <input type="number" id="prop-rect-width" step="1" min="1">
+            </div>
+            <div class="property-group small">
+              <label>H</label>
+              <input type="number" id="prop-rect-height" step="1" min="1">
+            </div>
+          </div>
+        </div>
+
+        <!-- Text position -->
+        <div id="text-position" class="position-section" style="display: none;">
+          <div class="property-row">
+            <div class="property-group small">
+              <label>X</label>
+              <input type="number" id="prop-text-x" step="1">
+            </div>
+            <div class="property-group small">
+              <label>Y</label>
+              <input type="number" id="prop-text-y" step="1">
+            </div>
+          </div>
+        </div>
+
+        <!-- Node position -->
+        <div id="node-position" class="position-section" style="display: none;">
+          <div class="property-row">
+            <div class="property-group small">
+              <label>CX</label>
+              <input type="number" id="prop-node-cx" step="1">
+            </div>
+            <div class="property-group small">
+              <label>CY</label>
+              <input type="number" id="prop-node-cy" step="1">
+            </div>
+          </div>
+          <div class="property-row">
+            <div class="property-group small">
+              <label>RX</label>
+              <input type="number" id="prop-node-rx" step="1" min="1">
+            </div>
+            <div class="property-group small">
+              <label>RY</label>
+              <input type="number" id="prop-node-ry" step="1" min="1">
+            </div>
+          </div>
+        </div>
+
         <!-- Text-specific properties (hidden by default) -->
         <div id="text-properties" style="display: none;">
           <div class="property-group">

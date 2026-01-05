@@ -96,3 +96,35 @@
   height: 14px;
   cursor: pointer;
 }
+
+/* Position/Size property rows */
+.position-section {
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #3e3e3e;
+}
+
+.property-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.property-row:last-child {
+  margin-bottom: 0;
+}
+
+.property-group.small {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+.property-group.small label {
+  margin-bottom: 4px;
+}
+
+.property-group.small input[type="number"] {
+  width: 100%;
+  padding: 4px 6px;
+  font-size: 12px;
+}

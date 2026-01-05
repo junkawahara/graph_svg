@@ -6,6 +6,8 @@ import { historyManager } from '../core/HistoryManager';
 import { Shape } from '../shapes/Shape';
 import { Text } from '../shapes/Text';
 import { Line } from '../shapes/Line';
+import { Ellipse } from '../shapes/Ellipse';
+import { Rectangle } from '../shapes/Rectangle';
 import { Node } from '../shapes/Node';
 import { Edge } from '../shapes/Edge';
 import { StyleChangeCommand } from '../commands/StyleChangeCommand';
@@ -13,6 +15,7 @@ import { TextPropertyChangeCommand, TextPropertyUpdates } from '../commands/Text
 import { MarkerChangeCommand, MarkerUpdates } from '../commands/MarkerChangeCommand';
 import { NodeLabelChangeCommand, NodePropertyUpdates } from '../commands/NodeLabelChangeCommand';
 import { EdgeDirectionChangeCommand } from '../commands/EdgeDirectionChangeCommand';
+import { ResizeShapeCommand } from '../commands/ResizeShapeCommand';
 
 /**
  * Sidebar component - handles style property editing
@@ -48,6 +51,35 @@ export class Sidebar {
   private edgePropertiesContainer: HTMLDivElement | null = null;
   private edgeDirection: HTMLSelectElement | null = null;
 
+  // Position/Size properties
+  private linePositionContainer: HTMLDivElement | null = null;
+  private lineX1Input: HTMLInputElement | null = null;
+  private lineY1Input: HTMLInputElement | null = null;
+  private lineX2Input: HTMLInputElement | null = null;
+  private lineY2Input: HTMLInputElement | null = null;
+
+  private ellipsePositionContainer: HTMLDivElement | null = null;
+  private ellipseCxInput: HTMLInputElement | null = null;
+  private ellipseCyInput: HTMLInputElement | null = null;
+  private ellipseRxInput: HTMLInputElement | null = null;
+  private ellipseRyInput: HTMLInputElement | null = null;
+
+  private rectanglePositionContainer: HTMLDivElement | null = null;
+  private rectXInput: HTMLInputElement | null = null;
+  private rectYInput: HTMLInputElement | null = null;
+  private rectWidthInput: HTMLInputElement | null = null;
+  private rectHeightInput: HTMLInputElement | null = null;
+
+  private textPositionContainer: HTMLDivElement | null = null;
+  private textXInput: HTMLInputElement | null = null;
+  private textYInput: HTMLInputElement | null = null;
+
+  private nodePositionContainer: HTMLDivElement | null = null;
+  private nodeCxInput: HTMLInputElement | null = null;
+  private nodeCyInput: HTMLInputElement | null = null;
+  private nodeRxInput: HTMLInputElement | null = null;
+  private nodeRyInput: HTMLInputElement | null = null;
+
   private isUpdatingUI = false; // Prevent feedback loop
 
   constructor() {
@@ -82,11 +114,41 @@ export class Sidebar {
     this.edgePropertiesContainer = document.getElementById('edge-properties') as HTMLDivElement;
     this.edgeDirection = document.getElementById('prop-edge-direction') as HTMLSelectElement;
 
+    // Position/Size elements
+    this.linePositionContainer = document.getElementById('line-position') as HTMLDivElement;
+    this.lineX1Input = document.getElementById('prop-line-x1') as HTMLInputElement;
+    this.lineY1Input = document.getElementById('prop-line-y1') as HTMLInputElement;
+    this.lineX2Input = document.getElementById('prop-line-x2') as HTMLInputElement;
+    this.lineY2Input = document.getElementById('prop-line-y2') as HTMLInputElement;
+
+    this.ellipsePositionContainer = document.getElementById('ellipse-position') as HTMLDivElement;
+    this.ellipseCxInput = document.getElementById('prop-ellipse-cx') as HTMLInputElement;
+    this.ellipseCyInput = document.getElementById('prop-ellipse-cy') as HTMLInputElement;
+    this.ellipseRxInput = document.getElementById('prop-ellipse-rx') as HTMLInputElement;
+    this.ellipseRyInput = document.getElementById('prop-ellipse-ry') as HTMLInputElement;
+
+    this.rectanglePositionContainer = document.getElementById('rectangle-position') as HTMLDivElement;
+    this.rectXInput = document.getElementById('prop-rect-x') as HTMLInputElement;
+    this.rectYInput = document.getElementById('prop-rect-y') as HTMLInputElement;
+    this.rectWidthInput = document.getElementById('prop-rect-width') as HTMLInputElement;
+    this.rectHeightInput = document.getElementById('prop-rect-height') as HTMLInputElement;
+
+    this.textPositionContainer = document.getElementById('text-position') as HTMLDivElement;
+    this.textXInput = document.getElementById('prop-text-x') as HTMLInputElement;
+    this.textYInput = document.getElementById('prop-text-y') as HTMLInputElement;
+
+    this.nodePositionContainer = document.getElementById('node-position') as HTMLDivElement;
+    this.nodeCxInput = document.getElementById('prop-node-cx') as HTMLInputElement;
+    this.nodeCyInput = document.getElementById('prop-node-cy') as HTMLInputElement;
+    this.nodeRxInput = document.getElementById('prop-node-rx') as HTMLInputElement;
+    this.nodeRyInput = document.getElementById('prop-node-ry') as HTMLInputElement;
+
     this.setupInputListeners();
     this.setupTextInputListeners();
     this.setupLineInputListeners();
     this.setupNodeInputListeners();
     this.setupEdgeInputListeners();
+    this.setupPositionInputListeners();
     this.setupEventListeners();
 
     // Initialize with default style
@@ -211,6 +273,51 @@ export class Sidebar {
   }
 
   /**
+   * Setup position/size input listeners
+   */
+  private setupPositionInputListeners(): void {
+    // Line position inputs
+    const lineInputs = [this.lineX1Input, this.lineY1Input, this.lineX2Input, this.lineY2Input];
+    lineInputs.forEach(input => {
+      if (input) {
+        input.addEventListener('change', () => this.applyLinePositionChange());
+      }
+    });
+
+    // Ellipse position inputs
+    const ellipseInputs = [this.ellipseCxInput, this.ellipseCyInput, this.ellipseRxInput, this.ellipseRyInput];
+    ellipseInputs.forEach(input => {
+      if (input) {
+        input.addEventListener('change', () => this.applyEllipsePositionChange());
+      }
+    });
+
+    // Rectangle position inputs
+    const rectInputs = [this.rectXInput, this.rectYInput, this.rectWidthInput, this.rectHeightInput];
+    rectInputs.forEach(input => {
+      if (input) {
+        input.addEventListener('change', () => this.applyRectanglePositionChange());
+      }
+    });
+
+    // Text position inputs
+    const textInputs = [this.textXInput, this.textYInput];
+    textInputs.forEach(input => {
+      if (input) {
+        input.addEventListener('change', () => this.applyTextPositionChange());
+      }
+    });
+
+    // Node position inputs
+    const nodeInputs = [this.nodeCxInput, this.nodeCyInput, this.nodeRxInput, this.nodeRyInput];
+    nodeInputs.forEach(input => {
+      if (input) {
+        input.addEventListener('change', () => this.applyNodePositionChange());
+      }
+    });
+  }
+
+  /**
    * Setup event listeners
    */
   private setupEventListeners(): void {
@@ -248,6 +355,9 @@ export class Sidebar {
         } else {
           this.hideEdgeProperties();
         }
+
+        // Show position properties based on shape type
+        this.showPositionProperties(shape);
       } else if (shapes.length === 0) {
         // Show editor's current style (for new shapes)
         this.updateUIFromStyle(editorState.currentStyle);
@@ -255,12 +365,22 @@ export class Sidebar {
         this.hideLineProperties();
         this.hideNodeProperties();
         this.hideEdgeProperties();
+        this.hideAllPositionProperties();
       } else {
         // Multiple selection - hide special properties
         this.hideTextProperties();
         this.hideLineProperties();
         this.hideNodeProperties();
         this.hideEdgeProperties();
+        this.hideAllPositionProperties();
+      }
+    });
+
+    // Update position inputs when shape is updated (e.g., during drag)
+    eventBus.on('shape:updated', (shape: Shape) => {
+      const selectedShapes = selectionManager.getSelection();
+      if (selectedShapes.length === 1 && selectedShapes[0] === shape) {
+        this.updatePositionInputs(shape);
       }
     });
   }
@@ -438,5 +558,190 @@ export class Sidebar {
     this.strokeLinecap.value = style.strokeLinecap;
 
     this.isUpdatingUI = false;
+  }
+
+  /**
+   * Show position properties for the given shape
+   */
+  private showPositionProperties(shape: Shape): void {
+    this.hideAllPositionProperties();
+
+    if (shape instanceof Line) {
+      this.showLinePositionProperties(shape);
+    } else if (shape instanceof Node) {
+      this.showNodePositionProperties(shape);
+    } else if (shape instanceof Ellipse) {
+      this.showEllipsePositionProperties(shape);
+    } else if (shape instanceof Rectangle) {
+      this.showRectanglePositionProperties(shape);
+    } else if (shape instanceof Text) {
+      this.showTextPositionProperties(shape);
+    }
+    // Edge has no position properties (derived from nodes)
+  }
+
+  /**
+   * Hide all position property sections
+   */
+  private hideAllPositionProperties(): void {
+    if (this.linePositionContainer) this.linePositionContainer.style.display = 'none';
+    if (this.ellipsePositionContainer) this.ellipsePositionContainer.style.display = 'none';
+    if (this.rectanglePositionContainer) this.rectanglePositionContainer.style.display = 'none';
+    if (this.textPositionContainer) this.textPositionContainer.style.display = 'none';
+    if (this.nodePositionContainer) this.nodePositionContainer.style.display = 'none';
+  }
+
+  /**
+   * Update position inputs from shape (without triggering change events)
+   */
+  private updatePositionInputs(shape: Shape): void {
+    this.isUpdatingUI = true;
+
+    if (shape instanceof Line) {
+      if (this.lineX1Input) this.lineX1Input.value = String(Math.round(shape.x1));
+      if (this.lineY1Input) this.lineY1Input.value = String(Math.round(shape.y1));
+      if (this.lineX2Input) this.lineX2Input.value = String(Math.round(shape.x2));
+      if (this.lineY2Input) this.lineY2Input.value = String(Math.round(shape.y2));
+    } else if (shape instanceof Node) {
+      if (this.nodeCxInput) this.nodeCxInput.value = String(Math.round(shape.cx));
+      if (this.nodeCyInput) this.nodeCyInput.value = String(Math.round(shape.cy));
+      if (this.nodeRxInput) this.nodeRxInput.value = String(Math.round(shape.rx));
+      if (this.nodeRyInput) this.nodeRyInput.value = String(Math.round(shape.ry));
+    } else if (shape instanceof Ellipse) {
+      if (this.ellipseCxInput) this.ellipseCxInput.value = String(Math.round(shape.cx));
+      if (this.ellipseCyInput) this.ellipseCyInput.value = String(Math.round(shape.cy));
+      if (this.ellipseRxInput) this.ellipseRxInput.value = String(Math.round(shape.rx));
+      if (this.ellipseRyInput) this.ellipseRyInput.value = String(Math.round(shape.ry));
+    } else if (shape instanceof Rectangle) {
+      if (this.rectXInput) this.rectXInput.value = String(Math.round(shape.x));
+      if (this.rectYInput) this.rectYInput.value = String(Math.round(shape.y));
+      if (this.rectWidthInput) this.rectWidthInput.value = String(Math.round(shape.width));
+      if (this.rectHeightInput) this.rectHeightInput.value = String(Math.round(shape.height));
+    } else if (shape instanceof Text) {
+      if (this.textXInput) this.textXInput.value = String(Math.round(shape.x));
+      if (this.textYInput) this.textYInput.value = String(Math.round(shape.y));
+    }
+
+    this.isUpdatingUI = false;
+  }
+
+  // Show position properties for each shape type
+  private showLinePositionProperties(line: Line): void {
+    if (!this.linePositionContainer) return;
+    this.linePositionContainer.style.display = 'block';
+    this.updatePositionInputs(line);
+  }
+
+  private showEllipsePositionProperties(ellipse: Ellipse): void {
+    if (!this.ellipsePositionContainer) return;
+    this.ellipsePositionContainer.style.display = 'block';
+    this.updatePositionInputs(ellipse);
+  }
+
+  private showRectanglePositionProperties(rect: Rectangle): void {
+    if (!this.rectanglePositionContainer) return;
+    this.rectanglePositionContainer.style.display = 'block';
+    this.updatePositionInputs(rect);
+  }
+
+  private showTextPositionProperties(text: Text): void {
+    if (!this.textPositionContainer) return;
+    this.textPositionContainer.style.display = 'block';
+    this.updatePositionInputs(text);
+  }
+
+  private showNodePositionProperties(node: Node): void {
+    if (!this.nodePositionContainer) return;
+    this.nodePositionContainer.style.display = 'block';
+    this.updatePositionInputs(node);
+  }
+
+  // Apply position changes from inputs
+  private applyLinePositionChange(): void {
+    if (this.isUpdatingUI) return;
+    const selectedShapes = selectionManager.getSelection();
+    if (selectedShapes.length !== 1 || !(selectedShapes[0] instanceof Line)) return;
+
+    const line = selectedShapes[0] as Line;
+    const beforeState = ResizeShapeCommand.captureState(line);
+    const afterState = {
+      x1: parseFloat(this.lineX1Input?.value || '0'),
+      y1: parseFloat(this.lineY1Input?.value || '0'),
+      x2: parseFloat(this.lineX2Input?.value || '0'),
+      y2: parseFloat(this.lineY2Input?.value || '0')
+    };
+
+    const command = new ResizeShapeCommand(line, beforeState, afterState);
+    historyManager.execute(command);
+  }
+
+  private applyEllipsePositionChange(): void {
+    if (this.isUpdatingUI) return;
+    const selectedShapes = selectionManager.getSelection();
+    if (selectedShapes.length !== 1 || !(selectedShapes[0] instanceof Ellipse)) return;
+
+    const ellipse = selectedShapes[0] as Ellipse;
+    const beforeState = ResizeShapeCommand.captureState(ellipse);
+    const afterState = {
+      cx: parseFloat(this.ellipseCxInput?.value || '0'),
+      cy: parseFloat(this.ellipseCyInput?.value || '0'),
+      rx: Math.max(1, parseFloat(this.ellipseRxInput?.value || '1')),
+      ry: Math.max(1, parseFloat(this.ellipseRyInput?.value || '1'))
+    };
+
+    const command = new ResizeShapeCommand(ellipse, beforeState, afterState);
+    historyManager.execute(command);
+  }
+
+  private applyRectanglePositionChange(): void {
+    if (this.isUpdatingUI) return;
+    const selectedShapes = selectionManager.getSelection();
+    if (selectedShapes.length !== 1 || !(selectedShapes[0] instanceof Rectangle)) return;
+
+    const rect = selectedShapes[0] as Rectangle;
+    const beforeState = ResizeShapeCommand.captureState(rect);
+    const afterState = {
+      x: parseFloat(this.rectXInput?.value || '0'),
+      y: parseFloat(this.rectYInput?.value || '0'),
+      width: Math.max(1, parseFloat(this.rectWidthInput?.value || '1')),
+      height: Math.max(1, parseFloat(this.rectHeightInput?.value || '1'))
+    };
+
+    const command = new ResizeShapeCommand(rect, beforeState, afterState);
+    historyManager.execute(command);
+  }
+
+  private applyTextPositionChange(): void {
+    if (this.isUpdatingUI) return;
+    const selectedShapes = selectionManager.getSelection();
+    if (selectedShapes.length !== 1 || !(selectedShapes[0] instanceof Text)) return;
+
+    const text = selectedShapes[0] as Text;
+    const beforeState = ResizeShapeCommand.captureState(text);
+    const afterState = {
+      x: parseFloat(this.textXInput?.value || '0'),
+      y: parseFloat(this.textYInput?.value || '0')
+    };
+
+    const command = new ResizeShapeCommand(text, beforeState, afterState);
+    historyManager.execute(command);
+  }
+
+  private applyNodePositionChange(): void {
+    if (this.isUpdatingUI) return;
+    const selectedShapes = selectionManager.getSelection();
+    if (selectedShapes.length !== 1 || !(selectedShapes[0] instanceof Node)) return;
+
+    const node = selectedShapes[0] as Node;
+    const beforeState = ResizeShapeCommand.captureState(node);
+    const afterState = {
+      cx: parseFloat(this.nodeCxInput?.value || '0'),
+      cy: parseFloat(this.nodeCyInput?.value || '0'),
+      rx: Math.max(1, parseFloat(this.nodeRxInput?.value || '1')),
+      ry: Math.max(1, parseFloat(this.nodeRyInput?.value || '1'))
+    };
+
+    const command = new ResizeShapeCommand(node, beforeState, afterState);
+    historyManager.execute(command);
   }
 }

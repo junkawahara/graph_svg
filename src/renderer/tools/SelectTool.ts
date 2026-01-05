@@ -6,6 +6,7 @@ import { Handle } from '../handles/Handle';
 import { selectionManager } from '../core/SelectionManager';
 import { historyManager } from '../core/HistoryManager';
 import { editorState } from '../core/EditorState';
+import { eventBus } from '../core/EventBus';
 import { getGraphManager } from '../core/GraphManager';
 import { MoveShapeCommand } from '../commands/MoveShapeCommand';
 import { ResizeShapeCommand } from '../commands/ResizeShapeCommand';
@@ -123,7 +124,7 @@ export class SelectTool implements Tool {
     }
 
     // Handle resizing
-    if (this.isResizing && this.activeHandle) {
+    if (this.isResizing && this.activeHandle && this.resizeShape) {
       const snappedPoint = editorState.snapPoint(point);
       this.activeHandle.onDrag(snappedPoint);
       this.callbacks.updateHandles();
@@ -131,6 +132,8 @@ export class SelectTool implements Tool {
       if (this.resizeShape instanceof Node) {
         getGraphManager().updateEdgesForNode(this.resizeShape.id);
       }
+      // Emit shape updated event for sidebar sync
+      eventBus.emit('shape:updated', this.resizeShape);
       return;
     }
 
@@ -153,6 +156,8 @@ export class SelectTool implements Tool {
       if (shape instanceof Node) {
         gm.updateEdgesForNode(shape.id);
       }
+      // Emit shape updated event for sidebar sync
+      eventBus.emit('shape:updated', shape);
     });
 
     // Update handles

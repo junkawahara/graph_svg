@@ -29,6 +29,7 @@
     "webpack-cli": "^5.1.4"
   },
   "dependencies": {
-    "cytoscape": "^3.33.1"
+    "cytoscape": "^3.33.1",
+    "electron-store": "^11.0.2"
   }
 }

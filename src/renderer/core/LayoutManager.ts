@@ -90,11 +90,11 @@ export class LayoutManager {
         return {
           ...baseOptions,
           name: 'cose',
-          idealEdgeLength: 100,
-          nodeOverlap: 20,
-          nodeRepulsion: (node: cytoscape.NodeSingular) => 4000,
-          edgeElasticity: (edge: cytoscape.EdgeSingular) => 100,
-          gravity: 0.25,
+          idealEdgeLength: 200,
+          nodeOverlap: 50,
+          nodeRepulsion: (node: cytoscape.NodeSingular) => 8000,
+          edgeElasticity: (edge: cytoscape.EdgeSingular) => 50,
+          gravity: 0.1,
           numIter: 1000,
           coolingFactor: 0.95,
           minTemp: 1.0
@@ -142,7 +142,7 @@ export class LayoutManager {
   }
 
   /**
-   * Center all nodes on the canvas
+   * Scale and center all nodes to fit the canvas
    */
   private static centerOnCanvas(nodeIds: string[], canvasWidth: number, canvasHeight: number): void {
     const gm = getGraphManager();
@@ -163,6 +163,36 @@ export class LayoutManager {
       }
     });
 
+    // Calculate current bounds dimensions
+    const boundsWidth = maxX - minX;
+    const boundsHeight = maxY - minY;
+
+    // Skip if bounds are zero (single node or identical positions)
+    if (boundsWidth <= 0 && boundsHeight <= 0) {
+      // Just center a single node
+      const canvasCenterX = canvasWidth / 2;
+      const canvasCenterY = canvasHeight / 2;
+      nodeIds.forEach(id => {
+        const node = gm.getNodeShape(id);
+        if (node) {
+          node.cx = canvasCenterX;
+          node.cy = canvasCenterY;
+          node.updateElement();
+        }
+      });
+      return;
+    }
+
+    // Target area: use 80% of canvas with padding
+    const padding = 50;
+    const targetWidth = canvasWidth - padding * 2;
+    const targetHeight = canvasHeight - padding * 2;
+
+    // Calculate scale factor to fit nodes into target area
+    const scaleX = boundsWidth > 0 ? targetWidth / boundsWidth : 1;
+    const scaleY = boundsHeight > 0 ? targetHeight / boundsHeight : 1;
+    const scale = Math.min(scaleX, scaleY, 3); // Cap scale at 3x to avoid excessive spreading
+
     // Calculate center of bounding box
     const boundsCenterX = (minX + maxX) / 2;
     const boundsCenterY = (minY + maxY) / 2;
@@ -171,16 +201,15 @@ export class LayoutManager {
     const canvasCenterX = canvasWidth / 2;
     const canvasCenterY = canvasHeight / 2;
 
-    // Calculate offset to center
-    const offsetX = canvasCenterX - boundsCenterX;
-    const offsetY = canvasCenterY - boundsCenterY;
-
-    // Apply offset to all nodes
+    // Apply scale and center to all nodes
     nodeIds.forEach(id => {
       const node = gm.getNodeShape(id);
       if (node) {
-        node.cx += offsetX;
-        node.cy += offsetY;
+        // Scale relative to bounds center, then translate to canvas center
+        const relX = node.cx - boundsCenterX;
+        const relY = node.cy - boundsCenterY;
+        node.cx = canvasCenterX + relX * scale;
+        node.cy = canvasCenterY + relY * scale;
         node.updateElement();
       }
     });

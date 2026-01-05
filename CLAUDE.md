@@ -118,6 +118,7 @@ src/
 - `node:delete` - ノード削除リクエスト
 - `edge:delete` - エッジ削除リクエスト
 - `edgeDirection:changed` - エッジ方向変更
+- `shape:updated` - 図形の位置・サイズ変更（ドラッグ移動/リサイズ時）
 
 ## キーボードショートカット
 

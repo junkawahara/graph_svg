@@ -65,6 +65,23 @@
   - ツールバーに「Auto Layout」ボタン追加
   - レイアウト結果をキャンバス中央に配置
 
+- 設定ダイアログ機能
+  - アプリケーションメニュー追加（File, Edit, View）
+  - Edit > Settings... で設定ダイアログを開く
+  - 設定項目: 「起動時にスナップをONにする」
+  - electron-store による設定の永続化
+  - ウィンドウ位置・サイズの記憶と復元
+
+- 位置・サイズ数値入力機能
+  - サイドバーで選択オブジェクトの位置・サイズを数値入力で編集可能
+  - Line: X1, Y1, X2, Y2
+  - Ellipse: CX, CY, RX, RY
+  - Rectangle: X, Y, W, H
+  - Text: X, Y
+  - Node: CX, CY, RX, RY
+  - Undo/Redo対応（ResizeShapeCommand使用）
+  - ドラッグ移動・リサイズ時にサイドバーの値をリアルタイム同期
+
 ---
 
 ## [1.0.0] - 2026-01-05

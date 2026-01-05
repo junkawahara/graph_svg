@@ -4,6 +4,7 @@ import { Line } from '../shapes/Line';
 import { Ellipse } from '../shapes/Ellipse';
 import { Rectangle } from '../shapes/Rectangle';
 import { Text } from '../shapes/Text';
+import { Node } from '../shapes/Node';
 
 interface LineState {
   x1: number;
@@ -60,6 +61,14 @@ export class ResizeShapeCommand implements Command {
         x2: shape.x2,
         y2: shape.y2
       };
+    } else if (shape instanceof Node) {
+      // Node must be checked before Ellipse since Node is not an Ellipse subclass
+      return {
+        cx: shape.cx,
+        cy: shape.cy,
+        rx: shape.rx,
+        ry: shape.ry
+      };
     } else if (shape instanceof Ellipse) {
       return {
         cx: shape.cx,
@@ -97,6 +106,11 @@ export class ResizeShapeCommand implements Command {
       this.shape.y1 = state.y1;
       this.shape.x2 = state.x2;
       this.shape.y2 = state.y2;
+    } else if (this.shape instanceof Node && 'cx' in state) {
+      this.shape.cx = state.cx;
+      this.shape.cy = state.cy;
+      this.shape.rx = state.rx;
+      this.shape.ry = state.ry;
     } else if (this.shape instanceof Ellipse && 'cx' in state) {
       this.shape.cx = state.cx;
       this.shape.cy = state.cy;
