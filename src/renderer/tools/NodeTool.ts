@@ -1,7 +1,6 @@
 import { Point } from '../../shared/types';
 import { Tool } from './Tool';
 import { Node } from '../shapes/Node';
-import { NodeInputDialog } from '../components/NodeInputDialog';
 import { editorState } from '../core/EditorState';
 import { eventBus } from '../core/EventBus';
 
@@ -12,12 +11,6 @@ export class NodeTool implements Tool {
   readonly name = 'node';
 
   private placementPoint: Point | null = null;
-  private dialog: NodeInputDialog;
-  private isDialogOpen = false;
-
-  constructor() {
-    this.dialog = new NodeInputDialog();
-  }
 
   onMouseDown(point: Point, _event: MouseEvent): void {
     // Snap point if enabled
@@ -28,29 +21,18 @@ export class NodeTool implements Tool {
     // No preview for node tool
   }
 
-  async onMouseUp(_point: Point, _event: MouseEvent): Promise<void> {
+  onMouseUp(_point: Point, _event: MouseEvent): void {
     if (!this.placementPoint) return;
-    if (this.isDialogOpen) return;
 
-    // Use the original click point
-    const placement = this.placementPoint;
+    // Create node with empty label immediately
+    const node = Node.fromCenter(
+      this.placementPoint,
+      '',
+      { ...editorState.currentStyle }
+    );
+
+    eventBus.emit('shape:added', node);
     this.placementPoint = null;
-
-    // Show dialog for label input
-    this.isDialogOpen = true;
-    const result = await this.dialog.show(placement);
-    this.isDialogOpen = false;
-
-    if (result !== null) {
-      // Create node shape
-      const node = Node.fromCenter(
-        placement,
-        result.label,
-        { ...editorState.currentStyle }
-      );
-
-      eventBus.emit('shape:added', node);
-    }
   }
 
   onMouseLeave(): void {
