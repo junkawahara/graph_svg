@@ -4,7 +4,7 @@ Electron + TypeScript で構築された SVG 編集ドローツール。
 
 ## プロジェクト概要
 
-直線・楕円・長方形・テキストを描画し、選択・移動・リサイズ・スタイル変更ができる SVG エディタ。
+直線・楕円・長方形・テキスト・グラフ（ノードとエッジ）を描画し、選択・移動・リサイズ・スタイル変更ができる SVG エディタ。
 Undo/Redo、ファイル保存/読み込み、コピー/ペーストに対応。
 
 ## コマンド
@@ -39,7 +39,8 @@ src/
 │   │   ├── HistoryManager.ts    # Undo/Redo履歴管理
 │   │   ├── FileManager.ts       # SVGシリアライズ/パース
 │   │   ├── ClipboardManager.ts  # コピー/ペースト管理
-│   │   └── MarkerManager.ts     # SVGマーカー定義（矢印）
+│   │   ├── MarkerManager.ts     # SVGマーカー定義（矢印）
+│   │   └── GraphManager.ts      # グラフ（ノード-エッジ）関係管理
 │   ├── commands/            # コマンドパターン（Undo/Redo）
 │   │   ├── Command.ts           # インターフェース
 │   │   ├── AddShapeCommand.ts   # 図形追加
@@ -50,13 +51,21 @@ src/
 │   │   ├── PasteShapesCommand.ts # 図形ペースト
 │   │   ├── TextPropertyChangeCommand.ts # テキストプロパティ変更
 │   │   ├── MarkerChangeCommand.ts # 矢印マーカー変更
-│   │   └── ZOrderCommand.ts       # 重ね順変更
+│   │   ├── ZOrderCommand.ts       # 重ね順変更
+│   │   ├── AddNodeCommand.ts      # ノード追加
+│   │   ├── AddEdgeCommand.ts      # エッジ追加
+│   │   ├── DeleteNodeCommand.ts   # ノード削除（接続エッジも削除）
+│   │   ├── DeleteEdgeCommand.ts   # エッジ削除
+│   │   ├── NodeLabelChangeCommand.ts  # ノードラベル変更
+│   │   └── EdgeDirectionChangeCommand.ts # エッジ方向変更
 │   ├── shapes/              # 図形クラス
 │   │   ├── Shape.ts         # インターフェース
 │   │   ├── Line.ts          # 直線
 │   │   ├── Ellipse.ts       # 楕円
 │   │   ├── Rectangle.ts     # 長方形
 │   │   ├── Text.ts          # テキスト
+│   │   ├── Node.ts          # グラフノード（楕円＋ラベル）
+│   │   ├── Edge.ts          # グラフエッジ（直線/曲線/自己ループ）
 │   │   └── ShapeFactory.ts  # 図形生成ファクトリ
 │   ├── tools/               # ツール
 │   │   ├── Tool.ts          # インターフェース
@@ -64,13 +73,18 @@ src/
 │   │   ├── LineTool.ts      # 直線描画
 │   │   ├── EllipseTool.ts   # 楕円描画
 │   │   ├── RectangleTool.ts # 長方形描画
-│   │   └── TextTool.ts      # テキスト配置
+│   │   ├── TextTool.ts      # テキスト配置
+│   │   ├── NodeTool.ts      # ノード配置
+│   │   ├── EdgeTool.ts      # エッジ作成
+│   │   ├── DeleteNodeTool.ts # ノード削除
+│   │   └── DeleteEdgeTool.ts # エッジ削除
 │   ├── handles/             # リサイズハンドル
 │   │   ├── Handle.ts        # インターフェース
 │   │   ├── LineHandles.ts   # 直線用（2点）
 │   │   ├── EllipseHandles.ts # 楕円用（4隅）
 │   │   ├── RectangleHandles.ts # 長方形用（4隅）
-│   │   └── TextHandles.ts   # テキスト用（中心点）
+│   │   ├── TextHandles.ts   # テキスト用（中心点）
+│   │   └── NodeHandles.ts   # ノード用（4隅）
 │   └── styles/              # CSS（main, toolbar, sidebar, canvas, dialog）
 └── shared/
     └── types.ts             # 共有型定義
@@ -99,6 +113,11 @@ src/
 - `snap:changed` - グリッドスナップ状態変更
 - `file:save` - ファイル保存リクエスト
 - `file:open` - ファイル読み込みリクエスト
+- `node:added` - ノード追加
+- `edge:added` - エッジ追加
+- `node:delete` - ノード削除リクエスト
+- `edge:delete` - エッジ削除リクエスト
+- `edgeDirection:changed` - エッジ方向変更
 
 ## キーボードショートカット
 
@@ -107,6 +126,8 @@ src/
 - `E` - 楕円ツール
 - `R` - 長方形ツール
 - `T` - テキストツール
+- `N` - ノードツール
+- `W` - エッジツール
 - `H` - パンツール
 - `G` - グリッドスナップ切り替え
 - `Delete` / `Backspace` - 選択図形を削除
@@ -181,6 +202,66 @@ src/
   - 図形移動時
   - 図形リサイズ時
 - スナップモード時はグリッド線を表示
+
+## グラフ機能
+
+ノード（頂点）とエッジ（辺）を描画してグラフを作成可能。
+
+### ノード
+
+- `N`キー または ツールバーノードボタンでノードツールに切り替え
+- キャンバスをクリックでノードを配置
+- ラベル入力ダイアログが表示される
+- ノードは楕円＋中央ラベルで描画
+- 選択してドラッグで移動（接続エッジも連動）
+- 4隅のハンドルでリサイズ可能
+
+### エッジ
+
+- `W`キー または ツールバーエッジボタンでエッジツールに切り替え
+- エッジ作成方法:
+  - 始点ノードをクリック → 終点ノードをクリック
+  - 始点ノードから終点ノードへドラッグ
+- 有向/無向切り替えボタンで方向を設定
+- 並行辺: 同じノード間に複数エッジがある場合、曲線でオフセット
+- 自己ループ: 同じノードへのエッジはベジェ曲線で描画
+
+### エッジ方向
+
+- None（無向）: 矢印なし
+- Forward（前方向）: 終点に矢印
+- Backward（後方向）: 始点に矢印
+
+### 削除
+
+- DeleteNodeTool: ノードをクリックで削除（接続エッジも一括削除）
+- DeleteEdgeTool: エッジをクリックで削除
+- 削除対象にホバーすると赤ハイライト
+
+### ノード/エッジプロパティ
+
+ノード選択時:
+- Node Label（ラベル文字列）
+- Font Size（フォントサイズ）
+
+エッジ選択時:
+- Direction（方向: Undirected / Forward / Backward）
+
+### SVG保存形式
+
+```xml
+<!-- ノード -->
+<g id="node-123" data-graph-type="node" data-label="A">
+  <ellipse cx="100" cy="100" rx="30" ry="30" fill="..." stroke="..."/>
+  <text x="100" y="100" text-anchor="middle">A</text>
+</g>
+
+<!-- エッジ -->
+<path id="edge-456" data-graph-type="edge"
+      data-source-id="node-123" data-target-id="node-789"
+      data-direction="forward" data-curve-offset="0"
+      d="M 130 100 L 270 100" fill="none" stroke="..."/>
+```
 
 ## 開発ワークフロー
 
