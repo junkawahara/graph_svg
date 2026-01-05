@@ -6,6 +6,8 @@ import { Rectangle } from '../shapes/Rectangle';
 import { Text } from '../shapes/Text';
 import { Node } from '../shapes/Node';
 import { Edge } from '../shapes/Edge';
+import { Polygon } from '../shapes/Polygon';
+import { Polyline } from '../shapes/Polyline';
 import { getGraphManager } from './GraphManager';
 
 // Marker definitions for SVG export
@@ -129,6 +131,12 @@ export class FileManager {
       return this.nodeToSvgElement(shape);
     } else if (shape instanceof Edge) {
       return this.edgeToSvgElement(shape);
+    } else if (shape instanceof Polygon) {
+      const points = shape.points.map(p => `${p.x},${p.y}`).join(' ');
+      return `  <polygon id="${shape.id}" points="${points}" ${style}/>`;
+    } else if (shape instanceof Polyline) {
+      const points = shape.points.map(p => `${p.x},${p.y}`).join(' ');
+      return `  <polyline id="${shape.id}" points="${points}" ${style}/>`;
     }
 
     return '';
@@ -395,6 +403,22 @@ export class FileManager {
       const style = this.parseStyleFromElement(el);
       const text = Text.fromElement(el, style);
       shapes.push(text);
+    });
+
+    // Parse polygon elements
+    const polygons = svg.querySelectorAll('polygon');
+    polygons.forEach(el => {
+      const style = this.parseStyleFromElement(el);
+      const polygon = Polygon.fromElement(el, style);
+      shapes.push(polygon);
+    });
+
+    // Parse polyline elements
+    const polylines = svg.querySelectorAll('polyline');
+    polylines.forEach(el => {
+      const style = this.parseStyleFromElement(el);
+      const polyline = Polyline.fromElement(el, style);
+      shapes.push(polyline);
     });
 
     return { shapes, canvasSize };

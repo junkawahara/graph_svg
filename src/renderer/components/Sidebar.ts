@@ -1,4 +1,4 @@
-import { ShapeStyle, StrokeLinecap, MarkerType, EdgeDirection, CanvasSize } from '../../shared/types';
+import { ShapeStyle, StrokeLinecap, MarkerType, EdgeDirection, CanvasSize, ToolType } from '../../shared/types';
 import { eventBus } from '../core/EventBus';
 import { editorState } from '../core/EditorState';
 import { selectionManager } from '../core/SelectionManager';
@@ -85,6 +85,11 @@ export class Sidebar {
   private canvasWidthInput: HTMLInputElement | null = null;
   private canvasHeightInput: HTMLInputElement | null = null;
 
+  // Default node size inputs
+  private defaultNodeSizeSection: HTMLDivElement | null = null;
+  private defaultNodeRxInput: HTMLInputElement | null = null;
+  private defaultNodeRyInput: HTMLInputElement | null = null;
+
   private isUpdatingUI = false; // Prevent feedback loop
 
   constructor() {
@@ -152,6 +157,11 @@ export class Sidebar {
     this.canvasWidthInput = document.getElementById('prop-canvas-width') as HTMLInputElement;
     this.canvasHeightInput = document.getElementById('prop-canvas-height') as HTMLInputElement;
 
+    // Default node size inputs
+    this.defaultNodeSizeSection = document.getElementById('default-node-size-section') as HTMLDivElement;
+    this.defaultNodeRxInput = document.getElementById('prop-default-node-rx') as HTMLInputElement;
+    this.defaultNodeRyInput = document.getElementById('prop-default-node-ry') as HTMLInputElement;
+
     this.setupInputListeners();
     this.setupTextInputListeners();
     this.setupLineInputListeners();
@@ -159,6 +169,7 @@ export class Sidebar {
     this.setupEdgeInputListeners();
     this.setupPositionInputListeners();
     this.setupCanvasSizeInputListeners();
+    this.setupDefaultNodeSizeInputListeners();
     this.setupEventListeners();
 
     // Initialize with default style
@@ -343,6 +354,40 @@ export class Sidebar {
   }
 
   /**
+   * Setup default node size input listeners
+   */
+  private setupDefaultNodeSizeInputListeners(): void {
+    if (this.defaultNodeRxInput) {
+      this.defaultNodeRxInput.addEventListener('change', () => this.applyDefaultNodeSizeChange());
+    }
+    if (this.defaultNodeRyInput) {
+      this.defaultNodeRyInput.addEventListener('change', () => this.applyDefaultNodeSizeChange());
+    }
+  }
+
+  /**
+   * Apply default node size change from inputs
+   */
+  private applyDefaultNodeSizeChange(): void {
+    if (this.isUpdatingUI) return;
+
+    const rx = Math.max(5, parseInt(this.defaultNodeRxInput?.value || '20', 10));
+    const ry = Math.max(5, parseInt(this.defaultNodeRyInput?.value || '20', 10));
+    editorState.setDefaultNodeSize(rx, ry);
+  }
+
+  /**
+   * Update default node size inputs
+   */
+  private updateDefaultNodeSizeInputs(): void {
+    this.isUpdatingUI = true;
+    const { rx, ry } = editorState.defaultNodeSize;
+    if (this.defaultNodeRxInput) this.defaultNodeRxInput.value = String(rx);
+    if (this.defaultNodeRyInput) this.defaultNodeRyInput.value = String(ry);
+    this.isUpdatingUI = false;
+  }
+
+  /**
    * Update canvas size inputs from canvas size
    */
   private updateCanvasSizeInputs(size: CanvasSize): void {
@@ -448,6 +493,34 @@ export class Sidebar {
     eventBus.on('canvas:sizeChanged', (size: CanvasSize) => {
       this.updateCanvasSizeInputs(size);
     });
+
+    // Show/hide default node size section based on current tool
+    eventBus.on('tool:changed', (tool: ToolType) => {
+      if (tool === 'node') {
+        this.showDefaultNodeSizeSection();
+      } else {
+        this.hideDefaultNodeSizeSection();
+      }
+    });
+  }
+
+  /**
+   * Show default node size section
+   */
+  private showDefaultNodeSizeSection(): void {
+    if (this.defaultNodeSizeSection) {
+      this.defaultNodeSizeSection.style.display = 'block';
+      this.updateDefaultNodeSizeInputs();
+    }
+  }
+
+  /**
+   * Hide default node size section
+   */
+  private hideDefaultNodeSizeSection(): void {
+    if (this.defaultNodeSizeSection) {
+      this.defaultNodeSizeSection.style.display = 'none';
+    }
   }
 
   /**

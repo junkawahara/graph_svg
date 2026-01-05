@@ -1,0 +1,206 @@
+import { Point, Bounds, ShapeStyle, PolylineData, generateId } from '../../shared/types';
+import { Shape, applyStyle } from './Shape';
+
+/**
+ * Polyline shape implementation - open shape with multiple vertices
+ */
+export class Polyline implements Shape {
+  readonly type = 'polyline';
+  element: SVGPolylineElement | null = null;
+
+  constructor(
+    public readonly id: string,
+    public points: Point[],
+    public style: ShapeStyle
+  ) {}
+
+  /**
+   * Create polyline from points array
+   */
+  static fromPoints(points: Point[], style: ShapeStyle): Polyline {
+    return new Polyline(generateId(), points.map(p => ({ ...p })), style);
+  }
+
+  /**
+   * Create polyline from SVG element
+   */
+  static fromElement(el: SVGPolylineElement, style: ShapeStyle): Polyline {
+    const pointsAttr = el.getAttribute('points') || '';
+    const points = Polyline.parsePointsAttribute(pointsAttr);
+    return new Polyline(el.id || generateId(), points, style);
+  }
+
+  /**
+   * Parse SVG points attribute string to Point array
+   */
+  static parsePointsAttribute(pointsStr: string): Point[] {
+    const points: Point[] = [];
+    const trimmed = pointsStr.trim();
+    if (!trimmed) return points;
+
+    // Handle both comma and space separated formats
+    const parts = trimmed.split(/[\s,]+/);
+    for (let i = 0; i < parts.length - 1; i += 2) {
+      const x = parseFloat(parts[i]);
+      const y = parseFloat(parts[i + 1]);
+      if (!isNaN(x) && !isNaN(y)) {
+        points.push({ x, y });
+      }
+    }
+    return points;
+  }
+
+  /**
+   * Convert points to SVG points attribute string
+   */
+  private pointsToString(): string {
+    return this.points.map(p => `${p.x},${p.y}`).join(' ');
+  }
+
+  render(): SVGPolylineElement {
+    const polyline = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+    polyline.id = this.id;
+    polyline.setAttribute('points', this.pointsToString());
+    // Polyline should have no fill by default
+    const styleWithNoFill = { ...this.style, fillNone: true };
+    applyStyle(polyline, styleWithNoFill);
+
+    this.element = polyline;
+    return polyline;
+  }
+
+  updateElement(): void {
+    if (!this.element) return;
+
+    this.element.setAttribute('points', this.pointsToString());
+    // Polyline should have no fill
+    const styleWithNoFill = { ...this.style, fillNone: true };
+    applyStyle(this.element, styleWithNoFill);
+  }
+
+  hitTest(point: Point, tolerance: number = 5): boolean {
+    if (this.points.length < 2) return false;
+
+    // Check if point is near any segment
+    for (let i = 0; i < this.points.length - 1; i++) {
+      const p1 = this.points[i];
+      const p2 = this.points[i + 1];
+      if (this.pointToLineDistance(point, p1, p2) <= tolerance) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * Calculate distance from point to line segment
+   */
+  private pointToLineDistance(point: Point, p1: Point, p2: Point): number {
+    const dx = p2.x - p1.x;
+    const dy = p2.y - p1.y;
+    const lengthSq = dx * dx + dy * dy;
+
+    if (lengthSq === 0) {
+      return Math.sqrt((point.x - p1.x) ** 2 + (point.y - p1.y) ** 2);
+    }
+
+    let t = ((point.x - p1.x) * dx + (point.y - p1.y) * dy) / lengthSq;
+    t = Math.max(0, Math.min(1, t));
+
+    const projX = p1.x + t * dx;
+    const projY = p1.y + t * dy;
+
+    return Math.sqrt((point.x - projX) ** 2 + (point.y - projY) ** 2);
+  }
+
+  getBounds(): Bounds {
+    if (this.points.length === 0) {
+      return { x: 0, y: 0, width: 0, height: 0 };
+    }
+
+    let minX = this.points[0].x;
+    let minY = this.points[0].y;
+    let maxX = this.points[0].x;
+    let maxY = this.points[0].y;
+
+    for (const p of this.points) {
+      minX = Math.min(minX, p.x);
+      minY = Math.min(minY, p.y);
+      maxX = Math.max(maxX, p.x);
+      maxY = Math.max(maxY, p.y);
+    }
+
+    return {
+      x: minX,
+      y: minY,
+      width: maxX - minX,
+      height: maxY - minY
+    };
+  }
+
+  move(dx: number, dy: number): void {
+    for (const p of this.points) {
+      p.x += dx;
+      p.y += dy;
+    }
+    this.updateElement();
+  }
+
+  serialize(): PolylineData {
+    return {
+      id: this.id,
+      type: 'polyline',
+      points: this.points.map(p => ({ ...p })),
+      style: { ...this.style }
+    };
+  }
+
+  clone(): Polyline {
+    return new Polyline(
+      generateId(),
+      this.points.map(p => ({ ...p })),
+      { ...this.style }
+    );
+  }
+
+  /**
+   * Set a specific vertex position
+   */
+  setVertex(index: number, point: Point): void {
+    if (index >= 0 && index < this.points.length) {
+      this.points[index] = { ...point };
+      this.updateElement();
+    }
+  }
+
+  /**
+   * Add a vertex at the end
+   */
+  addVertex(point: Point): void {
+    this.points.push({ ...point });
+    this.updateElement();
+  }
+
+  /**
+   * Insert a vertex at a specific index
+   */
+  insertVertex(index: number, point: Point): void {
+    if (index >= 0 && index <= this.points.length) {
+      this.points.splice(index, 0, { ...point });
+      this.updateElement();
+    }
+  }
+
+  /**
+   * Remove a vertex at a specific index (minimum 2 vertices for polyline)
+   */
+  removeVertex(index: number): boolean {
+    if (this.points.length > 2 && index >= 0 && index < this.points.length) {
+      this.points.splice(index, 1);
+      this.updateElement();
+      return true;
+    }
+    return false;
+  }
+}

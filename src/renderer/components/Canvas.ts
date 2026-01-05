@@ -14,6 +14,8 @@ import { NodeTool } from '../tools/NodeTool';
 import { EdgeTool } from '../tools/EdgeTool';
 import { DeleteNodeTool } from '../tools/DeleteNodeTool';
 import { DeleteEdgeTool } from '../tools/DeleteEdgeTool';
+import { PolygonTool } from '../tools/PolygonTool';
+import { PolylineTool } from '../tools/PolylineTool';
 import { Shape } from '../shapes/Shape';
 import { Line } from '../shapes/Line';
 import { Ellipse } from '../shapes/Ellipse';
@@ -21,12 +23,15 @@ import { Rectangle } from '../shapes/Rectangle';
 import { Text } from '../shapes/Text';
 import { Node } from '../shapes/Node';
 import { Edge } from '../shapes/Edge';
+import { Polygon } from '../shapes/Polygon';
+import { Polyline } from '../shapes/Polyline';
 import { Handle, HandleSet } from '../handles/Handle';
 import { LineHandles } from '../handles/LineHandles';
 import { EllipseHandles } from '../handles/EllipseHandles';
 import { RectangleHandles } from '../handles/RectangleHandles';
 import { TextHandles } from '../handles/TextHandles';
 import { NodeHandles } from '../handles/NodeHandles';
+import { PolygonHandles, PolylineHandles } from '../handles/PolygonHandles';
 import { AddShapeCommand } from '../commands/AddShapeCommand';
 import { AddNodeCommand } from '../commands/AddNodeCommand';
 import { AddEdgeCommand } from '../commands/AddEdgeCommand';
@@ -347,6 +352,8 @@ export class Canvas {
     this.tools.set('delete-edge', new DeleteEdgeTool({
       findEdgeAt: (point) => this.findEdgeAt(point)
     }));
+    this.tools.set('polygon', new PolygonTool(this.svg));
+    this.tools.set('polyline', new PolylineTool(this.svg));
     console.log('Canvas: All tools registered');
 
     // Set up GraphManager callback for updating edges
@@ -418,6 +425,10 @@ export class Canvas {
       return new TextHandles(shape);
     } else if (shape instanceof Node) {
       return new NodeHandles(shape);
+    } else if (shape instanceof Polygon) {
+      return new PolygonHandles(shape);
+    } else if (shape instanceof Polyline) {
+      return new PolylineHandles(shape);
     }
     return null;
   }

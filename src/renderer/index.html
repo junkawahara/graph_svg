@@ -23,6 +23,12 @@
         <button id="tool-rectangle" class="tool-btn" title="Rectangle (R)">
           <span class="icon">&#9645;</span>
         </button>
+        <button id="tool-polygon" class="tool-btn" title="Polygon (P)">
+          <span class="icon">&#11039;</span>
+        </button>
+        <button id="tool-polyline" class="tool-btn" title="Polyline (Y)">
+          <span class="icon">&#10138;</span>
+        </button>
         <button id="tool-text" class="tool-btn" title="Text (T)">
           <span class="icon">T</span>
         </button>
@@ -116,6 +122,21 @@
             <div class="property-group small">
               <label>H</label>
               <input type="number" id="prop-canvas-height" step="10" min="100">
+            </div>
+          </div>
+        </div>
+
+        <!-- Default Node Size (shown when node tool is active) -->
+        <div id="default-node-size-section" class="property-section" style="display: none;">
+          <label class="section-label">Default Node Size</label>
+          <div class="property-row">
+            <div class="property-group small">
+              <label>RX</label>
+              <input type="number" id="prop-default-node-rx" step="1" min="5" value="20">
+            </div>
+            <div class="property-group small">
+              <label>RY</label>
+              <input type="number" id="prop-default-node-ry" step="1" min="5" value="20">
             </div>
           </div>
         </div>

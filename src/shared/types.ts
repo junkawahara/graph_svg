@@ -2,12 +2,12 @@
  * Tool types available in the editor
  */
 export type ToolType = 'select' | 'line' | 'ellipse' | 'rectangle' | 'text' | 'pan'
-  | 'node' | 'edge' | 'delete-node' | 'delete-edge';
+  | 'node' | 'edge' | 'delete-node' | 'delete-edge' | 'polygon' | 'polyline';
 
 /**
  * Shape types that can be created
  */
-export type ShapeType = 'line' | 'ellipse' | 'rectangle' | 'text' | 'node' | 'edge';
+export type ShapeType = 'line' | 'ellipse' | 'rectangle' | 'text' | 'node' | 'edge' | 'polygon' | 'polyline';
 
 /**
  * Edge direction for graph edges
@@ -169,9 +169,25 @@ export interface EdgeData extends BaseShapeData {
 }
 
 /**
+ * Polygon shape data
+ */
+export interface PolygonData extends BaseShapeData {
+  type: 'polygon';
+  points: Point[];
+}
+
+/**
+ * Polyline shape data
+ */
+export interface PolylineData extends BaseShapeData {
+  type: 'polyline';
+  points: Point[];
+}
+
+/**
  * Union type for all shape data
  */
-export type ShapeData = LineData | EllipseData | RectangleData | TextData | NodeData | EdgeData;
+export type ShapeData = LineData | EllipseData | RectangleData | TextData | NodeData | EdgeData | PolygonData | PolylineData;
 
 /**
  * Event names used in EventBus

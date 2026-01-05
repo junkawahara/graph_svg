@@ -4,7 +4,7 @@ Electron + TypeScript で構築された SVG 編集ドローツール。
 
 ## プロジェクト概要
 
-直線・楕円・長方形・テキスト・グラフ（ノードとエッジ）を描画し、選択・移動・リサイズ・スタイル変更ができる SVG エディタ。
+直線・楕円・長方形・多角形・ポリライン・テキスト・グラフ（ノードとエッジ）を描画し、選択・移動・リサイズ・スタイル変更ができる SVG エディタ。
 Undo/Redo、ファイル保存/読み込み、コピー/ペーストに対応。
 
 ## コマンド
@@ -63,6 +63,8 @@ src/
 │   │   ├── Line.ts          # 直線
 │   │   ├── Ellipse.ts       # 楕円
 │   │   ├── Rectangle.ts     # 長方形
+│   │   ├── Polygon.ts       # 多角形
+│   │   ├── Polyline.ts      # ポリライン（折れ線）
 │   │   ├── Text.ts          # テキスト
 │   │   ├── Node.ts          # グラフノード（楕円＋ラベル）
 │   │   ├── Edge.ts          # グラフエッジ（直線/曲線/自己ループ）
@@ -73,6 +75,8 @@ src/
 │   │   ├── LineTool.ts      # 直線描画
 │   │   ├── EllipseTool.ts   # 楕円描画
 │   │   ├── RectangleTool.ts # 長方形描画
+│   │   ├── PolygonTool.ts   # 多角形描画
+│   │   ├── PolylineTool.ts  # ポリライン描画
 │   │   ├── TextTool.ts      # テキスト配置
 │   │   ├── NodeTool.ts      # ノード配置
 │   │   ├── EdgeTool.ts      # エッジ作成
@@ -84,7 +88,8 @@ src/
 │   │   ├── EllipseHandles.ts # 楕円用（4隅）
 │   │   ├── RectangleHandles.ts # 長方形用（4隅）
 │   │   ├── TextHandles.ts   # テキスト用（中心点）
-│   │   └── NodeHandles.ts   # ノード用（4隅）
+│   │   ├── NodeHandles.ts   # ノード用（4隅）
+│   │   └── PolygonHandles.ts # 多角形/ポリライン用（各頂点）
 │   └── styles/              # CSS（main, toolbar, sidebar, canvas, dialog）
 └── shared/
     └── types.ts             # 共有型定義
@@ -129,6 +134,8 @@ src/
 - `L` - 直線ツール
 - `E` - 楕円ツール
 - `R` - 長方形ツール
+- `P` - 多角形ツール
+- `Y` - ポリラインツール
 - `T` - テキストツール
 - `N` - ノードツール
 - `W` - エッジツール

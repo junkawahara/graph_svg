@@ -6,6 +6,8 @@ import { Rectangle } from './Rectangle';
 import { Text } from './Text';
 import { Node } from './Node';
 import { Edge } from './Edge';
+import { Polygon } from './Polygon';
+import { Polyline } from './Polyline';
 
 /**
  * Create a shape from serialized data
@@ -80,6 +82,20 @@ export function createShapeFromData(data: ShapeData, offsetX: number = 0, offset
         data.curveOffset,
         data.isSelfLoop,
         data.selfLoopAngle,
+        { ...data.style }
+      );
+
+    case 'polygon':
+      return new Polygon(
+        newId,
+        data.points.map(p => ({ x: p.x + offsetX, y: p.y + offsetY })),
+        { ...data.style }
+      );
+
+    case 'polyline':
+      return new Polyline(
+        newId,
+        data.points.map(p => ({ x: p.x + offsetX, y: p.y + offsetY })),
         { ...data.style }
       );
 

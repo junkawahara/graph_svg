@@ -24,15 +24,15 @@ export class Node implements Shape {
   ) {}
 
   /**
-   * Create node from center point with default size
+   * Create node from center point with specified size
    */
-  static fromCenter(center: Point, label: string, style: ShapeStyle): Node {
+  static fromCenter(center: Point, label: string, style: ShapeStyle, rx: number = 30, ry: number = 30): Node {
     return new Node(
       generateId(),
       center.x,
       center.y,
-      30,  // default rx
-      30,  // default ry
+      rx,
+      ry,
       label,
       14,  // default fontSize
       'Arial',  // default fontFamily

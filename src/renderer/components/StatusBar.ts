@@ -10,6 +10,8 @@ const TOOL_NAMES: Record<ToolType, string> = {
   'line': 'Line',
   'ellipse': 'Ellipse',
   'rectangle': 'Rectangle',
+  'polygon': 'Polygon',
+  'polyline': 'Polyline',
   'text': 'Text',
   'node': 'Node',
   'edge': 'Edge',

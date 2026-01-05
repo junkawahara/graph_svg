@@ -13,6 +13,7 @@ export class EditorState {
   private _currentFilePath: string | null = null;
   private _isDirty: boolean = false;
   private _canvasSize: CanvasSize = { ...DEFAULT_CANVAS_SIZE };
+  private _defaultNodeSize: { rx: number; ry: number } = { rx: 20, ry: 20 };
 
   /**
    * Get current tool
@@ -141,6 +142,22 @@ export class EditorState {
   toggleEdgeDirection(): void {
     this._edgeDirection = this._edgeDirection === 'none' ? 'forward' : 'none';
     eventBus.emit('edgeDirection:changed', this._edgeDirection);
+  }
+
+  /**
+   * Get default node size for new nodes
+   */
+  get defaultNodeSize(): { rx: number; ry: number } {
+    return { ...this._defaultNodeSize };
+  }
+
+  /**
+   * Set default node size for new nodes
+   */
+  setDefaultNodeSize(rx: number, ry: number): void {
+    const newRx = Math.max(5, Math.round(rx));
+    const newRy = Math.max(5, Math.round(ry));
+    this._defaultNodeSize = { rx: newRx, ry: newRy };
   }
 
   /**

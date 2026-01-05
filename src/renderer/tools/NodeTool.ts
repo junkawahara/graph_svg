@@ -24,11 +24,14 @@ export class NodeTool implements Tool {
   onMouseUp(_point: Point, _event: MouseEvent): void {
     if (!this.placementPoint) return;
 
-    // Create node with empty label immediately
+    // Create node with empty label using default node size
+    const { rx, ry } = editorState.defaultNodeSize;
     const node = Node.fromCenter(
       this.placementPoint,
       '',
-      { ...editorState.currentStyle }
+      { ...editorState.currentStyle },
+      rx,
+      ry
     );
 
     eventBus.emit('shape:added', node);

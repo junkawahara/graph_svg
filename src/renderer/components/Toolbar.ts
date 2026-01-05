@@ -57,6 +57,8 @@ export class Toolbar {
       { id: 'tool-line', type: 'line' },
       { id: 'tool-ellipse', type: 'ellipse' },
       { id: 'tool-rectangle', type: 'rectangle' },
+      { id: 'tool-polygon', type: 'polygon' },
+      { id: 'tool-polyline', type: 'polyline' },
       { id: 'tool-text', type: 'text' },
       { id: 'tool-node', type: 'node' },
       { id: 'tool-edge', type: 'edge' },
@@ -442,6 +444,12 @@ export class Toolbar {
           break;
         case 'r':
           editorState.setTool('rectangle');
+          break;
+        case 'p':
+          editorState.setTool('polygon');
+          break;
+        case 'y':
+          editorState.setTool('polyline');
           break;
         case 't':
           editorState.setTool('text');
