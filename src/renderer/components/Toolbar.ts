@@ -60,6 +60,7 @@ export class Toolbar {
       { id: 'tool-rectangle', type: 'rectangle' },
       { id: 'tool-polygon', type: 'polygon' },
       { id: 'tool-polyline', type: 'polyline' },
+      { id: 'tool-bezier', type: 'bezierPath' },
       { id: 'tool-text', type: 'text' },
       { id: 'tool-node', type: 'node' },
       { id: 'tool-edge', type: 'edge' },
@@ -473,6 +474,9 @@ export class Toolbar {
           break;
         case 'y':
           editorState.setTool('polyline');
+          break;
+        case 'b':
+          editorState.setTool('bezierPath');
           break;
         case 't':
           editorState.setTool('text');

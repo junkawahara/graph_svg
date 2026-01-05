@@ -8,6 +8,7 @@ import { Node } from './Node';
 import { Edge } from './Edge';
 import { Polygon } from './Polygon';
 import { Polyline } from './Polyline';
+import { BezierPath } from './BezierPath';
 import { Group } from './Group';
 
 /**
@@ -103,6 +104,19 @@ export function createShapeFromData(data: ShapeData, offsetX: number = 0, offset
       return new Polyline(
         newId,
         data.points.map(p => ({ x: p.x + offsetX, y: p.y + offsetY })),
+        { ...data.style }
+      );
+
+    case 'bezierPath':
+      return new BezierPath(
+        newId,
+        { x: data.start.x + offsetX, y: data.start.y + offsetY },
+        data.segments.map(seg => ({
+          cp1: { x: seg.cp1.x + offsetX, y: seg.cp1.y + offsetY },
+          cp2: { x: seg.cp2.x + offsetX, y: seg.cp2.y + offsetY },
+          end: { x: seg.end.x + offsetX, y: seg.end.y + offsetY }
+        })),
+        data.closed,
         { ...data.style }
       );
 

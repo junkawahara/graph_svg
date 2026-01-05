@@ -16,6 +16,7 @@ import { DeleteNodeTool } from '../tools/DeleteNodeTool';
 import { DeleteEdgeTool } from '../tools/DeleteEdgeTool';
 import { PolygonTool } from '../tools/PolygonTool';
 import { PolylineTool } from '../tools/PolylineTool';
+import { BezierPathTool } from '../tools/BezierPathTool';
 import { Shape } from '../shapes/Shape';
 import { Line } from '../shapes/Line';
 import { Ellipse } from '../shapes/Ellipse';
@@ -25,6 +26,7 @@ import { Node } from '../shapes/Node';
 import { Edge } from '../shapes/Edge';
 import { Polygon } from '../shapes/Polygon';
 import { Polyline } from '../shapes/Polyline';
+import { BezierPath } from '../shapes/BezierPath';
 import { Group } from '../shapes/Group';
 import { Handle, HandleSet } from '../handles/Handle';
 import { LineHandles } from '../handles/LineHandles';
@@ -33,6 +35,7 @@ import { RectangleHandles } from '../handles/RectangleHandles';
 import { TextHandles } from '../handles/TextHandles';
 import { NodeHandles } from '../handles/NodeHandles';
 import { PolygonHandles, PolylineHandles } from '../handles/PolygonHandles';
+import { BezierPathHandles } from '../handles/BezierPathHandles';
 import { GroupHandles } from '../handles/GroupHandles';
 import { AddShapeCommand } from '../commands/AddShapeCommand';
 import { AddNodeCommand } from '../commands/AddNodeCommand';
@@ -371,6 +374,7 @@ export class Canvas {
     }));
     this.tools.set('polygon', new PolygonTool(this.svg));
     this.tools.set('polyline', new PolylineTool(this.svg));
+    this.tools.set('bezierPath', new BezierPathTool(this.svg));
     console.log('Canvas: All tools registered');
 
     // Set up GraphManager callback for updating edges
@@ -446,6 +450,8 @@ export class Canvas {
       return new PolygonHandles(shape);
     } else if (shape instanceof Polyline) {
       return new PolylineHandles(shape);
+    } else if (shape instanceof BezierPath) {
+      return new BezierPathHandles(shape);
     } else if (shape instanceof Group) {
       return new GroupHandles(shape);
     }

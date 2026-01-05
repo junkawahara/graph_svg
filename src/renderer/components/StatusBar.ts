@@ -12,6 +12,7 @@ const TOOL_NAMES: Record<ToolType, string> = {
   'rectangle': 'Rectangle',
   'polygon': 'Polygon',
   'polyline': 'Polyline',
+  'bezierPath': 'Bezier Path',
   'text': 'Text',
   'node': 'Node',
   'edge': 'Edge',

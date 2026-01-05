@@ -5,6 +5,10 @@ import { Ellipse } from '../shapes/Ellipse';
 import { Rectangle } from '../shapes/Rectangle';
 import { Text } from '../shapes/Text';
 import { Node } from '../shapes/Node';
+import { Polygon } from '../shapes/Polygon';
+import { Polyline } from '../shapes/Polyline';
+import { BezierPath } from '../shapes/BezierPath';
+import { Point, BezierSegment } from '../../shared/types';
 
 interface LineState {
   x1: number;
@@ -32,7 +36,17 @@ interface TextState {
   y: number;
 }
 
-type ShapeState = LineState | EllipseState | RectangleState | TextState;
+interface PolygonState {
+  points: Point[];
+}
+
+interface BezierPathState {
+  start: Point;
+  segments: BezierSegment[];
+  closed: boolean;
+}
+
+type ShapeState = LineState | EllipseState | RectangleState | TextState | PolygonState | BezierPathState;
 
 /**
  * Command for resizing a shape
@@ -88,6 +102,20 @@ export class ResizeShapeCommand implements Command {
         x: shape.x,
         y: shape.y
       };
+    } else if (shape instanceof Polygon || shape instanceof Polyline) {
+      return {
+        points: shape.points.map(p => ({ ...p }))
+      };
+    } else if (shape instanceof BezierPath) {
+      return {
+        start: { ...shape.start },
+        segments: shape.segments.map(seg => ({
+          cp1: { ...seg.cp1 },
+          cp2: { ...seg.cp2 },
+          end: { ...seg.end }
+        })),
+        closed: shape.closed
+      };
     }
     throw new Error('Unknown shape type');
   }
@@ -121,9 +149,19 @@ export class ResizeShapeCommand implements Command {
       this.shape.y = state.y;
       this.shape.width = state.width;
       this.shape.height = state.height;
-    } else if (this.shape instanceof Text && 'x' in state && !('width' in state)) {
+    } else if (this.shape instanceof Text && 'x' in state && !('width' in state) && !('points' in state)) {
       this.shape.x = state.x;
       this.shape.y = state.y;
+    } else if ((this.shape instanceof Polygon || this.shape instanceof Polyline) && 'points' in state) {
+      this.shape.points = state.points.map(p => ({ ...p }));
+    } else if (this.shape instanceof BezierPath && 'segments' in state) {
+      this.shape.start = { ...state.start };
+      this.shape.segments = state.segments.map(seg => ({
+        cp1: { ...seg.cp1 },
+        cp2: { ...seg.cp2 },
+        end: { ...seg.end }
+      }));
+      this.shape.closed = state.closed;
     }
     this.shape.updateElement();
   }

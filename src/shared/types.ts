@@ -2,12 +2,12 @@
  * Tool types available in the editor
  */
 export type ToolType = 'select' | 'line' | 'ellipse' | 'rectangle' | 'text' | 'pan'
-  | 'node' | 'edge' | 'delete-node' | 'delete-edge' | 'polygon' | 'polyline';
+  | 'node' | 'edge' | 'delete-node' | 'delete-edge' | 'polygon' | 'polyline' | 'bezierPath';
 
 /**
  * Shape types that can be created
  */
-export type ShapeType = 'line' | 'ellipse' | 'rectangle' | 'text' | 'node' | 'edge' | 'polygon' | 'polyline' | 'group';
+export type ShapeType = 'line' | 'ellipse' | 'rectangle' | 'text' | 'node' | 'edge' | 'polygon' | 'polyline' | 'group' | 'bezierPath';
 
 /**
  * Edge direction for graph edges
@@ -195,6 +195,25 @@ export interface PolylineData extends BaseShapeData {
 }
 
 /**
+ * Bezier curve segment (cubic bezier)
+ */
+export interface BezierSegment {
+  cp1: Point;    // Control point 1 (near start)
+  cp2: Point;    // Control point 2 (near end)
+  end: Point;    // Segment end point
+}
+
+/**
+ * Bezier path shape data (cubic bezier curves)
+ */
+export interface BezierPathData extends BaseShapeData {
+  type: 'bezierPath';
+  start: Point;              // Path start point
+  segments: BezierSegment[]; // Bezier segments
+  closed: boolean;           // Whether the path is closed
+}
+
+/**
  * Group shape data (contains other shapes)
  */
 export interface GroupData {
@@ -207,7 +226,7 @@ export interface GroupData {
 /**
  * Union type for all shape data
  */
-export type ShapeData = LineData | EllipseData | RectangleData | TextData | NodeData | EdgeData | PolygonData | PolylineData | GroupData;
+export type ShapeData = LineData | EllipseData | RectangleData | TextData | NodeData | EdgeData | PolygonData | PolylineData | BezierPathData | GroupData;
 
 /**
  * Event names used in EventBus

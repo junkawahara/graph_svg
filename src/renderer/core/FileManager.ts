@@ -1,4 +1,4 @@
-import { ShapeStyle, DEFAULT_STYLE, StrokeLinecap, MarkerType, EdgeDirection, CanvasSize, DEFAULT_CANVAS_SIZE } from '../../shared/types';
+import { ShapeStyle, DEFAULT_STYLE, StrokeLinecap, MarkerType, EdgeDirection, CanvasSize, DEFAULT_CANVAS_SIZE, BezierSegment, Point } from '../../shared/types';
 import { Shape } from '../shapes/Shape';
 import { Line } from '../shapes/Line';
 import { Ellipse } from '../shapes/Ellipse';
@@ -8,6 +8,7 @@ import { Node } from '../shapes/Node';
 import { Edge } from '../shapes/Edge';
 import { Polygon } from '../shapes/Polygon';
 import { Polyline } from '../shapes/Polyline';
+import { BezierPath } from '../shapes/BezierPath';
 import { Group } from '../shapes/Group';
 import { getGraphManager } from './GraphManager';
 
@@ -172,6 +173,8 @@ export class FileManager {
     } else if (shape instanceof Polyline) {
       const points = shape.points.map(p => `${p.x},${p.y}`).join(' ');
       return `  <polyline id="${shape.id}" points="${points}" ${style}/>`;
+    } else if (shape instanceof BezierPath) {
+      return this.bezierPathToSvgElement(shape);
     } else if (shape instanceof Group) {
       return this.groupToSvgElement(shape);
     }
@@ -241,6 +244,28 @@ export class FileManager {
     }
 
     return `  <path id="${edge.id}" ${dataAttrs} d="${pathData}" ${attrs.join(' ')}${markerAttrs}/>`;
+  }
+
+  /**
+   * Convert a BezierPath to SVG element string
+   */
+  private static bezierPathToSvgElement(bezierPath: BezierPath): string {
+    const style = this.styleToAttributes(bezierPath.style);
+
+    // Build path data: M start C cp1 cp2 end [C cp1 cp2 end]... [Z]
+    let pathData = `M ${bezierPath.start.x} ${bezierPath.start.y}`;
+    for (const seg of bezierPath.segments) {
+      pathData += ` C ${seg.cp1.x} ${seg.cp1.y} ${seg.cp2.x} ${seg.cp2.y} ${seg.end.x} ${seg.end.y}`;
+    }
+    if (bezierPath.closed) {
+      pathData += ' Z';
+    }
+
+    // Store bezier data as data attributes for re-importing
+    const startJson = JSON.stringify(bezierPath.start);
+    const segmentsJson = JSON.stringify(bezierPath.segments);
+
+    return `  <path id="${bezierPath.id}" data-shape-type="bezierPath" data-start='${startJson}' data-segments='${segmentsJson}' data-closed="${bezierPath.closed}" d="${pathData}" ${style}/>`;
   }
 
   /**
@@ -503,6 +528,18 @@ export class FileManager {
       shapes.push(polyline);
     });
 
+    // Parse bezierPath elements (excluding those inside groups)
+    const bezierPaths = svg.querySelectorAll('path[data-shape-type="bezierPath"]');
+    bezierPaths.forEach(el => {
+      if (isInsideGroupOrNode(el)) return;
+
+      const style = this.parseStyleFromElement(el as SVGElement);
+      const bezierPath = this.parseBezierPathElement(el as SVGPathElement, style);
+      if (bezierPath) {
+        shapes.push(bezierPath);
+      }
+    });
+
     // Parse top-level group elements
     const groups = svg.querySelectorAll('g[data-group-type="group"]');
     groups.forEach(el => {
@@ -604,10 +641,40 @@ export class FileManager {
             return edge;
           }
         }
+        if (el.getAttribute('data-shape-type') === 'bezierPath') {
+          return this.parseBezierPathElement(el as SVGPathElement, style);
+        }
         return null;
 
       default:
         return null;
+    }
+  }
+
+  /**
+   * Parse a BezierPath element from SVG
+   */
+  private static parseBezierPathElement(el: SVGPathElement, style: ShapeStyle): BezierPath | null {
+    const id = el.id || `bezierPath-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+    try {
+      const startJson = el.getAttribute('data-start');
+      const segmentsJson = el.getAttribute('data-segments');
+      const closedAttr = el.getAttribute('data-closed');
+
+      if (!startJson || !segmentsJson) {
+        console.warn('BezierPath element missing required data attributes');
+        return null;
+      }
+
+      const start: Point = JSON.parse(startJson);
+      const segments: BezierSegment[] = JSON.parse(segmentsJson);
+      const closed = closedAttr === 'true';
+
+      return new BezierPath(id, start, segments, closed, style);
+    } catch (e) {
+      console.error('Failed to parse BezierPath element:', e);
+      return null;
     }
   }
 
