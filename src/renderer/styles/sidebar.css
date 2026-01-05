@@ -144,3 +144,65 @@
   padding: 4px 6px;
   font-size: 12px;
 }
+
+/* Text content textarea */
+.property-group textarea {
+  width: 100%;
+  padding: 6px 10px;
+  background-color: #3c3c3c;
+  border: 1px solid #4a4a4a;
+  border-radius: 4px;
+  color: #cccccc;
+  font-size: 13px;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 60px;
+}
+
+.property-group textarea:focus {
+  outline: none;
+  border-color: #0e639c;
+}
+
+/* Text style buttons */
+.text-style-buttons {
+  display: flex;
+  gap: 4px;
+}
+
+.style-btn {
+  width: 28px;
+  height: 28px;
+  border: 1px solid #4a4a4a;
+  background: #3c3c3c;
+  color: #cccccc;
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: normal;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.style-btn:hover:not(.active) {
+  background: #4a4a4a;
+}
+
+.style-btn.active {
+  background: #0e639c;
+  border-color: #0e639c;
+  color: #ffffff;
+}
+
+.style-btn em {
+  font-style: italic;
+}
+
+.style-btn u {
+  text-decoration: underline;
+}
+
+.style-btn s {
+  text-decoration: line-through;
+}

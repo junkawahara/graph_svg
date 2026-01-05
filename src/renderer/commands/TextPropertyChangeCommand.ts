@@ -1,11 +1,17 @@
 import { Command } from './Command';
 import { Text } from '../shapes/Text';
+import { TextAnchor } from '../../shared/types';
 
 export interface TextPropertyUpdates {
   content?: string;
   fontSize?: number;
   fontFamily?: string;
   fontWeight?: 'normal' | 'bold';
+  textAnchor?: TextAnchor;
+  fontStyle?: 'normal' | 'italic';
+  textUnderline?: boolean;
+  textStrikethrough?: boolean;
+  lineHeight?: number;
 }
 
 /**
@@ -32,6 +38,21 @@ export class TextPropertyChangeCommand implements Command {
     if (newValues.fontWeight !== undefined) {
       this.oldValues.fontWeight = text.fontWeight;
     }
+    if (newValues.textAnchor !== undefined) {
+      this.oldValues.textAnchor = text.textAnchor;
+    }
+    if (newValues.fontStyle !== undefined) {
+      this.oldValues.fontStyle = text.fontStyle;
+    }
+    if (newValues.textUnderline !== undefined) {
+      this.oldValues.textUnderline = text.textUnderline;
+    }
+    if (newValues.textStrikethrough !== undefined) {
+      this.oldValues.textStrikethrough = text.textStrikethrough;
+    }
+    if (newValues.lineHeight !== undefined) {
+      this.oldValues.lineHeight = text.lineHeight;
+    }
   }
 
   execute(): void {
@@ -54,6 +75,21 @@ export class TextPropertyChangeCommand implements Command {
     }
     if (values.fontWeight !== undefined) {
       this.text.fontWeight = values.fontWeight;
+    }
+    if (values.textAnchor !== undefined) {
+      this.text.textAnchor = values.textAnchor;
+    }
+    if (values.fontStyle !== undefined) {
+      this.text.fontStyle = values.fontStyle;
+    }
+    if (values.textUnderline !== undefined) {
+      this.text.textUnderline = values.textUnderline;
+    }
+    if (values.textStrikethrough !== undefined) {
+      this.text.textStrikethrough = values.textStrikethrough;
+    }
+    if (values.lineHeight !== undefined) {
+      this.text.lineHeight = values.lineHeight;
     }
     this.text.updateElement();
   }

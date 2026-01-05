@@ -1,4 +1,4 @@
-import { ShapeStyle, StrokeLinecap, MarkerType, EdgeDirection, CanvasSize, ToolType } from '../../shared/types';
+import { ShapeStyle, StrokeLinecap, MarkerType, EdgeDirection, CanvasSize, ToolType, TextAnchor } from '../../shared/types';
 import { eventBus } from '../core/EventBus';
 import { editorState } from '../core/EditorState';
 import { selectionManager } from '../core/SelectionManager';
@@ -33,10 +33,15 @@ export class Sidebar {
 
   // Text-specific properties
   private textPropertiesContainer: HTMLDivElement;
-  private textContent: HTMLInputElement;
+  private textContent: HTMLTextAreaElement;
   private fontSize: HTMLInputElement;
   private fontFamily: HTMLSelectElement;
-  private fontBold: HTMLInputElement;
+  private textAnchor: HTMLSelectElement;
+  private lineHeight: HTMLSelectElement;
+  private fontBoldBtn: HTMLButtonElement;
+  private fontItalicBtn: HTMLButtonElement;
+  private textUnderlineBtn: HTMLButtonElement;
+  private textStrikethroughBtn: HTMLButtonElement;
 
   // Line-specific properties (arrows)
   private linePropertiesContainer: HTMLDivElement;
@@ -105,10 +110,15 @@ export class Sidebar {
 
     // Text-specific elements
     this.textPropertiesContainer = document.getElementById('text-properties') as HTMLDivElement;
-    this.textContent = document.getElementById('prop-text-content') as HTMLInputElement;
+    this.textContent = document.getElementById('prop-text-content') as HTMLTextAreaElement;
     this.fontSize = document.getElementById('prop-font-size') as HTMLInputElement;
     this.fontFamily = document.getElementById('prop-font-family') as HTMLSelectElement;
-    this.fontBold = document.getElementById('prop-font-bold') as HTMLInputElement;
+    this.textAnchor = document.getElementById('prop-text-anchor') as HTMLSelectElement;
+    this.lineHeight = document.getElementById('prop-line-height') as HTMLSelectElement;
+    this.fontBoldBtn = document.getElementById('prop-font-bold-btn') as HTMLButtonElement;
+    this.fontItalicBtn = document.getElementById('prop-font-italic-btn') as HTMLButtonElement;
+    this.textUnderlineBtn = document.getElementById('prop-text-underline-btn') as HTMLButtonElement;
+    this.textStrikethroughBtn = document.getElementById('prop-text-strikethrough-btn') as HTMLButtonElement;
 
     // Line-specific elements
     this.linePropertiesContainer = document.getElementById('line-properties') as HTMLDivElement;
@@ -244,9 +254,51 @@ export class Sidebar {
       this.applyTextPropertyChange({ fontFamily: this.fontFamily.value });
     });
 
-    this.fontBold.addEventListener('change', () => {
+    this.textAnchor.addEventListener('change', () => {
       if (this.isUpdatingUI) return;
-      this.applyTextPropertyChange({ fontWeight: this.fontBold.checked ? 'bold' : 'normal' });
+      this.applyTextPropertyChange({ textAnchor: this.textAnchor.value as TextAnchor });
+    });
+
+    this.lineHeight.addEventListener('change', () => {
+      if (this.isUpdatingUI) return;
+      this.applyTextPropertyChange({ lineHeight: parseFloat(this.lineHeight.value) || 1.2 });
+    });
+
+    // Style toggle buttons
+    this.fontBoldBtn.addEventListener('click', () => {
+      if (this.isUpdatingUI) return;
+      const selectedShapes = selectionManager.getSelection();
+      if (selectedShapes.length === 1 && selectedShapes[0] instanceof Text) {
+        const text = selectedShapes[0] as Text;
+        this.applyTextPropertyChange({ fontWeight: text.fontWeight === 'bold' ? 'normal' : 'bold' });
+      }
+    });
+
+    this.fontItalicBtn.addEventListener('click', () => {
+      if (this.isUpdatingUI) return;
+      const selectedShapes = selectionManager.getSelection();
+      if (selectedShapes.length === 1 && selectedShapes[0] instanceof Text) {
+        const text = selectedShapes[0] as Text;
+        this.applyTextPropertyChange({ fontStyle: text.fontStyle === 'italic' ? 'normal' : 'italic' });
+      }
+    });
+
+    this.textUnderlineBtn.addEventListener('click', () => {
+      if (this.isUpdatingUI) return;
+      const selectedShapes = selectionManager.getSelection();
+      if (selectedShapes.length === 1 && selectedShapes[0] instanceof Text) {
+        const text = selectedShapes[0] as Text;
+        this.applyTextPropertyChange({ textUnderline: !text.textUnderline });
+      }
+    });
+
+    this.textStrikethroughBtn.addEventListener('click', () => {
+      if (this.isUpdatingUI) return;
+      const selectedShapes = selectionManager.getSelection();
+      if (selectedShapes.length === 1 && selectedShapes[0] instanceof Text) {
+        const text = selectedShapes[0] as Text;
+        this.applyTextPropertyChange({ textStrikethrough: !text.textStrikethrough });
+      }
     });
   }
 
@@ -575,7 +627,14 @@ export class Sidebar {
     this.textContent.value = text.content;
     this.fontSize.value = String(text.fontSize);
     this.fontFamily.value = text.fontFamily;
-    this.fontBold.checked = text.fontWeight === 'bold';
+    this.textAnchor.value = text.textAnchor;
+    this.lineHeight.value = String(text.lineHeight);
+
+    // Update toggle button states
+    this.fontBoldBtn.classList.toggle('active', text.fontWeight === 'bold');
+    this.fontItalicBtn.classList.toggle('active', text.fontStyle === 'italic');
+    this.textUnderlineBtn.classList.toggle('active', text.textUnderline);
+    this.textStrikethroughBtn.classList.toggle('active', text.textStrikethrough);
 
     this.isUpdatingUI = false;
   }

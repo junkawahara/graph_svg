@@ -5,6 +5,18 @@
 ## [Unreleased]
 
 ### 追加
+- テキスト機能拡張
+  - テキスト配置（text-anchor）: 左揃え/中央揃え/右揃え
+  - 斜体（font-style: italic）
+  - 下線（text-decoration: underline）
+  - 取り消し線（text-decoration: line-through）
+  - 複数行テキスト（改行対応、tspan要素でSVG出力）
+  - 行の高さ調整（Line Height: 1.0/1.2/1.5/2.0）
+  - サイドバーにスタイルボタン追加（B I U S）
+  - Content入力をtextareaに変更（複数行入力対応）
+  - Undo/Redo対応
+  - ファイル保存/読み込み対応（後方互換性あり）
+
 - キャンバスサイズ設定機能
   - キャンバスサイズ（幅×高さ）を指定可能
   - キャンバス範囲外はグレー色で表示

@@ -15,6 +15,11 @@ export type ShapeType = 'line' | 'ellipse' | 'rectangle' | 'text' | 'node' | 'ed
 export type EdgeDirection = 'none' | 'forward' | 'backward';
 
 /**
+ * Text anchor for horizontal alignment
+ */
+export type TextAnchor = 'start' | 'middle' | 'end';
+
+/**
  * 2D point coordinate
  */
 export interface Point {
@@ -139,6 +144,11 @@ export interface TextData extends BaseShapeData {
   fontSize: number;
   fontFamily: string;
   fontWeight: 'normal' | 'bold';
+  textAnchor: TextAnchor;
+  fontStyle: 'normal' | 'italic';
+  textUnderline: boolean;
+  textStrikethrough: boolean;
+  lineHeight: number;
 }
 
 /**

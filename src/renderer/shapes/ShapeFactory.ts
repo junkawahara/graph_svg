@@ -57,7 +57,13 @@ export function createShapeFromData(data: ShapeData, offsetX: number = 0, offset
         data.fontSize,
         data.fontFamily,
         data.fontWeight,
-        { ...data.style }
+        { ...data.style },
+        // New properties with defaults for backward compatibility
+        data.textAnchor || 'start',
+        data.fontStyle || 'normal',
+        data.textUnderline || false,
+        data.textStrikethrough || false,
+        data.lineHeight || 1.2
       );
 
     case 'node':

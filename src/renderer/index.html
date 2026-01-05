@@ -256,7 +256,7 @@
         <div id="text-properties" style="display: none;">
           <div class="property-group">
             <label>Content</label>
-            <input type="text" id="prop-text-content" placeholder="Text content">
+            <textarea id="prop-text-content" placeholder="Text content" rows="3"></textarea>
           </div>
           <div class="property-group">
             <label>Font Size</label>
@@ -276,10 +276,30 @@
             </select>
           </div>
           <div class="property-group">
-            <label class="checkbox-label">
-              <input type="checkbox" id="prop-font-bold">
-              Bold
-            </label>
+            <label>Alignment</label>
+            <select id="prop-text-anchor">
+              <option value="start">Left</option>
+              <option value="middle">Center</option>
+              <option value="end">Right</option>
+            </select>
+          </div>
+          <div class="property-group">
+            <label>Line Height</label>
+            <select id="prop-line-height">
+              <option value="1">1.0</option>
+              <option value="1.2" selected>1.2</option>
+              <option value="1.5">1.5</option>
+              <option value="2">2.0</option>
+            </select>
+          </div>
+          <div class="property-group">
+            <label>Style</label>
+            <div class="text-style-buttons">
+              <button type="button" id="prop-font-bold-btn" class="style-btn" title="Bold">B</button>
+              <button type="button" id="prop-font-italic-btn" class="style-btn" title="Italic"><em>I</em></button>
+              <button type="button" id="prop-text-underline-btn" class="style-btn" title="Underline"><u>U</u></button>
+              <button type="button" id="prop-text-strikethrough-btn" class="style-btn" title="Strikethrough"><s>S</s></button>
+            </div>
           </div>
         </div>
 

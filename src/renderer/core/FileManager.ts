@@ -125,8 +125,34 @@ export class FileManager {
     } else if (shape instanceof Rectangle) {
       return `  <rect id="${shape.id}" x="${shape.x}" y="${shape.y}" width="${shape.width}" height="${shape.height}" ${style}/>`;
     } else if (shape instanceof Text) {
-      const escapedContent = this.escapeXml(shape.content);
-      return `  <text id="${shape.id}" x="${shape.x}" y="${shape.y}" font-size="${shape.fontSize}" font-family="${shape.fontFamily}" font-weight="${shape.fontWeight}" dominant-baseline="hanging" ${style}>${escapedContent}</text>`;
+      // Build text-decoration attribute
+      const decorations: string[] = [];
+      if (shape.textUnderline) decorations.push('underline');
+      if (shape.textStrikethrough) decorations.push('line-through');
+      const textDecorationAttr = decorations.length > 0
+        ? ` text-decoration="${decorations.join(' ')}"`
+        : '';
+
+      // Build font-style attribute
+      const fontStyleAttr = shape.fontStyle === 'italic' ? ' font-style="italic"' : '';
+
+      // Handle multi-line content
+      const lines = shape.content.split('\n');
+
+      if (lines.length === 1) {
+        // Single line
+        const escapedContent = this.escapeXml(shape.content);
+        return `  <text id="${shape.id}" x="${shape.x}" y="${shape.y}" font-size="${shape.fontSize}" font-family="${shape.fontFamily}" font-weight="${shape.fontWeight}" text-anchor="${shape.textAnchor}"${fontStyleAttr}${textDecorationAttr} dominant-baseline="hanging" ${style}>${escapedContent}</text>`;
+      } else {
+        // Multi-line with tspans
+        const tspanLines = lines.map((line, index) => {
+          const dy = index === 0 ? 0 : shape.fontSize * shape.lineHeight;
+          const escapedLine = this.escapeXml(line) || ' ';
+          return `    <tspan x="${shape.x}" dy="${dy}">${escapedLine}</tspan>`;
+        }).join('\n');
+
+        return `  <text id="${shape.id}" x="${shape.x}" y="${shape.y}" font-size="${shape.fontSize}" font-family="${shape.fontFamily}" font-weight="${shape.fontWeight}" text-anchor="${shape.textAnchor}"${fontStyleAttr}${textDecorationAttr} dominant-baseline="hanging" ${style}>\n${tspanLines}\n  </text>`;
+      }
     } else if (shape instanceof Node) {
       return this.nodeToSvgElement(shape);
     } else if (shape instanceof Edge) {
