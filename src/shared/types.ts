@@ -265,7 +265,9 @@ export type EventName =
   | 'file:save'
   | 'file:saveAs'
   | 'file:open'
+  | 'file:exportFitToContent'
   | 'file:dirtyChanged'
+  | 'canvas:fitToContent'
   | 'app:beforeClose';
 
 /**

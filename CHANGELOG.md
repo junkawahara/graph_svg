@@ -5,6 +5,13 @@
 ## [Unreleased]
 
 ### 追加
+- Fit to Content 機能
+  - 「Export Fit to Content...」メニュー（File）: 全オブジェクトを含む最小サイズでSVGをエクスポート
+  - 「Fit Canvas to Content」メニュー（View）: キャンバスサイズを全オブジェクトにフィット
+  - 図形を原点(0,0)付近に移動して最小サイズを実現
+  - 余白設定: デフォルト20px、設定画面で変更可能（0〜100px）
+  - Fit Canvas to Content は Undo/Redo 対応
+
 - ベジェパス（3次ベジェ曲線）描画機能
   - クリックでアンカーポイントを順次配置
   - 開始点付近クリックで閉じたパス、ダブルクリックで開いたパス

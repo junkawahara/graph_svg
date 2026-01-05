@@ -79,6 +79,11 @@ function createMenu(): void {
           click: () => mainWindow?.webContents.send('menu:saveAs')
         },
         { type: 'separator' },
+        {
+          label: 'Export Fit to Content...',
+          click: () => mainWindow?.webContents.send('menu:exportFitToContent')
+        },
+        { type: 'separator' },
         { role: 'quit' }
       ]
     },
@@ -116,6 +121,11 @@ function createMenu(): void {
         { role: 'resetZoom' },
         { role: 'zoomIn' },
         { role: 'zoomOut' },
+        { type: 'separator' },
+        {
+          label: 'Fit Canvas to Content',
+          click: () => mainWindow?.webContents.send('menu:fitCanvasToContent')
+        },
         { type: 'separator' },
         { role: 'togglefullscreen' }
       ]

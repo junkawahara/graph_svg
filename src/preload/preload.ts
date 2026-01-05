@@ -54,6 +54,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('menu:redo', handler);
     return () => ipcRenderer.removeListener('menu:redo', handler);
   },
+  onMenuExportFitToContent: (callback: () => void) => {
+    const handler = (_event: IpcRendererEvent) => callback();
+    ipcRenderer.on('menu:exportFitToContent', handler);
+    return () => ipcRenderer.removeListener('menu:exportFitToContent', handler);
+  },
+  onMenuFitCanvasToContent: (callback: () => void) => {
+    const handler = (_event: IpcRendererEvent) => callback();
+    ipcRenderer.on('menu:fitCanvasToContent', handler);
+    return () => ipcRenderer.removeListener('menu:fitCanvasToContent', handler);
+  },
   onBeforeClose: (callback: () => void) => {
     const handler = (_event: IpcRendererEvent) => callback();
     ipcRenderer.on('app:beforeClose', handler);
@@ -80,6 +90,8 @@ declare global {
       onMenuSaveAs: (callback: () => void) => () => void;
       onMenuUndo: (callback: () => void) => () => void;
       onMenuRedo: (callback: () => void) => () => void;
+      onMenuExportFitToContent: (callback: () => void) => () => void;
+      onMenuFitCanvasToContent: (callback: () => void) => () => void;
       onBeforeClose: (callback: () => void) => () => void;
     };
   }

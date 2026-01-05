@@ -4,6 +4,7 @@
 export interface AppSettings {
   snapOnStartup: boolean;
   gridSize: number;
+  fitToContentMargin: number;
 }
 
 /**
@@ -11,7 +12,8 @@ export interface AppSettings {
  */
 export const DEFAULT_SETTINGS: AppSettings = {
   snapOnStartup: false,
-  gridSize: 10
+  gridSize: 10,
+  fitToContentMargin: 20
 };
 
 /**

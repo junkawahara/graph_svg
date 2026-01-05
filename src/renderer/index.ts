@@ -18,7 +18,9 @@ import { selectionManager } from './core/SelectionManager';
 import { editorState } from './core/EditorState';
 import { createShapeFromData } from './shapes/ShapeFactory';
 import { PasteShapesCommand } from './commands/PasteShapesCommand';
+import { FitCanvasToContentCommand } from './commands/FitCanvasToContentCommand';
 import { Shape } from './shapes/Shape';
+import { calculateFitToContent, calculateContentBounds } from './core/BoundsCalculator';
 
 document.addEventListener('DOMContentLoaded', () => {
   console.log('DrawSVG initialized');
@@ -195,6 +197,88 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  // Fit Canvas to Content handler
+  eventBus.on('canvas:fitToContent', async () => {
+    const shapes = canvas.getShapes();
+    if (shapes.length === 0) {
+      console.log('No shapes to fit');
+      return;
+    }
+
+    const settings = await window.electronAPI.readSettings();
+    const margin = settings.fitToContentMargin;
+    const fitResult = calculateFitToContent(shapes, margin);
+
+    if (!fitResult) {
+      console.log('No content bounds to fit');
+      return;
+    }
+
+    const { newWidth, newHeight, offsetX, offsetY } = fitResult;
+    const beforeSize = editorState.canvasSize;
+
+    // Only execute if there's a change
+    if (beforeSize.width === newWidth && beforeSize.height === newHeight && offsetX === 0 && offsetY === 0) {
+      console.log('Canvas already fits content');
+      return;
+    }
+
+    const command = new FitCanvasToContentCommand(
+      shapes,
+      beforeSize,
+      { width: newWidth, height: newHeight },
+      offsetX,
+      offsetY
+    );
+    historyManager.execute(command);
+    console.log(`Canvas fitted to content: ${newWidth}x${newHeight} (offset: ${offsetX}, ${offsetY})`);
+  });
+
+  // Export Fit to Content handler
+  eventBus.on('file:exportFitToContent', async () => {
+    const shapes = canvas.getShapes();
+    if (shapes.length === 0) {
+      console.log('No shapes to export');
+      return;
+    }
+
+    const settings = await window.electronAPI.readSettings();
+    const margin = settings.fitToContentMargin;
+    const bounds = calculateContentBounds(shapes);
+
+    if (bounds.isEmpty) {
+      console.log('No content bounds to export');
+      return;
+    }
+
+    // Calculate offset and new size
+    const offsetX = margin - bounds.x;
+    const offsetY = margin - bounds.y;
+    const fittedWidth = Math.max(100, Math.ceil(bounds.width + margin * 2));
+    const fittedHeight = Math.max(100, Math.ceil(bounds.height + margin * 2));
+
+    // Clone shapes and apply offset for export (don't modify originals)
+    const exportShapes: Shape[] = shapes.map(shape => {
+      const cloned = shape.clone();
+      cloned.move(offsetX, offsetY);
+      return cloned;
+    });
+
+    // Serialize with fitted dimensions
+    const svgContent = FileManager.serialize(exportShapes, fittedWidth, fittedHeight);
+
+    // Show save dialog
+    const currentPath = editorState.currentFilePath;
+    const defaultPath = currentPath
+      ? currentPath.replace(/\.svg$/i, '-fitted.svg')
+      : 'drawing-fitted.svg';
+
+    const filePath = await window.electronAPI.saveFileAs(svgContent, defaultPath);
+    if (filePath) {
+      console.log('Exported fit to content:', filePath, `(${fittedWidth}x${fittedHeight})`);
+    }
+  });
+
   console.log('Components initialized:', { canvas, toolbar, sidebar, statusBar });
 
   // Initialize settings
@@ -271,6 +355,16 @@ function setupMenuListeners(canvas: Canvas): void {
   // Menu: Redo
   window.electronAPI.onMenuRedo(() => {
     historyManager.redo();
+  });
+
+  // Menu: Export Fit to Content
+  window.electronAPI.onMenuExportFitToContent(() => {
+    eventBus.emit('file:exportFitToContent', null);
+  });
+
+  // Menu: Fit Canvas to Content
+  window.electronAPI.onMenuFitCanvasToContent(() => {
+    eventBus.emit('canvas:fitToContent', null);
   });
 
   // App: Before Close

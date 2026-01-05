@@ -40,7 +40,8 @@ src/
 │   │   ├── FileManager.ts       # SVGシリアライズ/パース
 │   │   ├── ClipboardManager.ts  # コピー/ペースト管理
 │   │   ├── MarkerManager.ts     # SVGマーカー定義（矢印）
-│   │   └── GraphManager.ts      # グラフ（ノード-エッジ）関係管理
+│   │   ├── GraphManager.ts      # グラフ（ノード-エッジ）関係管理
+│   │   └── BoundsCalculator.ts  # バウンディングボックス計算
 │   ├── commands/            # コマンドパターン（Undo/Redo）
 │   │   ├── Command.ts           # インターフェース
 │   │   ├── AddShapeCommand.ts   # 図形追加
@@ -59,7 +60,8 @@ src/
 │   │   ├── NodeLabelChangeCommand.ts  # ノードラベル変更
 │   │   ├── EdgeDirectionChangeCommand.ts # エッジ方向変更
 │   │   ├── GroupShapesCommand.ts    # グループ化
-│   │   └── UngroupShapesCommand.ts  # グループ解除
+│   │   ├── UngroupShapesCommand.ts  # グループ解除
+│   │   └── FitCanvasToContentCommand.ts # キャンバスをコンテンツにフィット
 │   ├── shapes/              # 図形クラス
 │   │   ├── Shape.ts         # インターフェース
 │   │   ├── Line.ts          # 直線
@@ -130,6 +132,8 @@ src/
 - `file:saveAs` - 別名で保存リクエスト
 - `file:open` - ファイル読み込みリクエスト
 - `file:dirtyChanged` - 未保存状態変更
+- `file:exportFitToContent` - Fit to Contentエクスポートリクエスト
+- `canvas:fitToContent` - キャンバスをコンテンツにフィットリクエスト
 - `node:added` - ノード追加
 - `edge:added` - エッジ追加
 - `node:delete` - ノード削除リクエスト
@@ -227,6 +231,26 @@ src/
   - 図形移動時
   - 図形リサイズ時
 - スナップモード時はグリッド線を表示
+
+## Fit to Content 機能
+
+キャンバスサイズを全オブジェクトにフィットさせる機能。
+
+### メニュー
+
+- **File > Export Fit to Content...**: 全オブジェクトを含む最小サイズでSVGをエクスポート
+  - 元のキャンバスは変更せず、エクスポートのみ
+  - ファイル名に `-fitted` が自動で付与
+
+- **View > Fit Canvas to Content**: キャンバスサイズを全オブジェクトにフィット
+  - 図形を原点(0,0)付近に移動
+  - キャンバスサイズを最小化
+  - Undo/Redo対応
+
+### 設定
+
+- **Fit to Content 余白**: 図形周囲の余白サイズ（デフォルト: 20px）
+- Edit > Settings... で変更可能（0〜100px）
 
 ## ベジェパス機能
 
