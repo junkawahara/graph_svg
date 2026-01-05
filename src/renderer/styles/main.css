@@ -26,3 +26,33 @@ html, body {
   flex: 1;
   overflow: hidden;
 }
+
+/* Status Bar */
+#status-bar {
+  display: flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 12px;
+  background-color: #007acc;
+  color: #ffffff;
+  font-size: 12px;
+  gap: 8px;
+}
+
+#status-bar .status-item {
+  white-space: nowrap;
+}
+
+#status-bar .status-separator {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+#status-tool {
+  font-weight: 500;
+  min-width: 80px;
+}
+
+#status-position {
+  font-family: 'Consolas', 'Monaco', monospace;
+  min-width: 120px;
+}

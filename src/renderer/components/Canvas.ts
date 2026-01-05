@@ -630,6 +630,11 @@ export class Canvas {
     });
 
     this.svg.addEventListener('mousemove', (e) => {
+      const point = this.getPointFromEvent(e);
+
+      // Emit mouse position for status bar
+      eventBus.emit('canvas:mouseMove', point);
+
       // Handle panning
       if (this.isPanning && this.lastPanPoint) {
         const dx = (e.clientX - this.lastPanPoint.x) / this.scale;
@@ -641,7 +646,6 @@ export class Canvas {
         return;
       }
 
-      const point = this.getPointFromEvent(e);
       this.currentTool?.onMouseMove(point, e);
     });
 

@@ -7,6 +7,7 @@ import './styles/dialog.css';
 import { Canvas } from './components/Canvas';
 import { Toolbar } from './components/Toolbar';
 import { Sidebar } from './components/Sidebar';
+import { StatusBar } from './components/StatusBar';
 import { SettingsDialog } from './components/SettingsDialog';
 import { eventBus } from './core/EventBus';
 import { historyManager } from './core/HistoryManager';
@@ -29,6 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const canvas = new Canvas(svgElement, canvasContainer);
   const toolbar = new Toolbar();
   const sidebar = new Sidebar();
+  const statusBar = new StatusBar();
 
   // File save handler (save to existing path or show dialog for new file)
   eventBus.on('file:save', async () => {
@@ -128,7 +130,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  console.log('Components initialized:', { canvas, toolbar, sidebar });
+  console.log('Components initialized:', { canvas, toolbar, sidebar, statusBar });
 
   // Initialize settings
   initializeSettings();

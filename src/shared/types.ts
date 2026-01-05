@@ -174,6 +174,7 @@ export type EventName =
   | 'canvas:render'
   | 'canvas:zoomChanged'
   | 'canvas:zoomReset'
+  | 'canvas:mouseMove'
   | 'snap:changed'
   | 'edge:added'
   | 'node:delete'
