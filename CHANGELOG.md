@@ -12,6 +12,13 @@
   - NodeData, EdgeData インターフェース
   - GraphManager クラス（ノード-エッジ関係管理）
 
+- グラフ機能 Phase 2: ノード実装
+  - Node シェイプ（楕円＋中央ラベル）
+  - NodeTool（クリックでノード配置、ラベル入力ダイアログ）
+  - NodeHandles（4隅リサイズハンドル）
+  - AddNodeCommand（Undo/Redo対応）
+  - ツールバーにノードボタン追加（Nキー）
+
 ---
 
 ## [1.0.0] - 2026-01-05

@@ -50,6 +50,7 @@ export class Toolbar {
       { id: 'tool-ellipse', type: 'ellipse' },
       { id: 'tool-rectangle', type: 'rectangle' },
       { id: 'tool-text', type: 'text' },
+      { id: 'tool-node', type: 'node' },
       { id: 'tool-pan', type: 'pan' }
     ];
 
@@ -359,6 +360,9 @@ export class Toolbar {
           break;
         case 't':
           editorState.setTool('text');
+          break;
+        case 'n':
+          editorState.setTool('node');
           break;
         case 'h':
           editorState.setTool('pan');

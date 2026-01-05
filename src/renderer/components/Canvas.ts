@@ -9,17 +9,21 @@ import { LineTool } from '../tools/LineTool';
 import { EllipseTool } from '../tools/EllipseTool';
 import { RectangleTool } from '../tools/RectangleTool';
 import { TextTool } from '../tools/TextTool';
+import { NodeTool } from '../tools/NodeTool';
 import { Shape } from '../shapes/Shape';
 import { Line } from '../shapes/Line';
 import { Ellipse } from '../shapes/Ellipse';
 import { Rectangle } from '../shapes/Rectangle';
 import { Text } from '../shapes/Text';
+import { Node } from '../shapes/Node';
 import { Handle, HandleSet } from '../handles/Handle';
 import { LineHandles } from '../handles/LineHandles';
 import { EllipseHandles } from '../handles/EllipseHandles';
 import { RectangleHandles } from '../handles/RectangleHandles';
 import { TextHandles } from '../handles/TextHandles';
+import { NodeHandles } from '../handles/NodeHandles';
 import { AddShapeCommand } from '../commands/AddShapeCommand';
+import { AddNodeCommand } from '../commands/AddNodeCommand';
 import { DeleteShapeCommand } from '../commands/DeleteShapeCommand';
 import { ZOrderCommand, ZOrderOperation } from '../commands/ZOrderCommand';
 import { initMarkerManager } from '../core/MarkerManager';
@@ -75,8 +79,13 @@ export class Canvas {
 
     // Listen for shape additions
     eventBus.on('shape:added', (shape: Shape) => {
-      const command = new AddShapeCommand(this, shape);
-      historyManager.execute(command);
+      if (shape instanceof Node) {
+        const command = new AddNodeCommand(this, shape);
+        historyManager.execute(command);
+      } else {
+        const command = new AddShapeCommand(this, shape);
+        historyManager.execute(command);
+      }
     });
 
     // Listen for selection changes
@@ -185,6 +194,7 @@ export class Canvas {
     this.tools.set('ellipse', new EllipseTool(this.svg));
     this.tools.set('rectangle', new RectangleTool(this.svg));
     this.tools.set('text', new TextTool());
+    this.tools.set('node', new NodeTool());
     console.log('Canvas: All tools registered');
 
     // Set initial tool
@@ -246,6 +256,8 @@ export class Canvas {
       return new RectangleHandles(shape);
     } else if (shape instanceof Text) {
       return new TextHandles(shape);
+    } else if (shape instanceof Node) {
+      return new NodeHandles(shape);
     }
     return null;
   }
@@ -502,6 +514,9 @@ export class Canvas {
         break;
       case 'text':
         this.svg.style.cursor = 'text';
+        break;
+      case 'node':
+        this.svg.style.cursor = 'crosshair';
         break;
       case 'pan':
         this.svg.style.cursor = 'grab';
