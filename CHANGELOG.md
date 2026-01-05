@@ -5,6 +5,15 @@
 ## [Unreleased]
 
 ### 追加
+- グループ化機能
+  - 複数の図形を選択してグループ化（Ctrl+G）
+  - グループの解除（Ctrl+Shift+G）
+  - グループ単位での移動・リサイズ
+  - ネストしたグループのサポート
+  - Undo/Redo対応（GroupShapesCommand/UngroupShapesCommand）
+  - SVGファイルへの保存/読み込み（`<g data-group-type="group">` 形式）
+  - グループ選択時に破線の境界ボックスと4隅のリサイズハンドル表示
+
 - テキスト機能拡張
   - テキスト配置（text-anchor）: 左揃え/中央揃え/右揃え
   - 斜体（font-style: italic）

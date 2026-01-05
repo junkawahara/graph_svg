@@ -154,6 +154,8 @@ src/
 - `Ctrl+[` - 1つ背面へ
 - `Ctrl+Shift+]` - 最前面へ
 - `Ctrl+Shift+[` - 最背面へ
+- `Ctrl+G` - グループ化
+- `Ctrl+Shift+G` - グループ解除
 - `Ctrl+0` - ズームリセット（100%）
 
 ## 選択操作

@@ -8,6 +8,7 @@ import { Node } from '../shapes/Node';
 import { Edge } from '../shapes/Edge';
 import { Polygon } from '../shapes/Polygon';
 import { Polyline } from '../shapes/Polyline';
+import { Group } from '../shapes/Group';
 import { getGraphManager } from './GraphManager';
 
 // Marker definitions for SVG export
@@ -53,23 +54,31 @@ export class FileManager {
     const usedMarkers = new Set<string>();
     const usedEdgeColors = new Set<string>();
 
-    // Collect all used markers
-    shapes.forEach(shape => {
-      if (shape instanceof Line) {
-        if (shape.markerStart !== 'none') {
-          usedMarkers.add(`${shape.markerStart}-start`);
+    // Recursively collect markers from shapes
+    const collectMarkers = (shapeList: Shape[]) => {
+      shapeList.forEach(shape => {
+        if (shape instanceof Line) {
+          if (shape.markerStart !== 'none') {
+            usedMarkers.add(`${shape.markerStart}-start`);
+          }
+          if (shape.markerEnd !== 'none') {
+            usedMarkers.add(`${shape.markerEnd}-end`);
+          }
         }
-        if (shape.markerEnd !== 'none') {
-          usedMarkers.add(`${shape.markerEnd}-end`);
+        // Collect edge arrow colors
+        if (shape instanceof Edge) {
+          if (shape.direction === 'forward' || shape.direction === 'backward') {
+            usedEdgeColors.add(shape.style.stroke.replace('#', ''));
+          }
         }
-      }
-      // Collect edge arrow colors
-      if (shape instanceof Edge) {
-        if (shape.direction === 'forward' || shape.direction === 'backward') {
-          usedEdgeColors.add(shape.style.stroke.replace('#', ''));
+        // Recursively check group children
+        if (shape instanceof Group) {
+          collectMarkers(shape.children);
         }
-      }
-    });
+      });
+    };
+
+    collectMarkers(shapes);
 
     if (usedMarkers.size === 0 && usedEdgeColors.size === 0) return null;
 
@@ -163,6 +172,8 @@ export class FileManager {
     } else if (shape instanceof Polyline) {
       const points = shape.points.map(p => `${p.x},${p.y}`).join(' ');
       return `  <polyline id="${shape.id}" points="${points}" ${style}/>`;
+    } else if (shape instanceof Group) {
+      return this.groupToSvgElement(shape);
     }
 
     return '';
@@ -291,6 +302,30 @@ export class FileManager {
   }
 
   /**
+   * Convert a Group to SVG element string
+   */
+  private static groupToSvgElement(group: Group, indent: string = '  '): string {
+    const lines: string[] = [];
+
+    lines.push(`${indent}<g id="${group.id}" data-group-type="group">`);
+
+    // Recursively convert children
+    for (const child of group.children) {
+      if (child instanceof Group) {
+        lines.push(this.groupToSvgElement(child, indent + '  '));
+      } else {
+        // Re-indent the child element
+        const childSvg = this.shapeToSvgElement(child);
+        lines.push(childSvg.replace(/^  /, indent + '  '));
+      }
+    }
+
+    lines.push(`${indent}</g>`);
+
+    return lines.join('\n');
+  }
+
+  /**
    * Convert style object to SVG attributes string
    */
   private static styleToAttributes(style: ShapeStyle): string {
@@ -380,9 +415,24 @@ export class FileManager {
       }
     });
 
-    // Parse line elements (excluding edges)
+    // Helper function to check if element is inside a group or node
+    const isInsideGroupOrNode = (el: Element): boolean => {
+      let parent: Element | null = el.parentElement;
+      while (parent && parent !== (svg as Element)) {
+        if (parent.getAttribute('data-group-type') === 'group' ||
+            parent.getAttribute('data-graph-type') === 'node') {
+          return true;
+        }
+        parent = parent.parentElement;
+      }
+      return false;
+    };
+
+    // Parse line elements (excluding edges and those inside groups)
     const lines = svg.querySelectorAll('line');
     lines.forEach(el => {
+      if (isInsideGroupOrNode(el)) return;
+
       const style = this.parseStyleFromElement(el);
       const markerStart = this.parseMarkerType(el.getAttribute('marker-start'));
       const markerEnd = this.parseMarkerType(el.getAttribute('marker-end'));
@@ -390,20 +440,21 @@ export class FileManager {
       shapes.push(line);
     });
 
-    // Parse ellipse elements (excluding those inside nodes)
+    // Parse ellipse elements (excluding those inside nodes or groups)
     const ellipses = svg.querySelectorAll('ellipse');
     ellipses.forEach(el => {
-      // Skip ellipses that are part of nodes
-      if (el.parentElement?.getAttribute('data-graph-type') === 'node') return;
+      if (isInsideGroupOrNode(el)) return;
 
       const style = this.parseStyleFromElement(el);
       const ellipse = Ellipse.fromElement(el, style);
       shapes.push(ellipse);
     });
 
-    // Parse circle elements (convert to ellipse)
+    // Parse circle elements (convert to ellipse, excluding those inside groups)
     const circles = svg.querySelectorAll('circle');
     circles.forEach(el => {
+      if (isInsideGroupOrNode(el)) return;
+
       const style = this.parseStyleFromElement(el);
       const cx = parseFloat(el.getAttribute('cx') || '0');
       const cy = parseFloat(el.getAttribute('cy') || '0');
@@ -412,42 +463,152 @@ export class FileManager {
       shapes.push(ellipse);
     });
 
-    // Parse rect elements
+    // Parse rect elements (excluding those inside groups)
     const rects = svg.querySelectorAll('rect');
     rects.forEach(el => {
+      if (isInsideGroupOrNode(el)) return;
+
       const style = this.parseStyleFromElement(el);
       const rectangle = Rectangle.fromElement(el, style);
       shapes.push(rectangle);
     });
 
-    // Parse text elements (excluding those inside nodes)
+    // Parse text elements (excluding those inside nodes or groups)
     const texts = svg.querySelectorAll('text');
     texts.forEach(el => {
-      // Skip text elements that are part of nodes
-      if (el.parentElement?.getAttribute('data-graph-type') === 'node') return;
+      if (isInsideGroupOrNode(el)) return;
 
       const style = this.parseStyleFromElement(el);
       const text = Text.fromElement(el, style);
       shapes.push(text);
     });
 
-    // Parse polygon elements
+    // Parse polygon elements (excluding those inside groups)
     const polygons = svg.querySelectorAll('polygon');
     polygons.forEach(el => {
+      if (isInsideGroupOrNode(el)) return;
+
       const style = this.parseStyleFromElement(el);
       const polygon = Polygon.fromElement(el, style);
       shapes.push(polygon);
     });
 
-    // Parse polyline elements
+    // Parse polyline elements (excluding those inside groups)
     const polylines = svg.querySelectorAll('polyline');
     polylines.forEach(el => {
+      if (isInsideGroupOrNode(el)) return;
+
       const style = this.parseStyleFromElement(el);
       const polyline = Polyline.fromElement(el, style);
       shapes.push(polyline);
     });
 
+    // Parse top-level group elements
+    const groups = svg.querySelectorAll('g[data-group-type="group"]');
+    groups.forEach(el => {
+      // Only parse top-level groups (not nested)
+      if (el.parentElement !== (svg as Element)) return;
+
+      const group = this.parseGroupElement(el as SVGGElement, gm);
+      if (group) {
+        shapes.push(group);
+      }
+    });
+
     return { shapes, canvasSize };
+  }
+
+  /**
+   * Parse a group element recursively
+   */
+  private static parseGroupElement(groupEl: SVGGElement, gm: ReturnType<typeof getGraphManager>): Group | null {
+    const id = groupEl.id || `group-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const children: Shape[] = [];
+
+    // Parse child elements
+    for (const child of Array.from(groupEl.children)) {
+      const shape = this.parseChildElement(child as SVGElement, gm);
+      if (shape) {
+        children.push(shape);
+      }
+    }
+
+    if (children.length === 0) {
+      return null;
+    }
+
+    return new Group(id, children, { ...DEFAULT_STYLE });
+  }
+
+  /**
+   * Parse a child element within a group
+   */
+  private static parseChildElement(el: SVGElement, gm: ReturnType<typeof getGraphManager>): Shape | null {
+    const tagName = el.tagName.toLowerCase();
+
+    // Handle nested groups
+    if (tagName === 'g') {
+      if (el.getAttribute('data-group-type') === 'group') {
+        return this.parseGroupElement(el as SVGGElement, gm);
+      }
+      if (el.getAttribute('data-graph-type') === 'node') {
+        const ellipse = el.querySelector('ellipse');
+        if (ellipse) {
+          const style = this.parseStyleFromElement(ellipse);
+          const node = Node.fromElement(el as SVGGElement, style);
+          if (node) {
+            gm.registerNode(node.id);
+            gm.setNodeShape(node.id, node);
+            return node;
+          }
+        }
+      }
+      return null;
+    }
+
+    const style = this.parseStyleFromElement(el);
+
+    switch (tagName) {
+      case 'line':
+        const markerStart = this.parseMarkerType(el.getAttribute('marker-start'));
+        const markerEnd = this.parseMarkerType(el.getAttribute('marker-end'));
+        return Line.fromElement(el as SVGLineElement, style, markerStart, markerEnd);
+
+      case 'ellipse':
+        return Ellipse.fromElement(el as SVGEllipseElement, style);
+
+      case 'circle':
+        const cx = parseFloat(el.getAttribute('cx') || '0');
+        const cy = parseFloat(el.getAttribute('cy') || '0');
+        const r = parseFloat(el.getAttribute('r') || '0');
+        return Ellipse.fromCenter({ x: cx, y: cy }, r, r, style);
+
+      case 'rect':
+        return Rectangle.fromElement(el as SVGRectElement, style);
+
+      case 'text':
+        return Text.fromElement(el as SVGTextElement, style);
+
+      case 'polygon':
+        return Polygon.fromElement(el as SVGPolygonElement, style);
+
+      case 'polyline':
+        return Polyline.fromElement(el as SVGPolylineElement, style);
+
+      case 'path':
+        if (el.getAttribute('data-graph-type') === 'edge') {
+          const edgeStyle = this.parseEdgeStyleFromElement(el as SVGPathElement);
+          const edge = Edge.fromElement(el as SVGPathElement, edgeStyle);
+          if (edge) {
+            gm.registerEdge(edge.id, edge.sourceNodeId, edge.targetNodeId);
+            return edge;
+          }
+        }
+        return null;
+
+      default:
+        return null;
+    }
   }
 
   /**

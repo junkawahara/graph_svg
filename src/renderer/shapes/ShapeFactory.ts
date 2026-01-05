@@ -8,6 +8,7 @@ import { Node } from './Node';
 import { Edge } from './Edge';
 import { Polygon } from './Polygon';
 import { Polyline } from './Polyline';
+import { Group } from './Group';
 
 /**
  * Create a shape from serialized data
@@ -104,6 +105,18 @@ export function createShapeFromData(data: ShapeData, offsetX: number = 0, offset
         data.points.map(p => ({ x: p.x + offsetX, y: p.y + offsetY })),
         { ...data.style }
       );
+
+    case 'group':
+      // Recursively create child shapes
+      const children = data.children
+        .map(childData => createShapeFromData(childData, offsetX, offsetY))
+        .filter((child): child is Shape => child !== null);
+
+      if (children.length === 0) {
+        return null;
+      }
+
+      return new Group(newId, children, { ...data.style });
 
     default:
       console.warn('Unknown shape type:', (data as any).type);

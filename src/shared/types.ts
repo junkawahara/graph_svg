@@ -7,7 +7,7 @@ export type ToolType = 'select' | 'line' | 'ellipse' | 'rectangle' | 'text' | 'p
 /**
  * Shape types that can be created
  */
-export type ShapeType = 'line' | 'ellipse' | 'rectangle' | 'text' | 'node' | 'edge' | 'polygon' | 'polyline';
+export type ShapeType = 'line' | 'ellipse' | 'rectangle' | 'text' | 'node' | 'edge' | 'polygon' | 'polyline' | 'group';
 
 /**
  * Edge direction for graph edges
@@ -195,9 +195,19 @@ export interface PolylineData extends BaseShapeData {
 }
 
 /**
+ * Group shape data (contains other shapes)
+ */
+export interface GroupData {
+  id: string;
+  type: 'group';
+  style: ShapeStyle;
+  children: ShapeData[];
+}
+
+/**
  * Union type for all shape data
  */
-export type ShapeData = LineData | EllipseData | RectangleData | TextData | NodeData | EdgeData | PolygonData | PolylineData;
+export type ShapeData = LineData | EllipseData | RectangleData | TextData | NodeData | EdgeData | PolygonData | PolylineData | GroupData;
 
 /**
  * Event names used in EventBus
@@ -230,6 +240,8 @@ export type EventName =
   | 'graph:edgeRemoved'
   | 'graph:edgeDirectionChanged'
   | 'graph:autoLayout'
+  | 'shapes:group'
+  | 'shapes:ungroup'
   | 'file:new'
   | 'file:save'
   | 'file:saveAs'

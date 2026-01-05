@@ -5,6 +5,7 @@ import { historyManager } from '../core/HistoryManager';
 import { selectionManager } from '../core/SelectionManager';
 import { clipboardManager } from '../core/ClipboardManager';
 import { Shape } from '../shapes/Shape';
+import { Group } from '../shapes/Group';
 import { ZOrderOperation } from '../commands/ZOrderCommand';
 
 /**
@@ -422,6 +423,28 @@ export class Toolbar {
       if (e.ctrlKey && !e.shiftKey && e.key === '[') {
         e.preventDefault();
         this.changeZOrder('sendBackward');
+        return;
+      }
+
+      // Ungroup: Ctrl+Shift+G
+      if (e.ctrlKey && e.shiftKey && e.key === 'G') {
+        e.preventDefault();
+        const selected = selectionManager.getSelection();
+        selected.forEach(shape => {
+          if (shape instanceof Group) {
+            eventBus.emit('shapes:ungroup', shape);
+          }
+        });
+        return;
+      }
+
+      // Group: Ctrl+G
+      if (e.ctrlKey && !e.shiftKey && e.key === 'g') {
+        e.preventDefault();
+        const selected = selectionManager.getSelection();
+        if (selected.length >= 2) {
+          eventBus.emit('shapes:group', selected);
+        }
         return;
       }
 

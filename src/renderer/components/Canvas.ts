@@ -25,6 +25,7 @@ import { Node } from '../shapes/Node';
 import { Edge } from '../shapes/Edge';
 import { Polygon } from '../shapes/Polygon';
 import { Polyline } from '../shapes/Polyline';
+import { Group } from '../shapes/Group';
 import { Handle, HandleSet } from '../handles/Handle';
 import { LineHandles } from '../handles/LineHandles';
 import { EllipseHandles } from '../handles/EllipseHandles';
@@ -32,6 +33,7 @@ import { RectangleHandles } from '../handles/RectangleHandles';
 import { TextHandles } from '../handles/TextHandles';
 import { NodeHandles } from '../handles/NodeHandles';
 import { PolygonHandles, PolylineHandles } from '../handles/PolygonHandles';
+import { GroupHandles } from '../handles/GroupHandles';
 import { AddShapeCommand } from '../commands/AddShapeCommand';
 import { AddNodeCommand } from '../commands/AddNodeCommand';
 import { AddEdgeCommand } from '../commands/AddEdgeCommand';
@@ -41,6 +43,8 @@ import { getGraphManager } from '../core/GraphManager';
 import { DeleteShapeCommand } from '../commands/DeleteShapeCommand';
 import { ZOrderCommand, ZOrderOperation } from '../commands/ZOrderCommand';
 import { ApplyLayoutCommand } from '../commands/ApplyLayoutCommand';
+import { GroupShapesCommand } from '../commands/GroupShapesCommand';
+import { UngroupShapesCommand } from '../commands/UngroupShapesCommand';
 import { initMarkerManager } from '../core/MarkerManager';
 
 /**
@@ -170,6 +174,19 @@ export class Canvas {
     // Listen for auto layout requests
     eventBus.on('graph:autoLayout', () => {
       this.applyAutoLayout();
+    });
+
+    // Listen for group requests
+    eventBus.on('shapes:group', (shapes: Shape[]) => {
+      if (shapes.length < 2) return;
+      const command = new GroupShapesCommand(this, shapes);
+      historyManager.execute(command);
+    });
+
+    // Listen for ungroup requests
+    eventBus.on('shapes:ungroup', (group: Group) => {
+      const command = new UngroupShapesCommand(this, group);
+      historyManager.execute(command);
     });
 
     // Listen for canvas size changes
@@ -429,6 +446,8 @@ export class Canvas {
       return new PolygonHandles(shape);
     } else if (shape instanceof Polyline) {
       return new PolylineHandles(shape);
+    } else if (shape instanceof Group) {
+      return new GroupHandles(shape);
     }
     return null;
   }
