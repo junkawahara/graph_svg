@@ -10,6 +10,7 @@ import { Ellipse } from '../shapes/Ellipse';
 import { Rectangle } from '../shapes/Rectangle';
 import { Node } from '../shapes/Node';
 import { Edge } from '../shapes/Edge';
+import { Path } from '../shapes/Path';
 import { StyleChangeCommand } from '../commands/StyleChangeCommand';
 import { TextPropertyChangeCommand, TextPropertyUpdates } from '../commands/TextPropertyChangeCommand';
 import { MarkerChangeCommand, MarkerUpdates } from '../commands/MarkerChangeCommand';
@@ -17,6 +18,7 @@ import { NodeLabelChangeCommand, NodePropertyUpdates } from '../commands/NodeLab
 import { EdgeDirectionChangeCommand } from '../commands/EdgeDirectionChangeCommand';
 import { ResizeShapeCommand } from '../commands/ResizeShapeCommand';
 import { CanvasResizeCommand } from '../commands/CanvasResizeCommand';
+import { parsePath, serializePath } from '../core/PathParser';
 
 /**
  * Sidebar component - handles style property editing
@@ -56,6 +58,10 @@ export class Sidebar {
   // Edge-specific properties
   private edgePropertiesContainer: HTMLDivElement | null = null;
   private edgeDirection: HTMLSelectElement | null = null;
+
+  // Path-specific properties
+  private pathPropertiesContainer: HTMLDivElement | null = null;
+  private pathDataInput: HTMLTextAreaElement | null = null;
 
   // Position/Size properties
   private linePositionContainer: HTMLDivElement | null = null;
@@ -134,6 +140,10 @@ export class Sidebar {
     this.edgePropertiesContainer = document.getElementById('edge-properties') as HTMLDivElement;
     this.edgeDirection = document.getElementById('prop-edge-direction') as HTMLSelectElement;
 
+    // Path-specific elements
+    this.pathPropertiesContainer = document.getElementById('path-properties') as HTMLDivElement;
+    this.pathDataInput = document.getElementById('prop-path-data') as HTMLTextAreaElement;
+
     // Position/Size elements
     this.linePositionContainer = document.getElementById('line-position') as HTMLDivElement;
     this.lineX1Input = document.getElementById('prop-line-x1') as HTMLInputElement;
@@ -177,6 +187,7 @@ export class Sidebar {
     this.setupLineInputListeners();
     this.setupNodeInputListeners();
     this.setupEdgeInputListeners();
+    this.setupPathInputListeners();
     this.setupPositionInputListeners();
     this.setupCanvasSizeInputListeners();
     this.setupDefaultNodeSizeInputListeners();
@@ -349,6 +360,18 @@ export class Sidebar {
   }
 
   /**
+   * Setup path property input listeners
+   */
+  private setupPathInputListeners(): void {
+    if (this.pathDataInput) {
+      this.pathDataInput.addEventListener('change', () => {
+        if (this.isUpdatingUI) return;
+        this.applyPathDataChange();
+      });
+    }
+  }
+
+  /**
    * Setup position/size input listeners
    */
   private setupPositionInputListeners(): void {
@@ -513,6 +536,13 @@ export class Sidebar {
           this.hideEdgeProperties();
         }
 
+        // Show/hide path properties based on shape type
+        if (shape instanceof Path) {
+          this.showPathProperties(shape);
+        } else {
+          this.hidePathProperties();
+        }
+
         // Show position properties based on shape type
         this.showPositionProperties(shape);
       } else if (shapes.length === 0) {
@@ -522,6 +552,7 @@ export class Sidebar {
         this.hideLineProperties();
         this.hideNodeProperties();
         this.hideEdgeProperties();
+        this.hidePathProperties();
         this.hideAllPositionProperties();
       } else {
         // Multiple selection - hide special properties
@@ -529,6 +560,7 @@ export class Sidebar {
         this.hideLineProperties();
         this.hideNodeProperties();
         this.hideEdgeProperties();
+        this.hidePathProperties();
         this.hideAllPositionProperties();
       }
     });
@@ -538,6 +570,10 @@ export class Sidebar {
       const selectedShapes = selectionManager.getSelection();
       if (selectedShapes.length === 1 && selectedShapes[0] === shape) {
         this.updatePositionInputs(shape);
+        // Update path data input if it's a path
+        if (shape instanceof Path) {
+          this.updatePathDataInput(shape);
+        }
       }
     });
 
@@ -736,6 +772,74 @@ export class Sidebar {
   private hideEdgeProperties(): void {
     if (this.edgePropertiesContainer) {
       this.edgePropertiesContainer.style.display = 'none';
+    }
+  }
+
+  /**
+   * Show path properties and populate with shape values
+   */
+  private showPathProperties(path: Path): void {
+    if (!this.pathPropertiesContainer || !this.pathDataInput) return;
+
+    this.isUpdatingUI = true;
+
+    this.pathPropertiesContainer.style.display = 'block';
+    this.pathDataInput.value = serializePath(path.commands);
+
+    this.isUpdatingUI = false;
+  }
+
+  /**
+   * Hide path properties
+   */
+  private hidePathProperties(): void {
+    if (this.pathPropertiesContainer) {
+      this.pathPropertiesContainer.style.display = 'none';
+    }
+  }
+
+  /**
+   * Update path data input without triggering change events
+   */
+  private updatePathDataInput(path: Path): void {
+    if (!this.pathDataInput) return;
+
+    this.isUpdatingUI = true;
+    this.pathDataInput.value = serializePath(path.commands);
+    this.isUpdatingUI = false;
+  }
+
+  /**
+   * Apply path data change from input
+   */
+  private applyPathDataChange(): void {
+    if (this.isUpdatingUI || !this.pathDataInput) return;
+
+    const selectedShapes = selectionManager.getSelection();
+    if (selectedShapes.length !== 1 || !(selectedShapes[0] instanceof Path)) return;
+
+    const path = selectedShapes[0] as Path;
+    const newD = this.pathDataInput.value.trim();
+
+    // Parse the new path data
+    try {
+      const newCommands = parsePath(newD);
+      if (newCommands.length === 0) {
+        // Invalid or empty path, revert to current value
+        this.pathDataInput.value = serializePath(path.commands);
+        return;
+      }
+
+      // Create command for undo/redo
+      const beforeState = { commands: path.commands.map(cmd => ({ ...cmd })) };
+      const afterState = { commands: newCommands };
+
+      const command = new ResizeShapeCommand(path, beforeState, afterState);
+      historyManager.execute(command);
+    } catch (e) {
+      // Parse error, revert to current value
+      console.warn('Invalid path data:', e);
+      this.pathDataInput.value = serializePath(path.commands);
     }
   }
 
