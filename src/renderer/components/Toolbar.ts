@@ -331,7 +331,7 @@ export class Toolbar {
     // Keyboard shortcuts
     document.addEventListener('keydown', (e) => {
       // Don't handle shortcuts if typing in an input
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement) {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement || e.target instanceof HTMLTextAreaElement) {
         return;
       }
 
