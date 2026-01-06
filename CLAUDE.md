@@ -42,7 +42,8 @@ src/
 │   │   ├── MarkerManager.ts     # SVGマーカー定義（矢印）
 │   │   ├── GraphManager.ts      # グラフ（ノード-エッジ）関係管理
 │   │   ├── BoundsCalculator.ts  # バウンディングボックス計算
-│   │   └── TransformParser.ts   # SVG transform 属性解析
+│   │   ├── TransformParser.ts   # SVG transform 属性解析
+│   │   └── PathParser.ts        # SVG path d属性パーサー
 │   ├── commands/            # コマンドパターン（Undo/Redo）
 │   │   ├── Command.ts           # インターフェース
 │   │   ├── AddShapeCommand.ts   # 図形追加
@@ -70,7 +71,7 @@ src/
 │   │   ├── Rectangle.ts     # 長方形
 │   │   ├── Polygon.ts       # 多角形
 │   │   ├── Polyline.ts      # ポリライン（折れ線）
-│   │   ├── BezierPath.ts    # ベジェパス（3次ベジェ曲線）
+│   │   ├── Path.ts          # パス（SVG標準path要素）
 │   │   ├── Text.ts          # テキスト
 │   │   ├── Node.ts          # グラフノード（楕円＋ラベル）
 │   │   ├── Edge.ts          # グラフエッジ（直線/曲線/自己ループ）
@@ -84,7 +85,7 @@ src/
 │   │   ├── RectangleTool.ts # 長方形描画
 │   │   ├── PolygonTool.ts   # 多角形描画
 │   │   ├── PolylineTool.ts  # ポリライン描画
-│   │   ├── BezierPathTool.ts # ベジェパス描画
+│   │   ├── PathTool.ts      # パス描画
 │   │   ├── TextTool.ts      # テキスト配置
 │   │   ├── NodeTool.ts      # ノード配置
 │   │   ├── EdgeTool.ts      # エッジ作成
@@ -98,7 +99,7 @@ src/
 │   │   ├── TextHandles.ts   # テキスト用（中心点）
 │   │   ├── NodeHandles.ts   # ノード用（4隅）
 │   │   ├── PolygonHandles.ts # 多角形/ポリライン用（各頂点）
-│   │   ├── BezierPathHandles.ts # ベジェパス用（アンカー＋制御点）
+│   │   ├── PathHandles.ts   # パス用（アンカー＋制御点）
 │   │   └── GroupHandles.ts  # グループ用（4隅＋破線境界）
 │   └── styles/              # CSS（main, toolbar, sidebar, canvas, dialog）
 └── shared/
@@ -150,7 +151,7 @@ src/
 - `R` - 長方形ツール
 - `P` - 多角形ツール
 - `Y` - ポリラインツール
-- `B` - ベジェパスツール
+- `B` - パスツール
 - `T` - テキストツール
 - `N` - ノードツール
 - `W` - エッジツール
@@ -289,16 +290,34 @@ SVGファイル読み込み時に `transform` 属性を解析し、図形の座�
 
 書き出し時は `transform` 属性を使用せず、変換後の絶対座標で出力します（現状維持）。
 
-## ベジェパス機能
+## パス機能
 
-3次ベジェ曲線（Cubic Bezier）で構成されるパスを描画・編集可能。
+標準 SVG path 要素（`d` 属性）を使用したパスを描画・編集可能。
+外部 SVG ファイル（PowerPoint等）のパス要素もインポート可能。
+
+### 対応コマンド
+
+| コマンド | 説明 | 対応 |
+|---------|------|------|
+| M, m | Move to（移動） | ✓ |
+| L, l | Line to（直線） | ✓ |
+| C, c | Cubic Bezier（3次ベジェ） | ✓ |
+| Q, q | Quadratic Bezier（2次ベジェ） | ✓ |
+| Z, z | Close path（閉じる） | ✓ |
+| H, h, V, v | 水平/垂直線 | L に変換 |
+| S, s | 滑らかな3次ベジェ | C に変換 |
+| T, t | 滑らかな2次ベジェ | Q に変換 |
+| A, a | 円弧 | 直線に近似（警告出力） |
+
+※ 相対コマンド（小文字）は読み込み時に絶対座標に変換
 
 ### 描画方法
 
-- `B`キー または ツールバーベジェパスボタンでベジェパスツールに切り替え
-- クリックでアンカーポイント（頂点）を順次配置
-- 開始点付近をクリックで閉じたパスとして完成
-- ダブルクリックで開いたパスとして完成
+- `B`キー または ツールバーパスボタンでパスツールに切り替え
+- **直線パス**: クリックでアンカーポイントを順次配置（L コマンド）
+- **ベジェ曲線**: `Shift`+クリックで3次ベジェ曲線セグメントを追加（C コマンド）
+- 開始点付近をクリックで閉じたパスとして完成（Z コマンド）
+- ダブルクリックまたは `Enter` キーで開いたパスとして完成
 - `Escape`キーでキャンセル
 
 ### 制御点の編集
@@ -312,19 +331,25 @@ SVGファイル読み込み時に `transform` 属性を解析し、図形の座�
 
 | ハンドル | 形状 | 説明 |
 |---------|------|------|
-| アンカーポイント | 四角(8x8) | 曲線の頂点、白地＋青枠 |
-| 制御点 | 丸(r=4) | 曲線の形状を制御、白地＋グレー枠 |
+| アンカーポイント | 四角(8x8) | 曲線の頂点（M, L, C, Q の終点）、白地＋青枠 |
+| 制御点 | 丸(r=4) | 曲線の形状を制御（C, Q の制御点）、白地＋グレー枠 |
 | 制御線 | 破線 | 制御点とアンカーを結ぶ線、グレー |
 
 ### SVG保存形式
 
 ```xml
-<path id="bezierPath-123" data-shape-type="bezierPath"
-      data-start='{"x":100,"y":100}'
-      data-segments='[{"cp1":{"x":133,"y":100},"cp2":{"x":166,"y":200},"end":{"x":200,"y":200}}]'
-      data-closed="false"
-      d="M 100 100 C 133 100 166 200 200 200"
+<path id="path-123" data-shape-type="path"
+      d="M 100 100 L 150 100 C 183 100 216 150 250 150 Z"
       fill="none" stroke="#000000" stroke-width="2"/>
+```
+
+### 外部SVGのインポート
+
+他のツール（PowerPoint、Illustrator等）で作成した SVG ファイルのパス要素を読み込み可能:
+
+```xml
+<!-- PowerPoint などからエクスポートしたパス -->
+<path d="M 0 0 L 100 0 L 100 100 L 0 100 Z" fill="#ff0000"/>
 ```
 
 ## グラフ機能

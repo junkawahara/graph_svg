@@ -8,7 +8,7 @@ import { Node } from './Node';
 import { Edge } from './Edge';
 import { Polygon } from './Polygon';
 import { Polyline } from './Polyline';
-import { BezierPath } from './BezierPath';
+import { Path } from './Path';
 import { Group } from './Group';
 
 /**
@@ -107,18 +107,37 @@ export function createShapeFromData(data: ShapeData, offsetX: number = 0, offset
         { ...data.style }
       );
 
-    case 'bezierPath':
-      return new BezierPath(
-        newId,
-        { x: data.start.x + offsetX, y: data.start.y + offsetY },
-        data.segments.map(seg => ({
-          cp1: { x: seg.cp1.x + offsetX, y: seg.cp1.y + offsetY },
-          cp2: { x: seg.cp2.x + offsetX, y: seg.cp2.y + offsetY },
-          end: { x: seg.end.x + offsetX, y: seg.end.y + offsetY }
-        })),
-        data.closed,
-        { ...data.style }
-      );
+    case 'path': {
+      // Apply offset to all command coordinates
+      const offsetCommands = data.commands.map(cmd => {
+        switch (cmd.type) {
+          case 'M':
+          case 'L':
+            return { ...cmd, x: cmd.x + offsetX, y: cmd.y + offsetY };
+          case 'C':
+            return {
+              ...cmd,
+              cp1x: cmd.cp1x + offsetX,
+              cp1y: cmd.cp1y + offsetY,
+              cp2x: cmd.cp2x + offsetX,
+              cp2y: cmd.cp2y + offsetY,
+              x: cmd.x + offsetX,
+              y: cmd.y + offsetY
+            };
+          case 'Q':
+            return {
+              ...cmd,
+              cpx: cmd.cpx + offsetX,
+              cpy: cmd.cpy + offsetY,
+              x: cmd.x + offsetX,
+              y: cmd.y + offsetY
+            };
+          case 'Z':
+            return { ...cmd };
+        }
+      });
+      return new Path(newId, offsetCommands, { ...data.style });
+    }
 
     case 'group':
       // Recursively create child shapes

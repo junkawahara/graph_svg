@@ -1,5 +1,5 @@
 import { Point } from '../../shared/types';
-import { BezierPath } from '../shapes/BezierPath';
+import { Path } from '../shapes/Path';
 import { Handle, HandleSet, HandlePosition } from './Handle';
 
 /**
@@ -53,26 +53,23 @@ function createControlLineElement(x1: number, y1: number, x2: number, y2: number
 }
 
 /**
- * Handle for bezier path anchor point (start point or segment end point)
+ * Handle for path anchor point (endpoint of M, L, C, Q commands)
  */
-class AnchorHandle implements Handle {
+class PathAnchorHandle implements Handle {
   type = 'corner' as const;
   position: HandlePosition;
   private handleElement: SVGRectElement | null = null;
 
   constructor(
-    private anchorIndex: number,  // 0 = start, 1+ = segment end points
-    private shape: BezierPath
+    private anchorIndex: number,  // Index in anchor points array
+    private shape: Path
   ) {
-    this.position = anchorIndex === 0 ? 'start' : 'end';
+    this.position = anchorIndex === 0 ? 'nw' : 'se';
   }
 
   getPosition(): Point {
-    if (this.anchorIndex === 0) {
-      return { ...this.shape.start };
-    } else {
-      return { ...this.shape.segments[this.anchorIndex - 1].end };
-    }
+    const anchors = this.shape.getAnchorPoints();
+    return anchors[this.anchorIndex] || { x: 0, y: 0 };
   }
 
   hitTest(point: Point, tolerance: number = 8): boolean {
@@ -104,22 +101,29 @@ class AnchorHandle implements Handle {
 }
 
 /**
- * Handle for bezier path control point
+ * Handle for path control point (cp1/cp2 for C, cp for Q)
  */
-class ControlPointHandle implements Handle {
+class PathControlPointHandle implements Handle {
   type = 'edge' as const;
-  position: HandlePosition = 'e';  // Use 'e' as generic position
+  position: HandlePosition = 'e';
   private handleElement: SVGCircleElement | null = null;
 
   constructor(
-    private segmentIndex: number,
-    private cpIndex: 0 | 1,  // 0 = cp1, 1 = cp2
-    private shape: BezierPath
+    private cmdIndex: number,  // Command index in commands array
+    private cpIndex: 0 | 1,    // 0 = cp1/cpx, 1 = cp2 (only for C)
+    private shape: Path
   ) {}
 
   getPosition(): Point {
-    const segment = this.shape.segments[this.segmentIndex];
-    return this.cpIndex === 0 ? { ...segment.cp1 } : { ...segment.cp2 };
+    const cmd = this.shape.commands[this.cmdIndex];
+    if (cmd.type === 'C') {
+      return this.cpIndex === 0
+        ? { x: cmd.cp1x, y: cmd.cp1y }
+        : { x: cmd.cp2x, y: cmd.cp2y };
+    } else if (cmd.type === 'Q') {
+      return { x: cmd.cpx, y: cmd.cpy };
+    }
+    return { x: 0, y: 0 };
   }
 
   hitTest(point: Point, tolerance: number = 6): boolean {
@@ -130,7 +134,7 @@ class ControlPointHandle implements Handle {
   }
 
   onDrag(point: Point): void {
-    this.shape.setControlPoint(this.segmentIndex, this.cpIndex, point);
+    this.shape.setControlPoint(this.cmdIndex, this.cpIndex, point);
   }
 
   setElement(el: SVGCircleElement): void {
@@ -144,8 +148,8 @@ class ControlPointHandle implements Handle {
     this.handleElement.setAttribute('cy', String(pos.y));
   }
 
-  getSegmentIndex(): number {
-    return this.segmentIndex;
+  getCmdIndex(): number {
+    return this.cmdIndex;
   }
 
   getCpIndex(): 0 | 1 {
@@ -158,24 +162,24 @@ class ControlPointHandle implements Handle {
  */
 interface ControlLineInfo {
   element: SVGLineElement;
-  anchorIndex: number;
-  segmentIndex: number;
+  cmdIndex: number;
   cpIndex: 0 | 1;
+  anchorType: 'start' | 'end';  // Which anchor the control point relates to
 }
 
 /**
- * Handle set for BezierPath shape
+ * Handle set for Path shape
  * Includes anchor handles (square) and control point handles (circle)
  * with dashed lines connecting control points to their anchors
  */
-export class BezierPathHandles implements HandleSet {
+export class PathHandles implements HandleSet {
   handles: Handle[] = [];
   element: SVGGElement | null = null;
-  private anchorHandles: AnchorHandle[] = [];
-  private controlPointHandles: ControlPointHandle[] = [];
+  private anchorHandles: PathAnchorHandle[] = [];
+  private controlPointHandles: PathControlPointHandle[] = [];
   private controlLines: ControlLineInfo[] = [];
 
-  constructor(public shape: BezierPath) {
+  constructor(public shape: Path) {
     this.createHandles();
   }
 
@@ -184,23 +188,54 @@ export class BezierPathHandles implements HandleSet {
     this.controlPointHandles = [];
     this.handles = [];
 
-    // Create anchor handles
-    const numAnchors = this.shape.segments.length + 1;
-    for (let i = 0; i < numAnchors; i++) {
-      // Skip the last anchor if path is closed (it's the same as start)
-      if (this.shape.closed && i === numAnchors - 1) continue;
+    const commands = this.shape.commands;
+    let anchorIndex = 0;
 
-      const handle = new AnchorHandle(i, this.shape);
-      this.anchorHandles.push(handle);
-      this.handles.push(handle);
-    }
+    for (let cmdIdx = 0; cmdIdx < commands.length; cmdIdx++) {
+      const cmd = commands[cmdIdx];
 
-    // Create control point handles
-    for (let i = 0; i < this.shape.segments.length; i++) {
-      const cp1Handle = new ControlPointHandle(i, 0, this.shape);
-      const cp2Handle = new ControlPointHandle(i, 1, this.shape);
-      this.controlPointHandles.push(cp1Handle, cp2Handle);
-      this.handles.push(cp1Handle, cp2Handle);
+      switch (cmd.type) {
+        case 'M':
+        case 'L': {
+          // Create anchor handle for the endpoint
+          const handle = new PathAnchorHandle(anchorIndex, this.shape);
+          this.anchorHandles.push(handle);
+          this.handles.push(handle);
+          anchorIndex++;
+          break;
+        }
+
+        case 'C': {
+          // Create anchor handle for the endpoint
+          const anchorHandle = new PathAnchorHandle(anchorIndex, this.shape);
+          this.anchorHandles.push(anchorHandle);
+          this.handles.push(anchorHandle);
+          anchorIndex++;
+
+          // Create control point handles for cp1 and cp2
+          const cp1Handle = new PathControlPointHandle(cmdIdx, 0, this.shape);
+          const cp2Handle = new PathControlPointHandle(cmdIdx, 1, this.shape);
+          this.controlPointHandles.push(cp1Handle, cp2Handle);
+          this.handles.push(cp1Handle, cp2Handle);
+          break;
+        }
+
+        case 'Q': {
+          // Create anchor handle for the endpoint
+          const anchorHandle = new PathAnchorHandle(anchorIndex, this.shape);
+          this.anchorHandles.push(anchorHandle);
+          this.handles.push(anchorHandle);
+          anchorIndex++;
+
+          // Create control point handle for cp
+          const cpHandle = new PathControlPointHandle(cmdIdx, 0, this.shape);
+          this.controlPointHandles.push(cpHandle);
+          this.handles.push(cpHandle);
+          break;
+        }
+
+        // Z command has no handles
+      }
     }
   }
 
@@ -212,41 +247,69 @@ export class BezierPathHandles implements HandleSet {
     this.createHandles();
 
     const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-    group.classList.add('handle-group', 'bezier-handle-group');
+    group.classList.add('handle-group', 'path-handle-group');
 
     this.controlLines = [];
 
     // Draw control lines first (so they appear behind handles)
-    for (let segIdx = 0; segIdx < this.shape.segments.length; segIdx++) {
-      const segment = this.shape.segments[segIdx];
-      const startAnchor = this.shape.getSegmentStart(segIdx);
-      const endAnchor = segment.end;
+    const commands = this.shape.commands;
+    for (let cmdIdx = 0; cmdIdx < commands.length; cmdIdx++) {
+      const cmd = commands[cmdIdx];
+      const startPos = this.shape.getCommandStart(cmdIdx);
 
-      // Line from start anchor to cp1
-      const line1 = createControlLineElement(
-        startAnchor.x, startAnchor.y,
-        segment.cp1.x, segment.cp1.y
-      );
-      group.appendChild(line1);
-      this.controlLines.push({
-        element: line1,
-        anchorIndex: segIdx,
-        segmentIndex: segIdx,
-        cpIndex: 0
-      });
+      if (cmd.type === 'C') {
+        // Line from start anchor to cp1
+        const line1 = createControlLineElement(
+          startPos.x, startPos.y,
+          cmd.cp1x, cmd.cp1y
+        );
+        group.appendChild(line1);
+        this.controlLines.push({
+          element: line1,
+          cmdIndex: cmdIdx,
+          cpIndex: 0,
+          anchorType: 'start'
+        });
 
-      // Line from end anchor to cp2
-      const line2 = createControlLineElement(
-        endAnchor.x, endAnchor.y,
-        segment.cp2.x, segment.cp2.y
-      );
-      group.appendChild(line2);
-      this.controlLines.push({
-        element: line2,
-        anchorIndex: segIdx + 1,
-        segmentIndex: segIdx,
-        cpIndex: 1
-      });
+        // Line from end anchor to cp2
+        const line2 = createControlLineElement(
+          cmd.x, cmd.y,
+          cmd.cp2x, cmd.cp2y
+        );
+        group.appendChild(line2);
+        this.controlLines.push({
+          element: line2,
+          cmdIndex: cmdIdx,
+          cpIndex: 1,
+          anchorType: 'end'
+        });
+      } else if (cmd.type === 'Q') {
+        // Line from start anchor to cp
+        const line1 = createControlLineElement(
+          startPos.x, startPos.y,
+          cmd.cpx, cmd.cpy
+        );
+        group.appendChild(line1);
+        this.controlLines.push({
+          element: line1,
+          cmdIndex: cmdIdx,
+          cpIndex: 0,
+          anchorType: 'start'
+        });
+
+        // Line from end anchor to cp
+        const line2 = createControlLineElement(
+          cmd.x, cmd.y,
+          cmd.cpx, cmd.cpy
+        );
+        group.appendChild(line2);
+        this.controlLines.push({
+          element: line2,
+          cmdIndex: cmdIdx,
+          cpIndex: 0,
+          anchorType: 'end'
+        });
+      }
     }
 
     // Draw control point handles
@@ -271,24 +334,6 @@ export class BezierPathHandles implements HandleSet {
   }
 
   update(): void {
-    // Check if structure changed
-    const expectedAnchors = this.shape.closed
-      ? this.shape.segments.length
-      : this.shape.segments.length + 1;
-    const expectedCps = this.shape.segments.length * 2;
-
-    if (this.anchorHandles.length !== expectedAnchors ||
-        this.controlPointHandles.length !== expectedCps) {
-      // Re-render if structure changed
-      if (this.element) {
-        const svg = this.element.ownerSVGElement;
-        if (svg) {
-          this.render(svg);
-        }
-      }
-      return;
-    }
-
     // Update existing handle positions
     for (const handle of this.anchorHandles) {
       handle.updateElement();
@@ -300,16 +345,29 @@ export class BezierPathHandles implements HandleSet {
 
     // Update control lines
     for (const lineInfo of this.controlLines) {
-      const segment = this.shape.segments[lineInfo.segmentIndex];
+      const cmd = this.shape.commands[lineInfo.cmdIndex];
+      if (!cmd) continue;
+
       let anchorPos: Point;
       let cpPos: Point;
 
-      if (lineInfo.cpIndex === 0) {
-        anchorPos = this.shape.getSegmentStart(lineInfo.segmentIndex);
-        cpPos = segment.cp1;
+      if (cmd.type === 'C') {
+        if (lineInfo.anchorType === 'start') {
+          anchorPos = this.shape.getCommandStart(lineInfo.cmdIndex);
+          cpPos = { x: cmd.cp1x, y: cmd.cp1y };
+        } else {
+          anchorPos = { x: cmd.x, y: cmd.y };
+          cpPos = { x: cmd.cp2x, y: cmd.cp2y };
+        }
+      } else if (cmd.type === 'Q') {
+        if (lineInfo.anchorType === 'start') {
+          anchorPos = this.shape.getCommandStart(lineInfo.cmdIndex);
+        } else {
+          anchorPos = { x: cmd.x, y: cmd.y };
+        }
+        cpPos = { x: cmd.cpx, y: cmd.cpy };
       } else {
-        anchorPos = segment.end;
-        cpPos = segment.cp2;
+        continue;
       }
 
       lineInfo.element.setAttribute('x1', String(anchorPos.x));

@@ -7,8 +7,8 @@ import { Text } from '../shapes/Text';
 import { Node } from '../shapes/Node';
 import { Polygon } from '../shapes/Polygon';
 import { Polyline } from '../shapes/Polyline';
-import { BezierPath } from '../shapes/BezierPath';
-import { Point, BezierSegment } from '../../shared/types';
+import { Path } from '../shapes/Path';
+import { Point, PathCommand } from '../../shared/types';
 
 interface LineState {
   x1: number;
@@ -40,13 +40,11 @@ interface PolygonState {
   points: Point[];
 }
 
-interface BezierPathState {
-  start: Point;
-  segments: BezierSegment[];
-  closed: boolean;
+interface PathState {
+  commands: PathCommand[];
 }
 
-type ShapeState = LineState | EllipseState | RectangleState | TextState | PolygonState | BezierPathState;
+type ShapeState = LineState | EllipseState | RectangleState | TextState | PolygonState | PathState;
 
 /**
  * Command for resizing a shape
@@ -106,15 +104,9 @@ export class ResizeShapeCommand implements Command {
       return {
         points: shape.points.map(p => ({ ...p }))
       };
-    } else if (shape instanceof BezierPath) {
+    } else if (shape instanceof Path) {
       return {
-        start: { ...shape.start },
-        segments: shape.segments.map(seg => ({
-          cp1: { ...seg.cp1 },
-          cp2: { ...seg.cp2 },
-          end: { ...seg.end }
-        })),
-        closed: shape.closed
+        commands: shape.commands.map(cmd => ({ ...cmd }))
       };
     }
     throw new Error('Unknown shape type');
@@ -154,14 +146,8 @@ export class ResizeShapeCommand implements Command {
       this.shape.y = state.y;
     } else if ((this.shape instanceof Polygon || this.shape instanceof Polyline) && 'points' in state) {
       this.shape.points = state.points.map(p => ({ ...p }));
-    } else if (this.shape instanceof BezierPath && 'segments' in state) {
-      this.shape.start = { ...state.start };
-      this.shape.segments = state.segments.map(seg => ({
-        cp1: { ...seg.cp1 },
-        cp2: { ...seg.cp2 },
-        end: { ...seg.end }
-      }));
-      this.shape.closed = state.closed;
+    } else if (this.shape instanceof Path && 'commands' in state) {
+      this.shape.commands = state.commands.map(cmd => ({ ...cmd }));
     }
     this.shape.updateElement();
   }

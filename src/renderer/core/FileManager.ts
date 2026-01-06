@@ -1,4 +1,4 @@
-import { ShapeStyle, DEFAULT_STYLE, StrokeLinecap, MarkerType, EdgeDirection, CanvasSize, DEFAULT_CANVAS_SIZE, BezierSegment, Point } from '../../shared/types';
+import { ShapeStyle, DEFAULT_STYLE, StrokeLinecap, MarkerType, EdgeDirection, CanvasSize, DEFAULT_CANVAS_SIZE, Point } from '../../shared/types';
 import { Shape } from '../shapes/Shape';
 import { Line } from '../shapes/Line';
 import { Ellipse } from '../shapes/Ellipse';
@@ -8,10 +8,11 @@ import { Node } from '../shapes/Node';
 import { Edge } from '../shapes/Edge';
 import { Polygon } from '../shapes/Polygon';
 import { Polyline } from '../shapes/Polyline';
-import { BezierPath } from '../shapes/BezierPath';
+import { Path } from '../shapes/Path';
 import { Group } from '../shapes/Group';
 import { getGraphManager } from './GraphManager';
 import { parseTransform, combineTransforms, ParsedTransform, IDENTITY_TRANSFORM, isIdentityTransform } from './TransformParser';
+import { serializePath } from './PathParser';
 
 // Marker definitions for SVG export
 const MARKER_SVG_DEFS: Record<Exclude<MarkerType, 'none'>, { path: string; filled: boolean; strokeWidth?: number }> = {
@@ -174,8 +175,8 @@ export class FileManager {
     } else if (shape instanceof Polyline) {
       const points = shape.points.map(p => `${p.x},${p.y}`).join(' ');
       return `  <polyline id="${shape.id}" points="${points}" ${style}/>`;
-    } else if (shape instanceof BezierPath) {
-      return this.bezierPathToSvgElement(shape);
+    } else if (shape instanceof Path) {
+      return this.pathToSvgElement(shape);
     } else if (shape instanceof Group) {
       return this.groupToSvgElement(shape);
     }
@@ -248,25 +249,12 @@ export class FileManager {
   }
 
   /**
-   * Convert a BezierPath to SVG element string
+   * Convert a Path to SVG element string
    */
-  private static bezierPathToSvgElement(bezierPath: BezierPath): string {
-    const style = this.styleToAttributes(bezierPath.style);
-
-    // Build path data: M start C cp1 cp2 end [C cp1 cp2 end]... [Z]
-    let pathData = `M ${bezierPath.start.x} ${bezierPath.start.y}`;
-    for (const seg of bezierPath.segments) {
-      pathData += ` C ${seg.cp1.x} ${seg.cp1.y} ${seg.cp2.x} ${seg.cp2.y} ${seg.end.x} ${seg.end.y}`;
-    }
-    if (bezierPath.closed) {
-      pathData += ' Z';
-    }
-
-    // Store bezier data as data attributes for re-importing
-    const startJson = JSON.stringify(bezierPath.start);
-    const segmentsJson = JSON.stringify(bezierPath.segments);
-
-    return `  <path id="${bezierPath.id}" data-shape-type="bezierPath" data-start='${startJson}' data-segments='${segmentsJson}' data-closed="${bezierPath.closed}" d="${pathData}" ${style}/>`;
+  private static pathToSvgElement(path: Path): string {
+    const style = this.styleToAttributes(path.style);
+    const pathData = serializePath(path.commands);
+    return `  <path id="${path.id}" d="${pathData}" ${style}/>`;
   }
 
   /**
@@ -545,17 +533,22 @@ export class FileManager {
       shapes.push(polyline);
     });
 
-    // Parse bezierPath elements (excluding those inside groups)
-    const bezierPaths = svg.querySelectorAll('path[data-shape-type="bezierPath"]');
-    bezierPaths.forEach(el => {
+    // Parse path elements (excluding those inside groups and edges)
+    const allPaths = svg.querySelectorAll('path');
+    allPaths.forEach(el => {
       if (isInsideGroupOrNode(el)) return;
+      // Skip if it's an edge
+      if (el.getAttribute('data-graph-type') === 'edge') return;
+
+      const dAttr = el.getAttribute('d');
+      if (!dAttr) return;
 
       const style = this.parseStyleFromElement(el as SVGElement);
-      const bezierPath = this.parseBezierPathElement(el as SVGPathElement, style);
-      if (bezierPath) {
+      const path = Path.fromPathData(dAttr, style);
+      if (path.commands.length > 0) {
         const transform = parseTransform(el.getAttribute('transform'));
-        this.applyTransformToShape(bezierPath, transform);
-        shapes.push(bezierPath);
+        this.applyTransformToShape(path, transform);
+        shapes.push(path);
       }
     });
 
@@ -684,9 +677,15 @@ export class FileManager {
             gm.registerEdge(edge.id, edge.sourceNodeId, edge.targetNodeId);
             return edge;  // Edges don't need transform (they reference nodes)
           }
-        }
-        if (el.getAttribute('data-shape-type') === 'bezierPath') {
-          shape = this.parseBezierPathElement(el as SVGPathElement, style);
+        } else {
+          // Parse path element
+          const dAttr = el.getAttribute('d');
+          if (dAttr) {
+            const path = Path.fromPathData(dAttr, style);
+            if (path.commands.length > 0) {
+              shape = path;
+            }
+          }
         }
         break;
 
@@ -700,33 +699,6 @@ export class FileManager {
     }
 
     return shape;
-  }
-
-  /**
-   * Parse a BezierPath element from SVG
-   */
-  private static parseBezierPathElement(el: SVGPathElement, style: ShapeStyle): BezierPath | null {
-    const id = el.id || `bezierPath-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-
-    try {
-      const startJson = el.getAttribute('data-start');
-      const segmentsJson = el.getAttribute('data-segments');
-      const closedAttr = el.getAttribute('data-closed');
-
-      if (!startJson || !segmentsJson) {
-        console.warn('BezierPath element missing required data attributes');
-        return null;
-      }
-
-      const start: Point = JSON.parse(startJson);
-      const segments: BezierSegment[] = JSON.parse(segmentsJson);
-      const closed = closedAttr === 'true';
-
-      return new BezierPath(id, start, segments, closed, style);
-    } catch (e) {
-      console.error('Failed to parse BezierPath element:', e);
-      return null;
-    }
   }
 
   /**

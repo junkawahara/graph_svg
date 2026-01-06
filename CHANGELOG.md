@@ -5,6 +5,23 @@
 ## [Unreleased]
 
 ### 追加
+- 標準 SVG path 対応
+  - 標準 SVG path 要素（`d` 属性）の読み込み・書き出し対応
+  - 対応コマンド: M, L, C, Q, Z（相対コマンド m, l, c, q も絶対座標に変換）
+  - H, V, S, T コマンドは対応コマンドに変換
+  - A (Arc) コマンドは直線に近似（警告出力）
+  - PathParser ユーティリティを追加
+  - PathTool で直線パスを描画（Bキー）
+  - Shift+クリックで3次ベジェ曲線セグメントを追加
+  - 選択時にアンカーポイント（四角）と制御点（丸）のハンドル表示
+  - 外部 SVG ファイル（PowerPoint等）のパス要素をインポート可能
+
+### 削除
+- BezierPath 機能を廃止し、Path に統合
+  - 旧形式（data-shape-type="bezierPath"）は読み込み不可
+
+### 変更
+
 - SVG transform 属性対応
   - SVGファイル読み込み時に `translate` と `scale` 変換を解析・適用
   - グループ内グループのネストしたtransform合成に対応
