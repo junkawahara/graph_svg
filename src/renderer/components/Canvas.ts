@@ -974,12 +974,32 @@ export class Canvas {
    * Show context menu for a shape
    */
   private showContextMenu(x: number, y: number, shape: Shape): void {
-    this.contextMenu.show(x, y, [
-      {
-        label: 'SVGタグを編集',
-        action: () => this.showSvgEditDialog(shape)
-      }
-    ]);
+    const menuItems: { label: string; action: () => void; disabled?: boolean }[] = [];
+    const selectedShapes = selectionManager.getSelection();
+
+    // If multiple shapes are selected, show group option
+    if (selectedShapes.length >= 2) {
+      menuItems.push({
+        label: 'グループ化',
+        action: () => eventBus.emit('shapes:group', selectedShapes)
+      });
+    }
+
+    // If the shape is a Group, show ungroup option
+    if (shape instanceof Group) {
+      menuItems.push({
+        label: 'グループ化の解除',
+        action: () => eventBus.emit('shapes:ungroup', shape)
+      });
+    }
+
+    // Always show SVG edit option
+    menuItems.push({
+      label: 'SVGタグを編集',
+      action: () => this.showSvgEditDialog(shape)
+    });
+
+    this.contextMenu.show(x, y, menuItems);
   }
 
   /**
