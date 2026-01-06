@@ -48,7 +48,10 @@ import { ZOrderCommand, ZOrderOperation } from '../commands/ZOrderCommand';
 import { ApplyLayoutCommand } from '../commands/ApplyLayoutCommand';
 import { GroupShapesCommand } from '../commands/GroupShapesCommand';
 import { UngroupShapesCommand } from '../commands/UngroupShapesCommand';
+import { EditSvgCommand } from '../commands/EditSvgCommand';
 import { initMarkerManager } from '../core/MarkerManager';
+import { SvgEditDialog } from './SvgEditDialog';
+import { FileManager } from '../core/FileManager';
 
 /**
  * Canvas component - manages SVG element, tools, shapes, and handles
@@ -82,6 +85,9 @@ export class Canvas {
   private canvasResizeHandle: SVGCircleElement | null = null;
   private isResizingCanvas: boolean = false;
   private canvasResizeStartSize: CanvasSize | null = null;
+
+  // SVG edit dialog
+  private svgEditDialog: SvgEditDialog = new SvgEditDialog();
 
   constructor(svgElement: SVGSVGElement, containerElement: HTMLElement) {
     this.svg = svgElement;
@@ -893,6 +899,18 @@ export class Canvas {
       this.zoomAt(screenX, screenY, delta);
     }, { passive: false });
 
+    // Right-click context menu for SVG editing
+    this.svg.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+
+      const point = this.getPointFromEvent(e);
+      const shape = this.findShapeAt(point);
+
+      if (shape && shape.element) {
+        this.showSvgEditDialog(shape);
+      }
+    });
+
     // Keyboard events for space key (panning)
     document.addEventListener('keydown', (e) => {
       if (e.code === 'Space' && !this.isSpacePressed) {
@@ -946,5 +964,63 @@ export class Canvas {
 
     // Clear selection and update handles
     selectionManager.clearSelection();
+  }
+
+  /**
+   * Show SVG edit dialog for a shape
+   */
+  private async showSvgEditDialog(shape: Shape): Promise<void> {
+    if (!shape.element) return;
+
+    // Get the current SVG source
+    const svgSource = shape.element.outerHTML;
+
+    // Show the dialog
+    const result = await this.svgEditDialog.show(svgSource);
+
+    if (result && result !== svgSource) {
+      // Parse the edited SVG to create a new shape
+      const newShape = this.parseEditedSvg(result, shape);
+
+      if (newShape) {
+        // Execute command to replace the shape
+        const command = new EditSvgCommand(this, shape, newShape);
+        historyManager.execute(command);
+
+        // Update selection to the new shape
+        selectionManager.clearSelection();
+        selectionManager.select(newShape);
+      }
+    }
+  }
+
+  /**
+   * Parse edited SVG string and create a new shape
+   */
+  private parseEditedSvg(svgSource: string, originalShape: Shape): Shape | null {
+    try {
+      // Wrap in minimal SVG for parsing
+      const wrappedSvg = `<svg xmlns="http://www.w3.org/2000/svg">${svgSource}</svg>`;
+
+      // Use FileManager to parse
+      const { shapes } = FileManager.parse(wrappedSvg);
+
+      if (shapes.length > 0) {
+        const newShape = shapes[0];
+        // Preserve original ID if the new shape has a different ID
+        // (This ensures the shape maintains its identity)
+        if (newShape.id !== originalShape.id) {
+          // Note: We could copy the original ID, but it's cleaner to keep the parsed ID
+          // as the user may have intentionally changed it in the SVG
+        }
+        return newShape;
+      }
+
+      console.warn('No shape found in edited SVG');
+      return null;
+    } catch (e) {
+      console.error('Failed to parse edited SVG:', e);
+      return null;
+    }
   }
 }
