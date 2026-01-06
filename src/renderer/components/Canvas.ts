@@ -993,6 +993,26 @@ export class Canvas {
       });
     }
 
+    // Z-order options (always show when shape is selected)
+    if (selectedShapes.length > 0) {
+      menuItems.push({
+        label: '最前面に移動',
+        action: () => eventBus.emit('shapes:zorder', { shapes: selectedShapes, operation: 'bringToFront' as ZOrderOperation })
+      });
+      menuItems.push({
+        label: '最背面に移動',
+        action: () => eventBus.emit('shapes:zorder', { shapes: selectedShapes, operation: 'sendToBack' as ZOrderOperation })
+      });
+      menuItems.push({
+        label: '1つ前面へ',
+        action: () => eventBus.emit('shapes:zorder', { shapes: selectedShapes, operation: 'bringForward' as ZOrderOperation })
+      });
+      menuItems.push({
+        label: '1つ背面へ',
+        action: () => eventBus.emit('shapes:zorder', { shapes: selectedShapes, operation: 'sendBackward' as ZOrderOperation })
+      });
+    }
+
     // Always show SVG edit option
     menuItems.push({
       label: 'SVGタグを編集',
