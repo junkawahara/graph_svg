@@ -132,4 +132,19 @@ export class Rectangle implements Shape {
       { ...this.style }
     );
   }
+
+  applyTransform(translateX: number, translateY: number, scaleX: number, scaleY: number): void {
+    this.x = this.x * scaleX + translateX;
+    this.y = this.y * scaleY + translateY;
+    this.width = this.width * Math.abs(scaleX);
+    this.height = this.height * Math.abs(scaleY);
+    // Handle negative scale (flip)
+    if (scaleX < 0) {
+      this.x -= this.width;
+    }
+    if (scaleY < 0) {
+      this.y -= this.height;
+    }
+    this.updateElement();
+  }
 }

@@ -50,6 +50,15 @@ export interface Shape {
    * Create a deep copy
    */
   clone(): Shape;
+
+  /**
+   * Apply transform to shape (modifies coordinates in place)
+   * @param translateX X translation
+   * @param translateY Y translation
+   * @param scaleX X scale factor
+   * @param scaleY Y scale factor
+   */
+  applyTransform?(translateX: number, translateY: number, scaleX: number, scaleY: number): void;
 }
 
 /**

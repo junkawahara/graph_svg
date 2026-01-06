@@ -5,6 +5,13 @@
 ## [Unreleased]
 
 ### 追加
+- SVG transform 属性対応
+  - SVGファイル読み込み時に `translate` と `scale` 変換を解析・適用
+  - グループ内グループのネストしたtransform合成に対応
+  - 変換後は絶対座標として保持（書き出し時はtransformを使用しない）
+  - 未対応変換（rotate, skewX, skewY, matrix）は警告ログ出力後に無視
+  - TransformParser ユーティリティを追加
+
 - Fit to Content 機能
   - 「Export Fit to Content...」メニュー（File）: 全オブジェクトを含む最小サイズでSVGをエクスポート
   - 「Fit Canvas to Content」メニュー（View）: キャンバスサイズを全オブジェクトにフィット

@@ -184,6 +184,14 @@ export class Polygon implements Shape {
     );
   }
 
+  applyTransform(translateX: number, translateY: number, scaleX: number, scaleY: number): void {
+    for (const point of this.points) {
+      point.x = point.x * scaleX + translateX;
+      point.y = point.y * scaleY + translateY;
+    }
+    this.updateElement();
+  }
+
   /**
    * Set a specific vertex position
    */

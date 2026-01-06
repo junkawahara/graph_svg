@@ -235,4 +235,13 @@ export class Text implements Shape {
       this.lineHeight
     );
   }
+
+  applyTransform(translateX: number, translateY: number, scaleX: number, scaleY: number): void {
+    this.x = this.x * scaleX + translateX;
+    this.y = this.y * scaleY + translateY;
+    // Scale font size by average scale factor
+    const avgScale = (Math.abs(scaleX) + Math.abs(scaleY)) / 2;
+    this.fontSize = this.fontSize * avgScale;
+    this.updateElement();
+  }
 }

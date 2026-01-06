@@ -137,4 +137,12 @@ export class Ellipse implements Shape {
       { ...this.style }
     );
   }
+
+  applyTransform(translateX: number, translateY: number, scaleX: number, scaleY: number): void {
+    this.cx = this.cx * scaleX + translateX;
+    this.cy = this.cy * scaleY + translateY;
+    this.rx = this.rx * Math.abs(scaleX);
+    this.ry = this.ry * Math.abs(scaleY);
+    this.updateElement();
+  }
 }

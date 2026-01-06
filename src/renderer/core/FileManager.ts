@@ -11,6 +11,7 @@ import { Polyline } from '../shapes/Polyline';
 import { BezierPath } from '../shapes/BezierPath';
 import { Group } from '../shapes/Group';
 import { getGraphManager } from './GraphManager';
+import { parseTransform, combineTransforms, ParsedTransform, IDENTITY_TRANSFORM, isIdentityTransform } from './TransformParser';
 
 // Marker definitions for SVG export
 const MARKER_SVG_DEFS: Record<Exclude<MarkerType, 'none'>, { path: string; filled: boolean; strokeWidth?: number }> = {
@@ -420,6 +421,8 @@ export class FileManager {
         const style = this.parseStyleFromElement(ellipse);
         const node = Node.fromElement(el as SVGGElement, style);
         if (node) {
+          const transform = parseTransform(el.getAttribute('transform'));
+          this.applyTransformToShape(node, transform);
           shapes.push(node);
           // Register with GraphManager
           gm.registerNode(node.id);
@@ -462,6 +465,8 @@ export class FileManager {
       const markerStart = this.parseMarkerType(el.getAttribute('marker-start'));
       const markerEnd = this.parseMarkerType(el.getAttribute('marker-end'));
       const line = Line.fromElement(el, style, markerStart, markerEnd);
+      const transform = parseTransform(el.getAttribute('transform'));
+      this.applyTransformToShape(line, transform);
       shapes.push(line);
     });
 
@@ -472,6 +477,8 @@ export class FileManager {
 
       const style = this.parseStyleFromElement(el);
       const ellipse = Ellipse.fromElement(el, style);
+      const transform = parseTransform(el.getAttribute('transform'));
+      this.applyTransformToShape(ellipse, transform);
       shapes.push(ellipse);
     });
 
@@ -485,6 +492,8 @@ export class FileManager {
       const cy = parseFloat(el.getAttribute('cy') || '0');
       const r = parseFloat(el.getAttribute('r') || '0');
       const ellipse = Ellipse.fromCenter({ x: cx, y: cy }, r, r, style);
+      const transform = parseTransform(el.getAttribute('transform'));
+      this.applyTransformToShape(ellipse, transform);
       shapes.push(ellipse);
     });
 
@@ -495,6 +504,8 @@ export class FileManager {
 
       const style = this.parseStyleFromElement(el);
       const rectangle = Rectangle.fromElement(el, style);
+      const transform = parseTransform(el.getAttribute('transform'));
+      this.applyTransformToShape(rectangle, transform);
       shapes.push(rectangle);
     });
 
@@ -505,6 +516,8 @@ export class FileManager {
 
       const style = this.parseStyleFromElement(el);
       const text = Text.fromElement(el, style);
+      const transform = parseTransform(el.getAttribute('transform'));
+      this.applyTransformToShape(text, transform);
       shapes.push(text);
     });
 
@@ -515,6 +528,8 @@ export class FileManager {
 
       const style = this.parseStyleFromElement(el);
       const polygon = Polygon.fromElement(el, style);
+      const transform = parseTransform(el.getAttribute('transform'));
+      this.applyTransformToShape(polygon, transform);
       shapes.push(polygon);
     });
 
@@ -525,6 +540,8 @@ export class FileManager {
 
       const style = this.parseStyleFromElement(el);
       const polyline = Polyline.fromElement(el, style);
+      const transform = parseTransform(el.getAttribute('transform'));
+      this.applyTransformToShape(polyline, transform);
       shapes.push(polyline);
     });
 
@@ -536,6 +553,8 @@ export class FileManager {
       const style = this.parseStyleFromElement(el as SVGElement);
       const bezierPath = this.parseBezierPathElement(el as SVGPathElement, style);
       if (bezierPath) {
+        const transform = parseTransform(el.getAttribute('transform'));
+        this.applyTransformToShape(bezierPath, transform);
         shapes.push(bezierPath);
       }
     });
@@ -558,13 +577,21 @@ export class FileManager {
   /**
    * Parse a group element recursively
    */
-  private static parseGroupElement(groupEl: SVGGElement, gm: ReturnType<typeof getGraphManager>): Group | null {
+  private static parseGroupElement(
+    groupEl: SVGGElement,
+    gm: ReturnType<typeof getGraphManager>,
+    parentTransform: ParsedTransform = IDENTITY_TRANSFORM
+  ): Group | null {
     const id = groupEl.id || `group-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     const children: Shape[] = [];
 
-    // Parse child elements
+    // Parse group's own transform and combine with parent
+    const myTransform = parseTransform(groupEl.getAttribute('transform'));
+    const combinedTransform = combineTransforms(parentTransform, myTransform);
+
+    // Parse child elements with accumulated transform
     for (const child of Array.from(groupEl.children)) {
-      const shape = this.parseChildElement(child as SVGElement, gm);
+      const shape = this.parseChildElement(child as SVGElement, gm, combinedTransform);
       if (shape) {
         children.push(shape);
       }
@@ -580,13 +607,21 @@ export class FileManager {
   /**
    * Parse a child element within a group
    */
-  private static parseChildElement(el: SVGElement, gm: ReturnType<typeof getGraphManager>): Shape | null {
+  private static parseChildElement(
+    el: SVGElement,
+    gm: ReturnType<typeof getGraphManager>,
+    parentTransform: ParsedTransform = IDENTITY_TRANSFORM
+  ): Shape | null {
     const tagName = el.tagName.toLowerCase();
+
+    // Parse element's own transform and combine with parent
+    const myTransform = parseTransform(el.getAttribute('transform'));
+    const combinedTransform = combineTransforms(parentTransform, myTransform);
 
     // Handle nested groups
     if (tagName === 'g') {
       if (el.getAttribute('data-group-type') === 'group') {
-        return this.parseGroupElement(el as SVGGElement, gm);
+        return this.parseGroupElement(el as SVGGElement, gm, parentTransform);
       }
       if (el.getAttribute('data-graph-type') === 'node') {
         const ellipse = el.querySelector('ellipse');
@@ -594,6 +629,7 @@ export class FileManager {
           const style = this.parseStyleFromElement(ellipse);
           const node = Node.fromElement(el as SVGGElement, style);
           if (node) {
+            this.applyTransformToShape(node, combinedTransform);
             gm.registerNode(node.id);
             gm.setNodeShape(node.id, node);
             return node;
@@ -604,33 +640,41 @@ export class FileManager {
     }
 
     const style = this.parseStyleFromElement(el);
+    let shape: Shape | null = null;
 
     switch (tagName) {
       case 'line':
         const markerStart = this.parseMarkerType(el.getAttribute('marker-start'));
         const markerEnd = this.parseMarkerType(el.getAttribute('marker-end'));
-        return Line.fromElement(el as SVGLineElement, style, markerStart, markerEnd);
+        shape = Line.fromElement(el as SVGLineElement, style, markerStart, markerEnd);
+        break;
 
       case 'ellipse':
-        return Ellipse.fromElement(el as SVGEllipseElement, style);
+        shape = Ellipse.fromElement(el as SVGEllipseElement, style);
+        break;
 
       case 'circle':
         const cx = parseFloat(el.getAttribute('cx') || '0');
         const cy = parseFloat(el.getAttribute('cy') || '0');
         const r = parseFloat(el.getAttribute('r') || '0');
-        return Ellipse.fromCenter({ x: cx, y: cy }, r, r, style);
+        shape = Ellipse.fromCenter({ x: cx, y: cy }, r, r, style);
+        break;
 
       case 'rect':
-        return Rectangle.fromElement(el as SVGRectElement, style);
+        shape = Rectangle.fromElement(el as SVGRectElement, style);
+        break;
 
       case 'text':
-        return Text.fromElement(el as SVGTextElement, style);
+        shape = Text.fromElement(el as SVGTextElement, style);
+        break;
 
       case 'polygon':
-        return Polygon.fromElement(el as SVGPolygonElement, style);
+        shape = Polygon.fromElement(el as SVGPolygonElement, style);
+        break;
 
       case 'polyline':
-        return Polyline.fromElement(el as SVGPolylineElement, style);
+        shape = Polyline.fromElement(el as SVGPolylineElement, style);
+        break;
 
       case 'path':
         if (el.getAttribute('data-graph-type') === 'edge') {
@@ -638,17 +682,24 @@ export class FileManager {
           const edge = Edge.fromElement(el as SVGPathElement, edgeStyle);
           if (edge) {
             gm.registerEdge(edge.id, edge.sourceNodeId, edge.targetNodeId);
-            return edge;
+            return edge;  // Edges don't need transform (they reference nodes)
           }
         }
         if (el.getAttribute('data-shape-type') === 'bezierPath') {
-          return this.parseBezierPathElement(el as SVGPathElement, style);
+          shape = this.parseBezierPathElement(el as SVGPathElement, style);
         }
-        return null;
+        break;
 
       default:
         return null;
     }
+
+    // Apply combined transform to the shape
+    if (shape) {
+      this.applyTransformToShape(shape, combinedTransform);
+    }
+
+    return shape;
   }
 
   /**
@@ -738,5 +789,21 @@ export class FileManager {
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&apos;');
+  }
+
+  /**
+   * Apply transform to a shape if it has applyTransform method
+   */
+  private static applyTransformToShape(shape: Shape, transform: ParsedTransform): void {
+    if (isIdentityTransform(transform)) return;
+
+    if (shape.applyTransform) {
+      shape.applyTransform(
+        transform.translateX,
+        transform.translateY,
+        transform.scaleX,
+        transform.scaleY
+      );
+    }
   }
 }

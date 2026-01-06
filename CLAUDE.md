@@ -41,7 +41,8 @@ src/
 │   │   ├── ClipboardManager.ts  # コピー/ペースト管理
 │   │   ├── MarkerManager.ts     # SVGマーカー定義（矢印）
 │   │   ├── GraphManager.ts      # グラフ（ノード-エッジ）関係管理
-│   │   └── BoundsCalculator.ts  # バウンディングボックス計算
+│   │   ├── BoundsCalculator.ts  # バウンディングボックス計算
+│   │   └── TransformParser.ts   # SVG transform 属性解析
 │   ├── commands/            # コマンドパターン（Undo/Redo）
 │   │   ├── Command.ts           # インターフェース
 │   │   ├── AddShapeCommand.ts   # 図形追加
@@ -251,6 +252,42 @@ src/
 
 - **Fit to Content 余白**: 図形周囲の余白サイズ（デフォルト: 20px）
 - Edit > Settings... で変更可能（0〜100px）
+
+## SVG transform 対応
+
+SVGファイル読み込み時に `transform` 属性を解析し、図形の座標に反映します。
+
+### 対応する変換
+
+| 変換 | 説明 | 例 |
+|------|------|-----|
+| `translate(x, y)` | 平行移動 | `translate(100, 50)` |
+| `scale(sx, sy)` | 拡大縮小 | `scale(2)`, `scale(1.5, 2)` |
+
+### 対応しない変換
+
+以下の変換は読み込み時に警告ログを出力し、無視されます:
+- `rotate` - 回転
+- `skewX`, `skewY` - 傾斜
+- `matrix` - 行列変換
+
+### ネストしたtransform
+
+グループ内グループなど、ネストしたtransformは自動的に合成されます:
+
+```xml
+<g transform="translate(100, 0)">
+  <g transform="scale(2)">
+    <rect x="0" y="0" width="50" height="50"/>
+  </g>
+</g>
+```
+
+上記の場合、矩形は `translate(100, 0)` と `scale(2)` が合成され、位置 (100, 0) に 100x100 の矩形として読み込まれます。
+
+### 書き出し時の動作
+
+書き出し時は `transform` 属性を使用せず、変換後の絶対座標で出力します（現状維持）。
 
 ## ベジェパス機能
 

@@ -256,6 +256,24 @@ export class BezierPath implements Shape {
     );
   }
 
+  applyTransform(translateX: number, translateY: number, scaleX: number, scaleY: number): void {
+    // Transform start point
+    this.start.x = this.start.x * scaleX + translateX;
+    this.start.y = this.start.y * scaleY + translateY;
+
+    // Transform all segment points
+    for (const seg of this.segments) {
+      seg.cp1.x = seg.cp1.x * scaleX + translateX;
+      seg.cp1.y = seg.cp1.y * scaleY + translateY;
+      seg.cp2.x = seg.cp2.x * scaleX + translateX;
+      seg.cp2.y = seg.cp2.y * scaleY + translateY;
+      seg.end.x = seg.end.x * scaleX + translateX;
+      seg.end.y = seg.end.y * scaleY + translateY;
+    }
+
+    this.updateElement();
+  }
+
   /**
    * Get all anchor points (start + all segment end points)
    */

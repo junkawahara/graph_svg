@@ -194,6 +194,16 @@ export class Group implements Shape {
     return new Group(generateId(), clonedChildren, { ...this.style });
   }
 
+  applyTransform(translateX: number, translateY: number, scaleX: number, scaleY: number): void {
+    // Recursively apply transform to all children
+    for (const child of this.children) {
+      if (child.applyTransform) {
+        child.applyTransform(translateX, translateY, scaleX, scaleY);
+      }
+    }
+    this.updateElement();
+  }
+
   /**
    * Get all child shapes (for ungrouping)
    */

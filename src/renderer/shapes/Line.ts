@@ -164,4 +164,12 @@ export class Line implements Shape {
       { ...this.style }
     );
   }
+
+  applyTransform(translateX: number, translateY: number, scaleX: number, scaleY: number): void {
+    this.x1 = this.x1 * scaleX + translateX;
+    this.y1 = this.y1 * scaleY + translateY;
+    this.x2 = this.x2 * scaleX + translateX;
+    this.y2 = this.y2 * scaleY + translateY;
+    this.updateElement();
+  }
 }

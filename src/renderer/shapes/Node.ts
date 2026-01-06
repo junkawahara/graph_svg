@@ -186,6 +186,17 @@ export class Node implements Shape {
     );
   }
 
+  applyTransform(translateX: number, translateY: number, scaleX: number, scaleY: number): void {
+    this.cx = this.cx * scaleX + translateX;
+    this.cy = this.cy * scaleY + translateY;
+    this.rx = this.rx * Math.abs(scaleX);
+    this.ry = this.ry * Math.abs(scaleY);
+    // Scale font size by average scale factor
+    const avgScale = (Math.abs(scaleX) + Math.abs(scaleY)) / 2;
+    this.fontSize = this.fontSize * avgScale;
+    this.updateElement();
+  }
+
   /**
    * Get the connection point on the node boundary for an edge
    * @param targetX Target point X (where the edge is going)
