@@ -51,6 +51,7 @@ import { UngroupShapesCommand } from '../commands/UngroupShapesCommand';
 import { EditSvgCommand } from '../commands/EditSvgCommand';
 import { initMarkerManager } from '../core/MarkerManager';
 import { SvgEditDialog } from './SvgEditDialog';
+import { ContextMenu } from './ContextMenu';
 import { FileManager } from '../core/FileManager';
 
 /**
@@ -88,6 +89,9 @@ export class Canvas {
 
   // SVG edit dialog
   private svgEditDialog: SvgEditDialog = new SvgEditDialog();
+
+  // Context menu
+  private contextMenu: ContextMenu = new ContextMenu();
 
   constructor(svgElement: SVGSVGElement, containerElement: HTMLElement) {
     this.svg = svgElement;
@@ -907,7 +911,7 @@ export class Canvas {
       const shape = this.findShapeAt(point);
 
       if (shape && shape.element) {
-        this.showSvgEditDialog(shape);
+        this.showContextMenu(e.clientX, e.clientY, shape);
       }
     });
 
@@ -964,6 +968,18 @@ export class Canvas {
 
     // Clear selection and update handles
     selectionManager.clearSelection();
+  }
+
+  /**
+   * Show context menu for a shape
+   */
+  private showContextMenu(x: number, y: number, shape: Shape): void {
+    this.contextMenu.show(x, y, [
+      {
+        label: 'SVGタグを編集',
+        action: () => this.showSvgEditDialog(shape)
+      }
+    ]);
   }
 
   /**

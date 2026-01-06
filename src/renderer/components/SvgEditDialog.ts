@@ -55,9 +55,9 @@ export class SvgEditDialog {
     textarea.style.width = '100%';
     textarea.style.minHeight = '200px';
     textarea.style.resize = 'both';
-    textarea.style.whiteSpace = 'pre';
-    textarea.style.overflowWrap = 'normal';
-    textarea.style.overflowX = 'auto';
+    textarea.style.whiteSpace = 'pre-wrap';
+    textarea.style.overflowWrap = 'break-word';
+    textarea.style.wordBreak = 'break-all';
 
     this.overlay.appendChild(this.dialog);
     document.body.appendChild(this.overlay);
