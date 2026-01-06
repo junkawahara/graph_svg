@@ -206,7 +206,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const settings = await window.electronAPI.readSettings();
-    const margin = settings.fitToContentMargin;
+    const margin = settings.fitToContentMargin ?? 20; // Default to 20 if not set
     const fitResult = calculateFitToContent(shapes, margin);
 
     if (!fitResult) {
@@ -243,7 +243,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const settings = await window.electronAPI.readSettings();
-    const margin = settings.fitToContentMargin;
+    const margin = settings.fitToContentMargin ?? 20; // Default to 20 if not set
     const bounds = calculateContentBounds(shapes);
 
     if (bounds.isEmpty) {
