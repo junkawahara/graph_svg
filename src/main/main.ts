@@ -56,78 +56,238 @@ function saveWindowState(): void {
 function createMenu(): void {
   const template: Electron.MenuItemConstructorOptions[] = [
     {
-      label: 'File',
+      label: 'ファイル',
       submenu: [
         {
-          label: 'New',
+          label: '新規作成',
           accelerator: 'CmdOrCtrl+N',
           click: () => mainWindow?.webContents.send('menu:new')
         },
         {
-          label: 'Open...',
+          label: '開く...',
           accelerator: 'CmdOrCtrl+O',
           click: () => mainWindow?.webContents.send('menu:open')
         },
         {
-          label: 'Save',
+          label: '保存',
           accelerator: 'CmdOrCtrl+S',
           click: () => mainWindow?.webContents.send('menu:save')
         },
         {
-          label: 'Save As...',
+          label: '別名で保存...',
           accelerator: 'CmdOrCtrl+Shift+S',
           click: () => mainWindow?.webContents.send('menu:saveAs')
         },
         { type: 'separator' },
         {
-          label: 'Export Fit to Content...',
+          label: 'コンテンツにフィットしてエクスポート...',
           click: () => mainWindow?.webContents.send('menu:exportFitToContent')
         },
         { type: 'separator' },
-        { role: 'quit' }
+        {
+          label: '終了',
+          role: 'quit'
+        }
       ]
     },
     {
-      label: 'Edit',
+      label: '編集',
       submenu: [
         {
-          label: 'Undo',
+          label: '元に戻す',
           accelerator: 'CmdOrCtrl+Z',
           click: () => mainWindow?.webContents.send('menu:undo')
         },
         {
-          label: 'Redo',
+          label: 'やり直し',
           accelerator: 'CmdOrCtrl+Y',
           click: () => mainWindow?.webContents.send('menu:redo')
         },
         { type: 'separator' },
-        { role: 'cut' },
-        { role: 'copy' },
-        { role: 'paste' },
+        {
+          label: '切り取り',
+          role: 'cut'
+        },
+        {
+          label: 'コピー',
+          role: 'copy'
+        },
+        {
+          label: '貼り付け',
+          role: 'paste'
+        },
+        {
+          label: '削除',
+          accelerator: 'Delete',
+          click: () => mainWindow?.webContents.send('menu:delete')
+        },
         { type: 'separator' },
         {
-          label: 'Settings...',
+          label: 'グループ化',
+          accelerator: 'CmdOrCtrl+G',
+          click: () => mainWindow?.webContents.send('menu:group')
+        },
+        {
+          label: 'グループ解除',
+          accelerator: 'CmdOrCtrl+Shift+G',
+          click: () => mainWindow?.webContents.send('menu:ungroup')
+        },
+        { type: 'separator' },
+        {
+          label: '設定...',
           click: () => mainWindow?.webContents.send('open-settings')
         }
       ]
     },
     {
-      label: 'View',
+      label: '表示',
       submenu: [
-        { role: 'reload' },
-        { role: 'forceReload' },
-        { role: 'toggleDevTools' },
-        { type: 'separator' },
-        { role: 'resetZoom' },
-        { role: 'zoomIn' },
-        { role: 'zoomOut' },
+        {
+          label: 'ズームリセット',
+          accelerator: 'CmdOrCtrl+0',
+          click: () => mainWindow?.webContents.send('menu:zoomReset')
+        },
+        {
+          label: '拡大',
+          role: 'zoomIn'
+        },
+        {
+          label: '縮小',
+          role: 'zoomOut'
+        },
         { type: 'separator' },
         {
-          label: 'Fit Canvas to Content',
+          label: 'グリッドスナップ',
+          accelerator: 'G',
+          click: () => mainWindow?.webContents.send('menu:toggleSnap')
+        },
+        { type: 'separator' },
+        {
+          label: 'キャンバスをコンテンツにフィット',
           click: () => mainWindow?.webContents.send('menu:fitCanvasToContent')
         },
         { type: 'separator' },
-        { role: 'togglefullscreen' }
+        {
+          label: '再読み込み',
+          role: 'reload'
+        },
+        {
+          label: '強制再読み込み',
+          role: 'forceReload'
+        },
+        {
+          label: '開発者ツール',
+          role: 'toggleDevTools'
+        },
+        { type: 'separator' },
+        {
+          label: 'フルスクリーン',
+          role: 'togglefullscreen'
+        }
+      ]
+    },
+    {
+      label: 'ツール',
+      submenu: [
+        {
+          label: '選択',
+          accelerator: 'V',
+          click: () => mainWindow?.webContents.send('menu:tool', 'select')
+        },
+        {
+          label: 'パン',
+          accelerator: 'H',
+          click: () => mainWindow?.webContents.send('menu:tool', 'pan')
+        },
+        { type: 'separator' },
+        {
+          label: '直線',
+          accelerator: 'L',
+          click: () => mainWindow?.webContents.send('menu:tool', 'line')
+        },
+        {
+          label: '楕円',
+          accelerator: 'E',
+          click: () => mainWindow?.webContents.send('menu:tool', 'ellipse')
+        },
+        {
+          label: '長方形',
+          accelerator: 'R',
+          click: () => mainWindow?.webContents.send('menu:tool', 'rectangle')
+        },
+        {
+          label: '多角形',
+          accelerator: 'P',
+          click: () => mainWindow?.webContents.send('menu:tool', 'polygon')
+        },
+        {
+          label: 'ポリライン',
+          accelerator: 'Y',
+          click: () => mainWindow?.webContents.send('menu:tool', 'polyline')
+        },
+        {
+          label: 'パス',
+          accelerator: 'B',
+          click: () => mainWindow?.webContents.send('menu:tool', 'path')
+        },
+        {
+          label: 'テキスト',
+          accelerator: 'T',
+          click: () => mainWindow?.webContents.send('menu:tool', 'text')
+        },
+        { type: 'separator' },
+        {
+          label: 'ノード',
+          accelerator: 'N',
+          click: () => mainWindow?.webContents.send('menu:tool', 'node')
+        },
+        {
+          label: 'エッジ',
+          accelerator: 'W',
+          click: () => mainWindow?.webContents.send('menu:tool', 'edge')
+        },
+        {
+          label: 'ノードを削除',
+          click: () => mainWindow?.webContents.send('menu:tool', 'delete-node')
+        },
+        {
+          label: 'エッジを削除',
+          click: () => mainWindow?.webContents.send('menu:tool', 'delete-edge')
+        }
+      ]
+    },
+    {
+      label: '配置',
+      submenu: [
+        {
+          label: '最前面に移動',
+          accelerator: 'CmdOrCtrl+Shift+]',
+          click: () => mainWindow?.webContents.send('menu:zorder', 'bringToFront')
+        },
+        {
+          label: '1つ前面へ',
+          accelerator: 'CmdOrCtrl+]',
+          click: () => mainWindow?.webContents.send('menu:zorder', 'bringForward')
+        },
+        {
+          label: '1つ背面へ',
+          accelerator: 'CmdOrCtrl+[',
+          click: () => mainWindow?.webContents.send('menu:zorder', 'sendBackward')
+        },
+        {
+          label: '最背面に移動',
+          accelerator: 'CmdOrCtrl+Shift+[',
+          click: () => mainWindow?.webContents.send('menu:zorder', 'sendToBack')
+        },
+        { type: 'separator' },
+        {
+          label: '自動レイアウト',
+          click: () => mainWindow?.webContents.send('menu:autoLayout')
+        },
+        {
+          label: '有向エッジ切替',
+          click: () => mainWindow?.webContents.send('menu:toggleDirectedEdge')
+        }
       ]
     }
   ];

@@ -68,6 +68,51 @@ contextBridge.exposeInMainWorld('electronAPI', {
     const handler = (_event: IpcRendererEvent) => callback();
     ipcRenderer.on('app:beforeClose', handler);
     return () => ipcRenderer.removeListener('app:beforeClose', handler);
+  },
+  onMenuDelete: (callback: () => void) => {
+    const handler = (_event: IpcRendererEvent) => callback();
+    ipcRenderer.on('menu:delete', handler);
+    return () => ipcRenderer.removeListener('menu:delete', handler);
+  },
+  onMenuGroup: (callback: () => void) => {
+    const handler = (_event: IpcRendererEvent) => callback();
+    ipcRenderer.on('menu:group', handler);
+    return () => ipcRenderer.removeListener('menu:group', handler);
+  },
+  onMenuUngroup: (callback: () => void) => {
+    const handler = (_event: IpcRendererEvent) => callback();
+    ipcRenderer.on('menu:ungroup', handler);
+    return () => ipcRenderer.removeListener('menu:ungroup', handler);
+  },
+  onMenuZoomReset: (callback: () => void) => {
+    const handler = (_event: IpcRendererEvent) => callback();
+    ipcRenderer.on('menu:zoomReset', handler);
+    return () => ipcRenderer.removeListener('menu:zoomReset', handler);
+  },
+  onMenuToggleSnap: (callback: () => void) => {
+    const handler = (_event: IpcRendererEvent) => callback();
+    ipcRenderer.on('menu:toggleSnap', handler);
+    return () => ipcRenderer.removeListener('menu:toggleSnap', handler);
+  },
+  onMenuTool: (callback: (tool: string) => void) => {
+    const handler = (_event: IpcRendererEvent, tool: string) => callback(tool);
+    ipcRenderer.on('menu:tool', handler);
+    return () => ipcRenderer.removeListener('menu:tool', handler);
+  },
+  onMenuZorder: (callback: (operation: string) => void) => {
+    const handler = (_event: IpcRendererEvent, operation: string) => callback(operation);
+    ipcRenderer.on('menu:zorder', handler);
+    return () => ipcRenderer.removeListener('menu:zorder', handler);
+  },
+  onMenuAutoLayout: (callback: () => void) => {
+    const handler = (_event: IpcRendererEvent) => callback();
+    ipcRenderer.on('menu:autoLayout', handler);
+    return () => ipcRenderer.removeListener('menu:autoLayout', handler);
+  },
+  onMenuToggleDirectedEdge: (callback: () => void) => {
+    const handler = (_event: IpcRendererEvent) => callback();
+    ipcRenderer.on('menu:toggleDirectedEdge', handler);
+    return () => ipcRenderer.removeListener('menu:toggleDirectedEdge', handler);
   }
 });
 
@@ -93,6 +138,15 @@ declare global {
       onMenuExportFitToContent: (callback: () => void) => () => void;
       onMenuFitCanvasToContent: (callback: () => void) => () => void;
       onBeforeClose: (callback: () => void) => () => void;
+      onMenuDelete: (callback: () => void) => () => void;
+      onMenuGroup: (callback: () => void) => () => void;
+      onMenuUngroup: (callback: () => void) => () => void;
+      onMenuZoomReset: (callback: () => void) => () => void;
+      onMenuToggleSnap: (callback: () => void) => () => void;
+      onMenuTool: (callback: (tool: string) => void) => () => void;
+      onMenuZorder: (callback: (operation: string) => void) => () => void;
+      onMenuAutoLayout: (callback: () => void) => () => void;
+      onMenuToggleDirectedEdge: (callback: () => void) => () => void;
     };
   }
 }

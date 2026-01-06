@@ -20,6 +20,9 @@ import { createShapeFromData } from './shapes/ShapeFactory';
 import { PasteShapesCommand } from './commands/PasteShapesCommand';
 import { FitCanvasToContentCommand } from './commands/FitCanvasToContentCommand';
 import { Shape } from './shapes/Shape';
+import { Group } from './shapes/Group';
+import { ToolType } from '../shared/types';
+import { ZOrderOperation } from './commands/ZOrderCommand';
 import { calculateFitToContent, calculateContentBounds } from './core/BoundsCalculator';
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -411,5 +414,67 @@ function setupMenuListeners(canvas: Canvas): void {
 
     // Allow close (either saved or discarded)
     await window.electronAPI.allowClose();
+  });
+
+  // Menu: Delete
+  window.electronAPI.onMenuDelete(() => {
+    const selected = selectionManager.getSelection();
+    if (selected.length > 0) {
+      eventBus.emit('shapes:delete', selected);
+    }
+  });
+
+  // Menu: Group
+  window.electronAPI.onMenuGroup(() => {
+    const selected = selectionManager.getSelection();
+    if (selected.length >= 2) {
+      eventBus.emit('shapes:group', selected);
+    }
+  });
+
+  // Menu: Ungroup
+  window.electronAPI.onMenuUngroup(() => {
+    const selected = selectionManager.getSelection();
+    selected.forEach(shape => {
+      if (shape instanceof Group) {
+        eventBus.emit('shapes:ungroup', shape);
+      }
+    });
+  });
+
+  // Menu: Zoom Reset
+  window.electronAPI.onMenuZoomReset(() => {
+    eventBus.emit('canvas:zoomReset', null);
+  });
+
+  // Menu: Toggle Snap
+  window.electronAPI.onMenuToggleSnap(() => {
+    editorState.setSnapEnabled(!editorState.snapEnabled);
+  });
+
+  // Menu: Tool selection
+  window.electronAPI.onMenuTool((tool: string) => {
+    eventBus.emit('tool:changed', tool as ToolType);
+  });
+
+  // Menu: Z-order
+  window.electronAPI.onMenuZorder((operation: string) => {
+    const selected = selectionManager.getSelection();
+    if (selected.length > 0) {
+      eventBus.emit('shapes:zorder', { shapes: selected, operation: operation as ZOrderOperation });
+    }
+  });
+
+  // Menu: Auto Layout
+  window.electronAPI.onMenuAutoLayout(() => {
+    eventBus.emit('graph:autoLayout', null);
+  });
+
+  // Menu: Toggle Directed Edge
+  window.electronAPI.onMenuToggleDirectedEdge(() => {
+    const currentDirection = editorState.edgeDirection;
+    const newDirection = currentDirection === 'forward' ? 'none' : 'forward';
+    editorState.setEdgeDirection(newDirection);
+    eventBus.emit('edgeDirection:changed', newDirection);
   });
 }
