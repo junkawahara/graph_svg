@@ -1,6 +1,6 @@
 import { Point, Bounds, ShapeStyle, PathData, PathCommand, generateId } from '../../shared/types';
 import { Shape, applyStyle, applyRotation, normalizeRotation, rotatePoint, getRotatedBounds } from './Shape';
-import { parsePath, serializePath, getPathPoints } from '../core/PathParser';
+import { parsePath, serializePath, getPathPoints, sampleArc } from '../core/PathParser';
 
 /**
  * Path shape implementation - standard SVG path with multiple command types
@@ -124,6 +124,14 @@ export class Path implements Shape {
           prevY = cmd.y;
           break;
 
+        case 'A':
+          if (this.isPointNearArc(testPoint, prevX, prevY, cmd, tolerance)) {
+            return true;
+          }
+          prevX = cmd.x;
+          prevY = cmd.y;
+          break;
+
         case 'Z':
           // Check line back to start
           const startCmd = this.commands.find(c => c.type === 'M');
@@ -215,6 +223,31 @@ export class Path implements Shape {
     return false;
   }
 
+  private isPointNearArc(
+    point: Point,
+    startX: number, startY: number,
+    cmd: { rx: number; ry: number; xAxisRotation: number; largeArcFlag: boolean; sweepFlag: boolean; x: number; y: number },
+    tolerance: number
+  ): boolean {
+    // Sample the arc and check distance to each sampled point
+    const arcPoints = sampleArc(startX, startY, cmd, 50);
+
+    // Check start point
+    let prevX = startX;
+    let prevY = startY;
+
+    for (const arcPoint of arcPoints) {
+      // Check if point is near the line segment between prev and current
+      if (this.isPointNearLine(point, prevX, prevY, arcPoint.x, arcPoint.y, tolerance)) {
+        return true;
+      }
+      prevX = arcPoint.x;
+      prevY = arcPoint.y;
+    }
+
+    return false;
+  }
+
   private isPointInsidePath(point: Point): boolean {
     // Sample the path to create a polygon approximation
     const polygonPoints = this.samplePath();
@@ -285,6 +318,14 @@ export class Path implements Shape {
               y: mt2 * prevY + 2 * mt * t * cmd.cpy + t2 * cmd.y
             });
           }
+          prevX = cmd.x;
+          prevY = cmd.y;
+          break;
+        }
+
+        case 'A': {
+          const arcPoints = sampleArc(prevX, prevY, cmd, 10);
+          points.push(...arcPoints);
           prevX = cmd.x;
           prevY = cmd.y;
           break;
@@ -361,6 +402,11 @@ export class Path implements Shape {
           cmd.x += dx;
           cmd.y += dy;
           break;
+        case 'A':
+          // Arc: only move endpoint (radii and flags remain unchanged)
+          cmd.x += dx;
+          cmd.y += dy;
+          break;
       }
     }
     this.updateElement();
@@ -407,6 +453,15 @@ export class Path implements Shape {
           cmd.x = cmd.x * scaleX + translateX;
           cmd.y = cmd.y * scaleY + translateY;
           break;
+        case 'A':
+          // Scale radii and endpoint
+          cmd.rx = cmd.rx * Math.abs(scaleX);
+          cmd.ry = cmd.ry * Math.abs(scaleY);
+          cmd.x = cmd.x * scaleX + translateX;
+          cmd.y = cmd.y * scaleY + translateY;
+          // Note: xAxisRotation should be adjusted if scaleX and scaleY differ,
+          // but this is complex; for now we keep it unchanged
+          break;
       }
     }
     this.updateElement();
@@ -421,12 +476,12 @@ export class Path implements Shape {
 
   /**
    * Get anchor point at index
-   * Returns points from M, L, C, Q commands (not control points)
+   * Returns points from M, L, C, Q, A commands (not control points)
    */
   getAnchorPoints(): Point[] {
     const points: Point[] = [];
     for (const cmd of this.commands) {
-      if (cmd.type === 'M' || cmd.type === 'L' || cmd.type === 'C' || cmd.type === 'Q') {
+      if (cmd.type === 'M' || cmd.type === 'L' || cmd.type === 'C' || cmd.type === 'Q' || cmd.type === 'A') {
         points.push({ x: cmd.x, y: cmd.y });
       }
     }
@@ -439,7 +494,7 @@ export class Path implements Shape {
   setAnchorPoint(index: number, point: Point): void {
     let anchorIndex = 0;
     for (const cmd of this.commands) {
-      if (cmd.type === 'M' || cmd.type === 'L' || cmd.type === 'C' || cmd.type === 'Q') {
+      if (cmd.type === 'M' || cmd.type === 'L' || cmd.type === 'C' || cmd.type === 'Q' || cmd.type === 'A') {
         if (anchorIndex === index) {
           cmd.x = point.x;
           cmd.y = point.y;

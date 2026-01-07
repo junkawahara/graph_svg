@@ -203,6 +203,7 @@ export type PathCommand =
   | { type: 'L'; x: number; y: number }
   | { type: 'C'; cp1x: number; cp1y: number; cp2x: number; cp2y: number; x: number; y: number }
   | { type: 'Q'; cpx: number; cpy: number; x: number; y: number }
+  | { type: 'A'; rx: number; ry: number; xAxisRotation: number; largeArcFlag: boolean; sweepFlag: boolean; x: number; y: number }
   | { type: 'Z' };
 
 /**

@@ -140,6 +140,12 @@ export function createShapeFromData(data: ShapeData, offsetX: number = 0, offset
               x: cmd.x + offsetX,
               y: cmd.y + offsetY
             };
+          case 'A':
+            return {
+              ...cmd,
+              x: cmd.x + offsetX,
+              y: cmd.y + offsetY
+            };
           case 'Z':
             return { ...cmd };
         }
