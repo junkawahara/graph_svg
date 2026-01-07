@@ -765,7 +765,8 @@ export class FileManager {
    * Parse style attributes from SVG element
    */
   private static parseStyleFromElement(el: SVGElement): ShapeStyle {
-    const fill = el.getAttribute('fill') || DEFAULT_STYLE.fill;
+    // SVG default for fill is black (#000000), not white
+    const fill = el.getAttribute('fill') || '#000000';
     const fillNone = fill === 'none';
     const strokeAttr = el.getAttribute('stroke');
     const strokeWidthAttr = el.getAttribute('stroke-width');
@@ -778,7 +779,7 @@ export class FileManager {
       : (strokeWidthAttr ? parseFloat(strokeWidthAttr) : 0);
 
     return {
-      fill: fillNone ? DEFAULT_STYLE.fill : fill,
+      fill: fillNone ? '#000000' : fill,
       fillNone,
       stroke: strokeAttr || DEFAULT_STYLE.stroke,
       strokeWidth,

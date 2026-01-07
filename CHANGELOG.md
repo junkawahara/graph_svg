@@ -11,6 +11,7 @@
   - SVG 読み込み時、stroke-width 属性を持たない text 要素は strokeWidth: 0 として読み込む
 
 - SVG読み込み時のスタイル解釈をSVG仕様に準拠
+  - fill 属性が未指定の場合、黒（#000000）をデフォルトに（SVG仕様準拠）
   - stroke 属性が未指定または "none" の場合、strokeWidth: 0 として読み込む
   - dominant-baseline 属性を保存・復元するよう対応（デフォルト: auto）
   - matrix() transform の水平反転を正しく解釈（scaleX=-1 を rotation=180° と誤解釈していた問題を修正）
