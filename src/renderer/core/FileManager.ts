@@ -375,22 +375,22 @@ export class FileManager {
       attrs.push(`fill="${style.fill}"`);
     }
 
-    attrs.push(`stroke="${style.stroke}"`);
-    // Only output stroke-width if > 0
+    // Only output stroke attributes if strokeWidth > 0
     if (style.strokeWidth > 0) {
+      attrs.push(`stroke="${style.stroke}"`);
       attrs.push(`stroke-width="${style.strokeWidth}"`);
+
+      if (style.strokeDasharray) {
+        attrs.push(`stroke-dasharray="${style.strokeDasharray}"`);
+      }
+
+      if (style.strokeLinecap !== 'butt') {
+        attrs.push(`stroke-linecap="${style.strokeLinecap}"`);
+      }
     }
 
     if (style.opacity !== 1) {
       attrs.push(`opacity="${style.opacity}"`);
-    }
-
-    if (style.strokeDasharray) {
-      attrs.push(`stroke-dasharray="${style.strokeDasharray}"`);
-    }
-
-    if (style.strokeLinecap !== 'butt') {
-      attrs.push(`stroke-linecap="${style.strokeLinecap}"`);
     }
 
     return attrs.join(' ');

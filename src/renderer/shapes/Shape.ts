@@ -175,11 +175,12 @@ export function applyStyle(element: SVGElement, style: ShapeStyle): void {
   } else {
     element.setAttribute('fill', style.fill);
   }
-  element.setAttribute('stroke', style.stroke);
-  // Only set stroke-width if > 0, otherwise remove it
+  // Only set stroke if strokeWidth > 0, otherwise set to none
   if (style.strokeWidth > 0) {
+    element.setAttribute('stroke', style.stroke);
     element.setAttribute('stroke-width', String(style.strokeWidth));
   } else {
+    element.setAttribute('stroke', 'none');
     element.removeAttribute('stroke-width');
   }
   element.setAttribute('opacity', String(style.opacity));
@@ -190,5 +191,9 @@ export function applyStyle(element: SVGElement, style: ShapeStyle): void {
     element.removeAttribute('stroke-dasharray');
   }
 
-  element.setAttribute('stroke-linecap', style.strokeLinecap);
+  if (style.strokeWidth > 0) {
+    element.setAttribute('stroke-linecap', style.strokeLinecap);
+  } else {
+    element.removeAttribute('stroke-linecap');
+  }
 }
