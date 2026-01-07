@@ -21,6 +21,17 @@ export class LayoutManager {
     // No nodes to layout
     if (nodeIds.length === 0) return;
 
+    // DEBUG: Log positions before layout
+    console.log('=== Auto Layout Debug ===');
+    console.log(`Layout type: ${layoutType}, Canvas: ${canvasWidth}x${canvasHeight}`);
+    console.log('--- Before Layout (Initial Positions) ---');
+    nodeIds.forEach(id => {
+      const node = gm.getNodeShape(id);
+      if (node) {
+        console.log(`  Node "${node.label}" (${id}): cx=${node.cx.toFixed(2)}, cy=${node.cy.toFixed(2)}, rx=${node.rx}, ry=${node.ry}`);
+      }
+    });
+
     // Build cytoscape elements
     const cyNodes = nodeIds.map(id => {
       const node = gm.getNodeShape(id)!;
@@ -35,6 +46,19 @@ export class LayoutManager {
       return {
         data: { id, source: conn.sourceId, target: conn.targetId }
       };
+    });
+
+    // DEBUG: Log edges
+    console.log(`--- Edges (${edgeIds.length} total) ---`);
+    edgeIds.forEach(id => {
+      const conn = gm.getEdgeConnection(id);
+      if (conn) {
+        const srcNode = gm.getNodeShape(conn.sourceId);
+        const tgtNode = gm.getNodeShape(conn.targetId);
+        const srcLabel = srcNode?.label || conn.sourceId;
+        const tgtLabel = tgtNode?.label || conn.targetId;
+        console.log(`  Edge ${id}: "${srcLabel}" -> "${tgtLabel}"`);
+      }
     });
 
     // Create headless cytoscape instance
@@ -55,10 +79,12 @@ export class LayoutManager {
     layout.run();
 
     // Apply new positions to nodes
+    console.log('--- After Cytoscape Layout (Before Centering) ---');
     cy.nodes().forEach(cyNode => {
       const node = gm.getNodeShape(cyNode.id());
       if (node) {
         const pos = cyNode.position();
+        console.log(`  Node "${node.label}" (${cyNode.id()}): cytoscape pos x=${pos.x.toFixed(2)}, y=${pos.y.toFixed(2)}`);
         node.cx = pos.x;
         node.cy = pos.y;
         node.updateElement();
@@ -67,6 +93,16 @@ export class LayoutManager {
 
     // Center the result on canvas
     this.centerOnCanvas(nodeIds, canvasWidth, canvasHeight);
+
+    // DEBUG: Log positions after centering
+    console.log('--- After Centering (Final Positions) ---');
+    nodeIds.forEach(id => {
+      const node = gm.getNodeShape(id);
+      if (node) {
+        console.log(`  Node "${node.label}" (${id}): cx=${node.cx.toFixed(2)}, cy=${node.cy.toFixed(2)}`);
+      }
+    });
+    console.log('=== End Auto Layout Debug ===');
 
     // Update all edges
     nodeIds.forEach(id => gm.updateEdgesForNode(id));
@@ -167,6 +203,11 @@ export class LayoutManager {
     const boundsWidth = maxX - minX;
     const boundsHeight = maxY - minY;
 
+    // DEBUG: Log centering calculations
+    console.log('--- Centering Calculations ---');
+    console.log(`  Bounding box: minX=${minX.toFixed(2)}, minY=${minY.toFixed(2)}, maxX=${maxX.toFixed(2)}, maxY=${maxY.toFixed(2)}`);
+    console.log(`  Bounds size: width=${boundsWidth.toFixed(2)}, height=${boundsHeight.toFixed(2)}`);
+
     // Skip if bounds are zero (single node or identical positions)
     if (boundsWidth <= 0 && boundsHeight <= 0) {
       // Just center a single node
@@ -200,6 +241,12 @@ export class LayoutManager {
     // Calculate canvas center
     const canvasCenterX = canvasWidth / 2;
     const canvasCenterY = canvasHeight / 2;
+
+    // DEBUG: Log scale and center info
+    console.log(`  Target area: ${targetWidth.toFixed(2)} x ${targetHeight.toFixed(2)} (padding=${padding})`);
+    console.log(`  Scale factors: scaleX=${scaleX.toFixed(4)}, scaleY=${scaleY.toFixed(4)}, final scale=${scale.toFixed(4)}`);
+    console.log(`  Bounds center: (${boundsCenterX.toFixed(2)}, ${boundsCenterY.toFixed(2)})`);
+    console.log(`  Canvas center: (${canvasCenterX.toFixed(2)}, ${canvasCenterY.toFixed(2)})`);
 
     // Apply scale and center to all nodes
     nodeIds.forEach(id => {

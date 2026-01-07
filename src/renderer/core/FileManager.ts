@@ -529,7 +529,7 @@ export class FileManager {
     texts.forEach(el => {
       if (isInsideGroupOrNode(el)) return;
 
-      const style = this.parseStyleFromElement(el);
+      const style = this.parseTextStyleFromElement(el);
       const text = Text.fromElement(el, style);
       const transform = parseTransform(el.getAttribute('transform'));
       this.applyTransformToShape(text, transform);
@@ -671,7 +671,9 @@ export class FileManager {
       return null;
     }
 
-    const style = this.parseStyleFromElement(el);
+    const style = tagName === 'text'
+      ? this.parseTextStyleFromElement(el)
+      : this.parseStyleFromElement(el);
     let shape: Shape | null = null;
 
     switch (tagName) {
@@ -771,6 +773,26 @@ export class FileManager {
       fillNone,
       stroke: el.getAttribute('stroke') || DEFAULT_STYLE.stroke,
       strokeWidth: parseFloat(el.getAttribute('stroke-width') || String(DEFAULT_STYLE.strokeWidth)),
+      opacity: parseFloat(el.getAttribute('opacity') || '1'),
+      strokeDasharray: el.getAttribute('stroke-dasharray') || '',
+      strokeLinecap: (el.getAttribute('stroke-linecap') as StrokeLinecap) || DEFAULT_STYLE.strokeLinecap
+    };
+  }
+
+  /**
+   * Parse style attributes from SVG text element
+   * Text defaults: fill=#000000, strokeWidth=0
+   */
+  private static parseTextStyleFromElement(el: SVGElement): ShapeStyle {
+    const fill = el.getAttribute('fill') || '#000000';
+    const fillNone = fill === 'none';
+    const strokeWidthAttr = el.getAttribute('stroke-width');
+
+    return {
+      fill: fillNone ? '#000000' : fill,
+      fillNone,
+      stroke: el.getAttribute('stroke') || DEFAULT_STYLE.stroke,
+      strokeWidth: strokeWidthAttr ? parseFloat(strokeWidthAttr) : 0,
       opacity: parseFloat(el.getAttribute('opacity') || '1'),
       strokeDasharray: el.getAttribute('stroke-dasharray') || '',
       strokeLinecap: (el.getAttribute('stroke-linecap') as StrokeLinecap) || DEFAULT_STYLE.strokeLinecap

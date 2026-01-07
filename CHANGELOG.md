@@ -8,6 +8,7 @@
 - テキストのデフォルトスタイル変更
   - 新規作成するテキストは fill: 黒（#000000）、strokeWidth: 0 がデフォルト
   - strokeWidth: 0 の図形は SVG 出力時に stroke-width 属性を出力しない
+  - SVG 読み込み時、stroke-width 属性を持たない text 要素は strokeWidth: 0 として読み込む
 
 ### 追加
 - 図形の回転機能
