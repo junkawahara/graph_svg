@@ -27,7 +27,8 @@ export function createShapeFromData(data: ShapeData, offsetX: number = 0, offset
         data.y2 + offsetY,
         data.markerStart || 'none',
         data.markerEnd || 'none',
-        { ...data.style }
+        { ...data.style },
+        data.rotation || 0
       );
 
     case 'ellipse':
@@ -37,7 +38,8 @@ export function createShapeFromData(data: ShapeData, offsetX: number = 0, offset
         data.cy + offsetY,
         data.rx,
         data.ry,
-        { ...data.style }
+        { ...data.style },
+        data.rotation || 0
       );
 
     case 'rectangle':
@@ -47,7 +49,8 @@ export function createShapeFromData(data: ShapeData, offsetX: number = 0, offset
         data.y + offsetY,
         data.width,
         data.height,
-        { ...data.style }
+        { ...data.style },
+        data.rotation || 0
       );
 
     case 'text':
@@ -65,7 +68,8 @@ export function createShapeFromData(data: ShapeData, offsetX: number = 0, offset
         data.fontStyle || 'normal',
         data.textUnderline || false,
         data.textStrikethrough || false,
-        data.lineHeight || 1.2
+        data.lineHeight || 1.2,
+        data.rotation || 0
       );
 
     case 'node':
@@ -78,10 +82,12 @@ export function createShapeFromData(data: ShapeData, offsetX: number = 0, offset
         data.label,
         data.fontSize,
         data.fontFamily,
-        { ...data.style }
+        { ...data.style },
+        data.rotation || 0
       );
 
     case 'edge':
+      // Edge doesn't support rotation
       return new Edge(
         newId,
         data.sourceNodeId,
@@ -97,14 +103,16 @@ export function createShapeFromData(data: ShapeData, offsetX: number = 0, offset
       return new Polygon(
         newId,
         data.points.map(p => ({ x: p.x + offsetX, y: p.y + offsetY })),
-        { ...data.style }
+        { ...data.style },
+        data.rotation || 0
       );
 
     case 'polyline':
       return new Polyline(
         newId,
         data.points.map(p => ({ x: p.x + offsetX, y: p.y + offsetY })),
-        { ...data.style }
+        { ...data.style },
+        data.rotation || 0
       );
 
     case 'path': {
@@ -136,7 +144,7 @@ export function createShapeFromData(data: ShapeData, offsetX: number = 0, offset
             return { ...cmd };
         }
       });
-      return new Path(newId, offsetCommands, { ...data.style });
+      return new Path(newId, offsetCommands, { ...data.style }, data.rotation || 0);
     }
 
     case 'group':
@@ -149,7 +157,7 @@ export function createShapeFromData(data: ShapeData, offsetX: number = 0, offset
         return null;
       }
 
-      return new Group(newId, children, { ...data.style });
+      return new Group(newId, children, { ...data.style }, data.rotation || 0);
 
     default:
       console.warn('Unknown shape type:', (data as any).type);

@@ -1,5 +1,5 @@
 import { Point, Bounds, ShapeStyle, LineData, MarkerType, generateId } from '../../shared/types';
-import { Shape, applyStyle } from './Shape';
+import { Shape, applyStyle, applyRotation, normalizeRotation, rotatePoint, getRotatedBounds } from './Shape';
 import { getMarkerManager } from '../core/MarkerManager';
 
 /**
@@ -8,6 +8,7 @@ import { getMarkerManager } from '../core/MarkerManager';
 export class Line implements Shape {
   readonly type = 'line';
   element: SVGLineElement | null = null;
+  rotation: number = 0;
 
   constructor(
     public readonly id: string,
@@ -17,8 +18,11 @@ export class Line implements Shape {
     public y2: number,
     public markerStart: MarkerType,
     public markerEnd: MarkerType,
-    public style: ShapeStyle
-  ) {}
+    public style: ShapeStyle,
+    rotation: number = 0
+  ) {
+    this.rotation = normalizeRotation(rotation);
+  }
 
   /**
    * Create line from two points
@@ -53,6 +57,10 @@ export class Line implements Shape {
     applyStyle(line, this.style);
     this.applyMarkers(line);
 
+    // Apply rotation
+    const center = this.getRotationCenter();
+    applyRotation(line, this.rotation, center.x, center.y);
+
     this.element = line;
     return line;
   }
@@ -86,9 +94,20 @@ export class Line implements Shape {
     this.element.setAttribute('y2', String(this.y2));
     applyStyle(this.element, this.style);
     this.applyMarkers(this.element);
+
+    // Apply rotation
+    const center = this.getRotationCenter();
+    applyRotation(this.element, this.rotation, center.x, center.y);
   }
 
   hitTest(point: Point, tolerance: number = 5): boolean {
+    // If rotated, transform the test point to the shape's local coordinate system
+    let testPoint = point;
+    if (this.rotation !== 0) {
+      const center = this.getRotationCenter();
+      testPoint = rotatePoint(point, center, -this.rotation);
+    }
+
     // Calculate distance from point to line segment
     const dx = this.x2 - this.x1;
     const dy = this.y2 - this.y1;
@@ -97,20 +116,20 @@ export class Line implements Shape {
     if (lengthSq === 0) {
       // Line is a point
       const dist = Math.sqrt(
-        (point.x - this.x1) ** 2 + (point.y - this.y1) ** 2
+        (testPoint.x - this.x1) ** 2 + (testPoint.y - this.y1) ** 2
       );
       return dist <= tolerance;
     }
 
     // Project point onto line
-    let t = ((point.x - this.x1) * dx + (point.y - this.y1) * dy) / lengthSq;
+    let t = ((testPoint.x - this.x1) * dx + (testPoint.y - this.y1) * dy) / lengthSq;
     t = Math.max(0, Math.min(1, t));
 
     const projX = this.x1 + t * dx;
     const projY = this.y1 + t * dy;
 
     const dist = Math.sqrt(
-      (point.x - projX) ** 2 + (point.y - projY) ** 2
+      (testPoint.x - projX) ** 2 + (testPoint.y - projY) ** 2
     );
 
     return dist <= tolerance;
@@ -122,12 +141,25 @@ export class Line implements Shape {
     const maxX = Math.max(this.x1, this.x2);
     const maxY = Math.max(this.y1, this.y2);
 
-    return {
+    const baseBounds = {
       x: minX,
       y: minY,
       width: maxX - minX,
       height: maxY - minY
     };
+    return getRotatedBounds(baseBounds, this.rotation);
+  }
+
+  getRotationCenter(): Point {
+    return {
+      x: (this.x1 + this.x2) / 2,
+      y: (this.y1 + this.y2) / 2
+    };
+  }
+
+  setRotation(angle: number): void {
+    this.rotation = normalizeRotation(angle);
+    this.updateElement();
   }
 
   move(dx: number, dy: number): void {
@@ -148,7 +180,8 @@ export class Line implements Shape {
       y2: this.y2,
       markerStart: this.markerStart,
       markerEnd: this.markerEnd,
-      style: { ...this.style }
+      style: { ...this.style },
+      rotation: this.rotation
     };
   }
 
@@ -161,7 +194,8 @@ export class Line implements Shape {
       this.y2,
       this.markerStart,
       this.markerEnd,
-      { ...this.style }
+      { ...this.style },
+      this.rotation
     );
   }
 

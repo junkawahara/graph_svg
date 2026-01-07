@@ -5,10 +5,12 @@ import { Node } from './Node';
 
 /**
  * Graph Edge shape - connects two nodes
+ * Note: Edges do not support rotation as they follow their connected nodes
  */
 export class Edge implements Shape {
   readonly type = 'edge';
   element: SVGPathElement | null = null;
+  rotation: number = 0;  // Always 0 - edges don't rotate
 
   constructor(
     public readonly id: string,
@@ -409,6 +411,20 @@ export class Edge implements Shape {
       width: maxX - minX,
       height: maxY - minY
     };
+  }
+
+  getRotationCenter(): Point {
+    // Return center of the edge bounds
+    const bounds = this.getBounds();
+    return {
+      x: bounds.x + bounds.width / 2,
+      y: bounds.y + bounds.height / 2
+    };
+  }
+
+  setRotation(_angle: number): void {
+    // Edges do not support rotation - they follow their connected nodes
+    // No-op
   }
 
   move(_dx: number, _dy: number): void {

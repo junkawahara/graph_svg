@@ -1,8 +1,8 @@
 import { Point } from '../../shared/types';
 import { Shape } from '../shapes/Shape';
 
-export type HandleType = 'corner' | 'edge' | 'endpoint';
-export type HandlePosition = 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w' | 'start' | 'end';
+export type HandleType = 'corner' | 'edge' | 'endpoint' | 'rotate';
+export type HandlePosition = 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w' | 'start' | 'end' | 'rotate';
 
 /**
  * Resize handle interface
@@ -86,7 +86,69 @@ export function getCursorForHandle(position: HandlePosition): string {
     case 'start':
     case 'end':
       return 'move';
+    case 'rotate':
+      return 'crosshair';
     default:
       return 'pointer';
   }
+}
+
+/**
+ * Create a rotation handle element (circle with rotation icon appearance)
+ */
+export function createRotationHandleElement(x: number, y: number): SVGGElement {
+  const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  group.classList.add('rotation-handle');
+  group.style.cursor = 'crosshair';
+
+  // Circle background
+  const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+  circle.setAttribute('cx', String(x));
+  circle.setAttribute('cy', String(y));
+  circle.setAttribute('r', '6');
+  circle.setAttribute('fill', '#ffffff');
+  circle.setAttribute('stroke', '#0e639c');
+  circle.setAttribute('stroke-width', '1.5');
+  group.appendChild(circle);
+
+  // Rotation arrow icon (simplified arc with arrow)
+  const arc = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  const r = 3;
+  const cx = x;
+  const cy = y;
+  // Draw a small arc with an arrow tip
+  arc.setAttribute('d', `M ${cx - r} ${cy} A ${r} ${r} 0 1 1 ${cx} ${cy - r}`);
+  arc.setAttribute('fill', 'none');
+  arc.setAttribute('stroke', '#0e639c');
+  arc.setAttribute('stroke-width', '1.2');
+  arc.setAttribute('stroke-linecap', 'round');
+  group.appendChild(arc);
+
+  // Arrow tip
+  const arrow = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  arrow.setAttribute('d', `M ${cx - 1} ${cy - r - 2} L ${cx} ${cy - r} L ${cx + 2} ${cy - r - 1}`);
+  arrow.setAttribute('fill', 'none');
+  arrow.setAttribute('stroke', '#0e639c');
+  arrow.setAttribute('stroke-width', '1.2');
+  arrow.setAttribute('stroke-linecap', 'round');
+  arrow.setAttribute('stroke-linejoin', 'round');
+  group.appendChild(arrow);
+
+  return group;
+}
+
+/**
+ * Create a rotation guide line from shape center to rotation handle
+ */
+export function createRotationGuideLine(x1: number, y1: number, x2: number, y2: number): SVGLineElement {
+  const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+  line.setAttribute('x1', String(x1));
+  line.setAttribute('y1', String(y1));
+  line.setAttribute('x2', String(x2));
+  line.setAttribute('y2', String(y2));
+  line.setAttribute('stroke', '#0e639c');
+  line.setAttribute('stroke-width', '1');
+  line.setAttribute('stroke-dasharray', '3,3');
+  line.classList.add('rotation-guide-line');
+  return line;
 }

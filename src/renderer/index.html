@@ -50,6 +50,9 @@
         <button id="tool-delete-edge" class="tool-btn" title="Delete Edge">
           <span class="icon">&#8594;&#10005;</span>
         </button>
+        <button id="tool-rotate" class="tool-btn" title="Rotate (O)">
+          <span class="icon">&#8634;</span>
+        </button>
       </div>
       <div class="tool-group">
         <button id="btn-undo" class="tool-btn" title="Undo (Ctrl+Z)" disabled>
@@ -337,6 +340,15 @@
             <option value="round">Round</option>
             <option value="square">Square</option>
           </select>
+        </div>
+
+        <!-- Rotation property (hidden by default, shown for rotatable shapes) -->
+        <div id="rotation-property" class="property-group" style="display: none;">
+          <label>Rotation</label>
+          <div class="rotation-input-wrapper">
+            <input type="number" id="prop-rotation" value="0" min="0" max="360" step="1">
+            <span>°</span>
+          </div>
         </div>
 
         <!-- Node-specific properties (hidden by default) -->

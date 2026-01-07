@@ -63,7 +63,8 @@ src/
 │   │   ├── EdgeDirectionChangeCommand.ts # エッジ方向変更
 │   │   ├── GroupShapesCommand.ts    # グループ化
 │   │   ├── UngroupShapesCommand.ts  # グループ解除
-│   │   └── FitCanvasToContentCommand.ts # キャンバスをコンテンツにフィット
+│   │   ├── FitCanvasToContentCommand.ts # キャンバスをコンテンツにフィット
+│   │   └── RotateShapeCommand.ts    # 図形回転
 │   ├── shapes/              # 図形クラス
 │   │   ├── Shape.ts         # インターフェース
 │   │   ├── Line.ts          # 直線
@@ -90,7 +91,8 @@ src/
 │   │   ├── NodeTool.ts      # ノード配置
 │   │   ├── EdgeTool.ts      # エッジ作成
 │   │   ├── DeleteNodeTool.ts # ノード削除
-│   │   └── DeleteEdgeTool.ts # エッジ削除
+│   │   ├── DeleteEdgeTool.ts # エッジ削除
+│   │   └── RotateTool.ts     # 回転ツール
 │   ├── handles/             # リサイズハンドル
 │   │   ├── Handle.ts        # インターフェース
 │   │   ├── LineHandles.ts   # 直線用（2点）
@@ -156,6 +158,7 @@ src/
 - `N` - ノードツール
 - `W` - エッジツール
 - `H` - パンツール
+- `O` - 回転ツール
 - `G` - グリッドスナップ切り替え
 - `Delete` / `Backspace` - 選択図形を削除
 - `Ctrl+Z` - 元に戻す（Undo）

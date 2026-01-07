@@ -1,5 +1,5 @@
 import { Point, Bounds, ShapeStyle, EllipseData, generateId } from '../../shared/types';
-import { Shape, applyStyle } from './Shape';
+import { Shape, applyStyle, applyRotation, normalizeRotation, rotatePoint, getRotatedBounds } from './Shape';
 
 /**
  * Ellipse shape implementation
@@ -7,6 +7,7 @@ import { Shape, applyStyle } from './Shape';
 export class Ellipse implements Shape {
   readonly type = 'ellipse';
   element: SVGEllipseElement | null = null;
+  rotation: number = 0;
 
   constructor(
     public readonly id: string,
@@ -14,8 +15,11 @@ export class Ellipse implements Shape {
     public cy: number,
     public rx: number,
     public ry: number,
-    public style: ShapeStyle
-  ) {}
+    public style: ShapeStyle,
+    rotation: number = 0
+  ) {
+    this.rotation = normalizeRotation(rotation);
+  }
 
   /**
    * Create ellipse from bounding box (two corner points)
@@ -58,6 +62,9 @@ export class Ellipse implements Shape {
     ellipse.setAttribute('ry', String(this.ry));
     applyStyle(ellipse, this.style);
 
+    // Apply rotation
+    applyRotation(ellipse, this.rotation, this.cx, this.cy);
+
     this.element = ellipse;
     return ellipse;
   }
@@ -70,13 +77,23 @@ export class Ellipse implements Shape {
     this.element.setAttribute('rx', String(this.rx));
     this.element.setAttribute('ry', String(this.ry));
     applyStyle(this.element, this.style);
+
+    // Apply rotation
+    applyRotation(this.element, this.rotation, this.cx, this.cy);
   }
 
   hitTest(point: Point, tolerance: number = 5): boolean {
+    // If rotated, transform the test point to the shape's local coordinate system
+    let testPoint = point;
+    if (this.rotation !== 0) {
+      const center = this.getRotationCenter();
+      testPoint = rotatePoint(point, center, -this.rotation);
+    }
+
     // Check if point is within ellipse + tolerance
     // Using ellipse equation: (x-cx)^2/rx^2 + (y-cy)^2/ry^2 <= 1
-    const dx = point.x - this.cx;
-    const dy = point.y - this.cy;
+    const dx = testPoint.x - this.cx;
+    const dy = testPoint.y - this.cy;
 
     // Check outer boundary (ellipse + tolerance)
     const outerRx = this.rx + tolerance;
@@ -101,12 +118,22 @@ export class Ellipse implements Shape {
   }
 
   getBounds(): Bounds {
-    return {
+    const baseBounds = {
       x: this.cx - this.rx,
       y: this.cy - this.ry,
       width: this.rx * 2,
       height: this.ry * 2
     };
+    return getRotatedBounds(baseBounds, this.rotation);
+  }
+
+  getRotationCenter(): Point {
+    return { x: this.cx, y: this.cy };
+  }
+
+  setRotation(angle: number): void {
+    this.rotation = normalizeRotation(angle);
+    this.updateElement();
   }
 
   move(dx: number, dy: number): void {
@@ -123,7 +150,8 @@ export class Ellipse implements Shape {
       cy: this.cy,
       rx: this.rx,
       ry: this.ry,
-      style: { ...this.style }
+      style: { ...this.style },
+      rotation: this.rotation
     };
   }
 
@@ -134,7 +162,8 @@ export class Ellipse implements Shape {
       this.cy,
       this.rx,
       this.ry,
-      { ...this.style }
+      { ...this.style },
+      this.rotation
     );
   }
 

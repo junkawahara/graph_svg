@@ -66,7 +66,8 @@ export class Toolbar {
       { id: 'tool-edge', type: 'edge' },
       { id: 'tool-delete-node', type: 'delete-node' },
       { id: 'tool-delete-edge', type: 'delete-edge' },
-      { id: 'tool-pan', type: 'pan' }
+      { id: 'tool-pan', type: 'pan' },
+      { id: 'tool-rotate', type: 'rotate' }
     ];
 
     tools.forEach(({ id, type }) => {
@@ -489,6 +490,9 @@ export class Toolbar {
           break;
         case 'h':
           editorState.setTool('pan');
+          break;
+        case 'o':
+          editorState.setTool('rotate');
           break;
         case 'g':
           editorState.toggleSnap();

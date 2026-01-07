@@ -1,5 +1,5 @@
 import { Point, Bounds, ShapeStyle, PolygonData, generateId } from '../../shared/types';
-import { Shape, applyStyle } from './Shape';
+import { Shape, applyStyle, applyRotation, normalizeRotation, rotatePoint, getRotatedBounds } from './Shape';
 
 /**
  * Polygon shape implementation - closed shape with multiple vertices
@@ -7,12 +7,16 @@ import { Shape, applyStyle } from './Shape';
 export class Polygon implements Shape {
   readonly type = 'polygon';
   element: SVGPolygonElement | null = null;
+  rotation: number = 0;
 
   constructor(
     public readonly id: string,
     public points: Point[],
-    public style: ShapeStyle
-  ) {}
+    public style: ShapeStyle,
+    rotation: number = 0
+  ) {
+    this.rotation = normalizeRotation(rotation);
+  }
 
   /**
    * Create polygon from points array
@@ -64,6 +68,10 @@ export class Polygon implements Shape {
     polygon.setAttribute('points', this.pointsToString());
     applyStyle(polygon, this.style);
 
+    // Apply rotation
+    const center = this.getRotationCenter();
+    applyRotation(polygon, this.rotation, center.x, center.y);
+
     this.element = polygon;
     return polygon;
   }
@@ -73,19 +81,30 @@ export class Polygon implements Shape {
 
     this.element.setAttribute('points', this.pointsToString());
     applyStyle(this.element, this.style);
+
+    // Apply rotation
+    const center = this.getRotationCenter();
+    applyRotation(this.element, this.rotation, center.x, center.y);
   }
 
   hitTest(point: Point, tolerance: number = 5): boolean {
     if (this.points.length < 3) return false;
 
+    // If rotated, transform the test point to the shape's local coordinate system
+    let testPoint = point;
+    if (this.rotation !== 0) {
+      const center = this.getRotationCenter();
+      testPoint = rotatePoint(point, center, -this.rotation);
+    }
+
     // Check if point is inside polygon using ray casting algorithm
-    if (this.isPointInside(point)) return true;
+    if (this.isPointInside(testPoint)) return true;
 
     // Check if point is near any edge
     for (let i = 0; i < this.points.length; i++) {
       const p1 = this.points[i];
       const p2 = this.points[(i + 1) % this.points.length];
-      if (this.pointToLineDistance(point, p1, p2) <= tolerance) {
+      if (this.pointToLineDistance(testPoint, p1, p2) <= tolerance) {
         return true;
       }
     }
@@ -134,7 +153,7 @@ export class Polygon implements Shape {
     return Math.sqrt((point.x - projX) ** 2 + (point.y - projY) ** 2);
   }
 
-  getBounds(): Bounds {
+  private getBaseBounds(): Bounds {
     if (this.points.length === 0) {
       return { x: 0, y: 0, width: 0, height: 0 };
     }
@@ -159,6 +178,23 @@ export class Polygon implements Shape {
     };
   }
 
+  getBounds(): Bounds {
+    return getRotatedBounds(this.getBaseBounds(), this.rotation);
+  }
+
+  getRotationCenter(): Point {
+    const bounds = this.getBaseBounds();
+    return {
+      x: bounds.x + bounds.width / 2,
+      y: bounds.y + bounds.height / 2
+    };
+  }
+
+  setRotation(angle: number): void {
+    this.rotation = normalizeRotation(angle);
+    this.updateElement();
+  }
+
   move(dx: number, dy: number): void {
     for (const p of this.points) {
       p.x += dx;
@@ -172,7 +208,8 @@ export class Polygon implements Shape {
       id: this.id,
       type: 'polygon',
       points: this.points.map(p => ({ ...p })),
-      style: { ...this.style }
+      style: { ...this.style },
+      rotation: this.rotation
     };
   }
 
@@ -180,7 +217,8 @@ export class Polygon implements Shape {
     return new Polygon(
       generateId(),
       this.points.map(p => ({ ...p })),
-      { ...this.style }
+      { ...this.style },
+      this.rotation
     );
   }
 

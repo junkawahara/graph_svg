@@ -1,5 +1,5 @@
 import { Point, Bounds, ShapeStyle, NodeData, generateId } from '../../shared/types';
-import { Shape, applyStyle } from './Shape';
+import { Shape, applyStyle, applyRotation, normalizeRotation, rotatePoint, getRotatedBounds } from './Shape';
 import { getGraphManager } from '../core/GraphManager';
 
 /**
@@ -10,6 +10,7 @@ export class Node implements Shape {
   element: SVGGElement | null = null;
   private ellipseElement: SVGEllipseElement | null = null;
   private textElement: SVGTextElement | null = null;
+  rotation: number = 0;
 
   constructor(
     public readonly id: string,
@@ -20,8 +21,11 @@ export class Node implements Shape {
     public label: string,
     public fontSize: number,
     public fontFamily: string,
-    public style: ShapeStyle
-  ) {}
+    public style: ShapeStyle,
+    rotation: number = 0
+  ) {
+    this.rotation = normalizeRotation(rotation);
+  }
 
   /**
    * Create node from center point with specified size
@@ -96,6 +100,9 @@ export class Node implements Shape {
     group.appendChild(text);
     this.textElement = text;
 
+    // Apply rotation
+    applyRotation(group, this.rotation, this.cx, this.cy);
+
     this.element = group;
 
     // Register with GraphManager
@@ -127,13 +134,22 @@ export class Node implements Shape {
     // Update group data attribute
     if (this.element) {
       this.element.setAttribute('data-label', this.label);
+      // Apply rotation
+      applyRotation(this.element, this.rotation, this.cx, this.cy);
     }
   }
 
   hitTest(point: Point, tolerance: number = 5): boolean {
+    // If rotated, transform the test point to the shape's local coordinate system
+    let testPoint = point;
+    if (this.rotation !== 0) {
+      const center = this.getRotationCenter();
+      testPoint = rotatePoint(point, center, -this.rotation);
+    }
+
     // Check if point is within ellipse + tolerance
-    const dx = point.x - this.cx;
-    const dy = point.y - this.cy;
+    const dx = testPoint.x - this.cx;
+    const dy = testPoint.y - this.cy;
 
     const outerRx = this.rx + tolerance;
     const outerRy = this.ry + tolerance;
@@ -143,12 +159,22 @@ export class Node implements Shape {
   }
 
   getBounds(): Bounds {
-    return {
+    const baseBounds = {
       x: this.cx - this.rx,
       y: this.cy - this.ry,
       width: this.rx * 2,
       height: this.ry * 2
     };
+    return getRotatedBounds(baseBounds, this.rotation);
+  }
+
+  getRotationCenter(): Point {
+    return { x: this.cx, y: this.cy };
+  }
+
+  setRotation(angle: number): void {
+    this.rotation = normalizeRotation(angle);
+    this.updateElement();
   }
 
   move(dx: number, dy: number): void {
@@ -168,7 +194,8 @@ export class Node implements Shape {
       label: this.label,
       fontSize: this.fontSize,
       fontFamily: this.fontFamily,
-      style: { ...this.style }
+      style: { ...this.style },
+      rotation: this.rotation
     };
   }
 
@@ -182,7 +209,8 @@ export class Node implements Shape {
       this.label,
       this.fontSize,
       this.fontFamily,
-      { ...this.style }
+      { ...this.style },
+      this.rotation
     );
   }
 

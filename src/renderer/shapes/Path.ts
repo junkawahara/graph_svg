@@ -1,5 +1,5 @@
 import { Point, Bounds, ShapeStyle, PathData, PathCommand, generateId } from '../../shared/types';
-import { Shape, applyStyle } from './Shape';
+import { Shape, applyStyle, applyRotation, normalizeRotation, rotatePoint, getRotatedBounds } from './Shape';
 import { parsePath, serializePath, getPathPoints } from '../core/PathParser';
 
 /**
@@ -8,12 +8,16 @@ import { parsePath, serializePath, getPathPoints } from '../core/PathParser';
 export class Path implements Shape {
   readonly type = 'path';
   element: SVGPathElement | null = null;
+  rotation: number = 0;
 
   constructor(
     public readonly id: string,
     public commands: PathCommand[],
-    public style: ShapeStyle
-  ) {}
+    public style: ShapeStyle,
+    rotation: number = 0
+  ) {
+    this.rotation = normalizeRotation(rotation);
+  }
 
   /**
    * Create path from d attribute string
@@ -58,6 +62,10 @@ export class Path implements Shape {
     path.setAttribute('d', this.buildPathData());
     applyStyle(path, this.style);
 
+    // Apply rotation
+    const center = this.getRotationCenter();
+    applyRotation(path, this.rotation, center.x, center.y);
+
     this.element = path;
     return path;
   }
@@ -67,9 +75,20 @@ export class Path implements Shape {
 
     this.element.setAttribute('d', this.buildPathData());
     applyStyle(this.element, this.style);
+
+    // Apply rotation
+    const center = this.getRotationCenter();
+    applyRotation(this.element, this.rotation, center.x, center.y);
   }
 
   hitTest(point: Point, tolerance: number = 5): boolean {
+    // If rotated, transform the test point to the shape's local coordinate system
+    let testPoint = point;
+    if (this.rotation !== 0) {
+      const center = this.getRotationCenter();
+      testPoint = rotatePoint(point, center, -this.rotation);
+    }
+
     // Check if point is near any segment of the path
     let prevX = 0;
     let prevY = 0;
@@ -82,7 +101,7 @@ export class Path implements Shape {
           break;
 
         case 'L':
-          if (this.isPointNearLine(point, prevX, prevY, cmd.x, cmd.y, tolerance)) {
+          if (this.isPointNearLine(testPoint, prevX, prevY, cmd.x, cmd.y, tolerance)) {
             return true;
           }
           prevX = cmd.x;
@@ -90,7 +109,7 @@ export class Path implements Shape {
           break;
 
         case 'C':
-          if (this.isPointNearCubicBezier(point, prevX, prevY, cmd, tolerance)) {
+          if (this.isPointNearCubicBezier(testPoint, prevX, prevY, cmd, tolerance)) {
             return true;
           }
           prevX = cmd.x;
@@ -98,7 +117,7 @@ export class Path implements Shape {
           break;
 
         case 'Q':
-          if (this.isPointNearQuadraticBezier(point, prevX, prevY, cmd, tolerance)) {
+          if (this.isPointNearQuadraticBezier(testPoint, prevX, prevY, cmd, tolerance)) {
             return true;
           }
           prevX = cmd.x;
@@ -109,7 +128,7 @@ export class Path implements Shape {
           // Check line back to start
           const startCmd = this.commands.find(c => c.type === 'M');
           if (startCmd && startCmd.type === 'M') {
-            if (this.isPointNearLine(point, prevX, prevY, startCmd.x, startCmd.y, tolerance)) {
+            if (this.isPointNearLine(testPoint, prevX, prevY, startCmd.x, startCmd.y, tolerance)) {
               return true;
             }
           }
@@ -119,7 +138,7 @@ export class Path implements Shape {
 
     // For closed paths with fill, check if point is inside
     if (this.isClosed() && !this.style.fillNone) {
-      if (this.isPointInsidePath(point)) {
+      if (this.isPointInsidePath(testPoint)) {
         return true;
       }
     }
@@ -276,7 +295,7 @@ export class Path implements Shape {
     return points;
   }
 
-  getBounds(): Bounds {
+  private getBaseBounds(): Bounds {
     const points = getPathPoints(this.commands);
 
     if (points.length === 0) {
@@ -301,6 +320,23 @@ export class Path implements Shape {
       width: maxX - minX,
       height: maxY - minY
     };
+  }
+
+  getBounds(): Bounds {
+    return getRotatedBounds(this.getBaseBounds(), this.rotation);
+  }
+
+  getRotationCenter(): Point {
+    const bounds = this.getBaseBounds();
+    return {
+      x: bounds.x + bounds.width / 2,
+      y: bounds.y + bounds.height / 2
+    };
+  }
+
+  setRotation(angle: number): void {
+    this.rotation = normalizeRotation(angle);
+    this.updateElement();
   }
 
   move(dx: number, dy: number): void {
@@ -335,7 +371,8 @@ export class Path implements Shape {
       id: this.id,
       type: 'path',
       commands: this.commands.map(cmd => ({ ...cmd })),
-      style: { ...this.style }
+      style: { ...this.style },
+      rotation: this.rotation
     };
   }
 
@@ -343,7 +380,8 @@ export class Path implements Shape {
     return new Path(
       generateId(),
       this.commands.map(cmd => ({ ...cmd })),
-      { ...this.style }
+      { ...this.style },
+      this.rotation
     );
   }
 

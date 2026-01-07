@@ -17,6 +17,7 @@ import { DeleteEdgeTool } from '../tools/DeleteEdgeTool';
 import { PolygonTool } from '../tools/PolygonTool';
 import { PolylineTool } from '../tools/PolylineTool';
 import { PathTool } from '../tools/PathTool';
+import { RotateTool } from '../tools/RotateTool';
 import { Shape } from '../shapes/Shape';
 import { Line } from '../shapes/Line';
 import { Ellipse } from '../shapes/Ellipse';
@@ -388,6 +389,12 @@ export class Canvas {
     this.tools.set('polygon', new PolygonTool(this.svg));
     this.tools.set('polyline', new PolylineTool(this.svg));
     this.tools.set('path', new PathTool(this.svg));
+    this.tools.set('rotate', new RotateTool({
+      findShapeAt: (point) => this.findShapeAt(point),
+      getShapes: () => this.getShapes(),
+      getSvgElement: () => this.svg,
+      updateHandles: () => this.updateHandles()
+    }));
     console.log('Canvas: All tools registered');
 
     // Set up GraphManager callback for updating edges
@@ -413,8 +420,8 @@ export class Canvas {
       this.currentTool.onDeactivate();
     }
 
-    // Clear handles when switching away from select tool
-    if (toolType !== 'select') {
+    // Clear handles when switching away from select tool (but not rotate tool)
+    if (toolType !== 'select' && toolType !== 'rotate') {
       this.clearHandles();
     }
 
@@ -774,6 +781,9 @@ export class Canvas {
         break;
       case 'pan':
         this.svg.style.cursor = 'grab';
+        break;
+      case 'rotate':
+        this.svg.style.cursor = 'crosshair';
         break;
       default:
         this.svg.style.cursor = 'default';

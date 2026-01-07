@@ -18,6 +18,7 @@ import { NodeLabelChangeCommand, NodePropertyUpdates } from '../commands/NodeLab
 import { EdgeDirectionChangeCommand } from '../commands/EdgeDirectionChangeCommand';
 import { ResizeShapeCommand } from '../commands/ResizeShapeCommand';
 import { CanvasResizeCommand } from '../commands/CanvasResizeCommand';
+import { RotateShapeCommand } from '../commands/RotateShapeCommand';
 import { parsePath, serializePath } from '../core/PathParser';
 
 /**
@@ -101,6 +102,10 @@ export class Sidebar {
   private defaultNodeRxInput: HTMLInputElement | null = null;
   private defaultNodeRyInput: HTMLInputElement | null = null;
 
+  // Rotation property
+  private rotationPropertyContainer: HTMLDivElement | null = null;
+  private rotationInput: HTMLInputElement | null = null;
+
   private isUpdatingUI = false; // Prevent feedback loop
 
   constructor() {
@@ -182,6 +187,10 @@ export class Sidebar {
     this.defaultNodeRxInput = document.getElementById('prop-default-node-rx') as HTMLInputElement;
     this.defaultNodeRyInput = document.getElementById('prop-default-node-ry') as HTMLInputElement;
 
+    // Rotation property
+    this.rotationPropertyContainer = document.getElementById('rotation-property') as HTMLDivElement;
+    this.rotationInput = document.getElementById('prop-rotation') as HTMLInputElement;
+
     this.setupInputListeners();
     this.setupTextInputListeners();
     this.setupLineInputListeners();
@@ -191,6 +200,7 @@ export class Sidebar {
     this.setupPositionInputListeners();
     this.setupCanvasSizeInputListeners();
     this.setupDefaultNodeSizeInputListeners();
+    this.setupRotationInputListeners();
     this.setupEventListeners();
 
     // Initialize with default style
@@ -452,6 +462,78 @@ export class Sidebar {
   }
 
   /**
+   * Setup rotation input listeners
+   */
+  private setupRotationInputListeners(): void {
+    if (this.rotationInput) {
+      this.rotationInput.addEventListener('change', () => {
+        if (this.isUpdatingUI) return;
+        this.applyRotationChange();
+      });
+    }
+  }
+
+  /**
+   * Apply rotation change from input
+   */
+  private applyRotationChange(): void {
+    if (this.isUpdatingUI || !this.rotationInput) return;
+
+    const selectedShapes = selectionManager.getSelection();
+    if (selectedShapes.length !== 1) return;
+
+    const shape = selectedShapes[0];
+    // Edge shapes don't support rotation
+    if (shape.type === 'edge') return;
+
+    const newRotation = parseFloat(this.rotationInput.value) || 0;
+    const beforeRotation = shape.rotation;
+
+    if (Math.abs(newRotation - beforeRotation) > 0.1) {
+      const command = new RotateShapeCommand(shape, beforeRotation, newRotation);
+      historyManager.execute(command);
+    }
+  }
+
+  /**
+   * Show rotation property for rotatable shapes
+   */
+  private showRotationProperty(shape: Shape): void {
+    if (!this.rotationPropertyContainer || !this.rotationInput) return;
+
+    // Edge doesn't support rotation
+    if (shape.type === 'edge') {
+      this.hideRotationProperty();
+      return;
+    }
+
+    this.isUpdatingUI = true;
+    this.rotationPropertyContainer.style.display = 'block';
+    this.rotationInput.value = String(Math.round(shape.rotation));
+    this.isUpdatingUI = false;
+  }
+
+  /**
+   * Hide rotation property
+   */
+  private hideRotationProperty(): void {
+    if (this.rotationPropertyContainer) {
+      this.rotationPropertyContainer.style.display = 'none';
+    }
+  }
+
+  /**
+   * Update rotation input from shape
+   */
+  private updateRotationInput(shape: Shape): void {
+    if (!this.rotationInput || shape.type === 'edge') return;
+
+    this.isUpdatingUI = true;
+    this.rotationInput.value = String(Math.round(shape.rotation));
+    this.isUpdatingUI = false;
+  }
+
+  /**
    * Update default node size inputs
    */
   private updateDefaultNodeSizeInputs(): void {
@@ -545,6 +627,9 @@ export class Sidebar {
 
         // Show position properties based on shape type
         this.showPositionProperties(shape);
+
+        // Show rotation property for rotatable shapes
+        this.showRotationProperty(shape);
       } else if (shapes.length === 0) {
         // Show editor's current style (for new shapes)
         this.updateUIFromStyle(editorState.currentStyle);
@@ -554,6 +639,7 @@ export class Sidebar {
         this.hideEdgeProperties();
         this.hidePathProperties();
         this.hideAllPositionProperties();
+        this.hideRotationProperty();
       } else {
         // Multiple selection - hide special properties
         this.hideTextProperties();
@@ -562,6 +648,7 @@ export class Sidebar {
         this.hideEdgeProperties();
         this.hidePathProperties();
         this.hideAllPositionProperties();
+        this.hideRotationProperty();
       }
     });
 
@@ -574,6 +661,8 @@ export class Sidebar {
         if (shape instanceof Path) {
           this.updatePathDataInput(shape);
         }
+        // Update rotation input
+        this.updateRotationInput(shape);
       }
     });
 

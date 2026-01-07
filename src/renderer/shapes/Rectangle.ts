@@ -1,5 +1,5 @@
 import { Point, Bounds, ShapeStyle, RectangleData, generateId } from '../../shared/types';
-import { Shape, applyStyle } from './Shape';
+import { Shape, applyStyle, applyRotation, normalizeRotation, rotatePoint, getRotatedBounds } from './Shape';
 
 /**
  * Rectangle shape implementation
@@ -7,6 +7,7 @@ import { Shape, applyStyle } from './Shape';
 export class Rectangle implements Shape {
   readonly type = 'rectangle';
   element: SVGRectElement | null = null;
+  rotation: number = 0;
 
   constructor(
     public readonly id: string,
@@ -14,8 +15,11 @@ export class Rectangle implements Shape {
     public y: number,
     public width: number,
     public height: number,
-    public style: ShapeStyle
-  ) {}
+    public style: ShapeStyle,
+    rotation: number = 0
+  ) {
+    this.rotation = normalizeRotation(rotation);
+  }
 
   /**
    * Create rectangle from bounding box (two corner points)
@@ -51,6 +55,10 @@ export class Rectangle implements Shape {
     rect.setAttribute('height', String(this.height));
     applyStyle(rect, this.style);
 
+    // Apply rotation
+    const center = this.getRotationCenter();
+    applyRotation(rect, this.rotation, center.x, center.y);
+
     this.element = rect;
     return rect;
   }
@@ -63,17 +71,29 @@ export class Rectangle implements Shape {
     this.element.setAttribute('width', String(this.width));
     this.element.setAttribute('height', String(this.height));
     applyStyle(this.element, this.style);
+
+    // Apply rotation
+    const center = this.getRotationCenter();
+    applyRotation(this.element, this.rotation, center.x, center.y);
   }
 
   hitTest(point: Point, tolerance: number = 5): boolean {
+    // If rotated, transform the test point to the shape's local coordinate system
+    let testPoint = point;
+    if (this.rotation !== 0) {
+      const center = this.getRotationCenter();
+      // Rotate the point in the opposite direction
+      testPoint = rotatePoint(point, center, -this.rotation);
+    }
+
     // Check if point is within rectangle + tolerance
     const outerX = this.x - tolerance;
     const outerY = this.y - tolerance;
     const outerWidth = this.width + tolerance * 2;
     const outerHeight = this.height + tolerance * 2;
 
-    const inOuter = point.x >= outerX && point.x <= outerX + outerWidth &&
-                    point.y >= outerY && point.y <= outerY + outerHeight;
+    const inOuter = testPoint.x >= outerX && testPoint.x <= outerX + outerWidth &&
+                    testPoint.y >= outerY && testPoint.y <= outerY + outerHeight;
 
     if (!inOuter) {
       return false;
@@ -86,8 +106,8 @@ export class Rectangle implements Shape {
       const innerWidth = Math.max(0, this.width - tolerance * 2);
       const innerHeight = Math.max(0, this.height - tolerance * 2);
 
-      const inInner = point.x >= innerX && point.x <= innerX + innerWidth &&
-                      point.y >= innerY && point.y <= innerY + innerHeight;
+      const inInner = testPoint.x >= innerX && testPoint.x <= innerX + innerWidth &&
+                      testPoint.y >= innerY && testPoint.y <= innerY + innerHeight;
 
       return !inInner;
     }
@@ -96,12 +116,25 @@ export class Rectangle implements Shape {
   }
 
   getBounds(): Bounds {
-    return {
+    const baseBounds = {
       x: this.x,
       y: this.y,
       width: this.width,
       height: this.height
     };
+    return getRotatedBounds(baseBounds, this.rotation);
+  }
+
+  getRotationCenter(): Point {
+    return {
+      x: this.x + this.width / 2,
+      y: this.y + this.height / 2
+    };
+  }
+
+  setRotation(angle: number): void {
+    this.rotation = normalizeRotation(angle);
+    this.updateElement();
   }
 
   move(dx: number, dy: number): void {
@@ -118,7 +151,8 @@ export class Rectangle implements Shape {
       y: this.y,
       width: this.width,
       height: this.height,
-      style: { ...this.style }
+      style: { ...this.style },
+      rotation: this.rotation
     };
   }
 
@@ -129,7 +163,8 @@ export class Rectangle implements Shape {
       this.y,
       this.width,
       this.height,
-      { ...this.style }
+      { ...this.style },
+      this.rotation
     );
   }
 

@@ -1,5 +1,5 @@
 import { Point, Bounds, ShapeStyle, GroupData, ShapeData, generateId, DEFAULT_STYLE } from '../../shared/types';
-import { Shape } from './Shape';
+import { Shape, applyRotation, normalizeRotation, rotatePoint, getRotatedBounds } from './Shape';
 
 /**
  * Group shape implementation - contains multiple shapes as children
@@ -8,13 +8,16 @@ export class Group implements Shape {
   readonly type = 'group';
   element: SVGGElement | null = null;
   children: Shape[];
+  rotation: number = 0;
 
   constructor(
     public readonly id: string,
     children: Shape[],
-    public style: ShapeStyle
+    public style: ShapeStyle,
+    rotation: number = 0
   ) {
     this.children = [...children];
+    this.rotation = normalizeRotation(rotation);
   }
 
   /**
@@ -35,6 +38,10 @@ export class Group implements Shape {
       g.appendChild(childElement);
     }
 
+    // Apply rotation to the group element
+    const center = this.getRotationCenter();
+    applyRotation(g, this.rotation, center.x, center.y);
+
     this.element = g;
     return g;
   }
@@ -46,16 +53,27 @@ export class Group implements Shape {
     for (const child of this.children) {
       child.updateElement();
     }
+
+    // Apply rotation to the group element
+    const center = this.getRotationCenter();
+    applyRotation(this.element, this.rotation, center.x, center.y);
   }
 
   hitTest(point: Point, tolerance: number = 5): boolean {
-    // Check if point is within the group's bounding box
-    const bounds = this.getBounds();
+    // If rotated, transform the test point to the shape's local coordinate system
+    let testPoint = point;
+    if (this.rotation !== 0) {
+      const center = this.getRotationCenter();
+      testPoint = rotatePoint(point, center, -this.rotation);
+    }
 
-    const inBounds = point.x >= bounds.x - tolerance &&
-                     point.x <= bounds.x + bounds.width + tolerance &&
-                     point.y >= bounds.y - tolerance &&
-                     point.y <= bounds.y + bounds.height + tolerance;
+    // Check if point is within the group's bounding box
+    const bounds = this.getBaseBounds();
+
+    const inBounds = testPoint.x >= bounds.x - tolerance &&
+                     testPoint.x <= bounds.x + bounds.width + tolerance &&
+                     testPoint.y >= bounds.y - tolerance &&
+                     testPoint.y <= bounds.y + bounds.height + tolerance;
 
     if (!inBounds) {
       return false;
@@ -63,7 +81,7 @@ export class Group implements Shape {
 
     // Also check if any child is hit (for more precise hit testing)
     for (const child of this.children) {
-      if (child.hitTest(point, tolerance)) {
+      if (child.hitTest(testPoint, tolerance)) {
         return true;
       }
     }
@@ -71,7 +89,7 @@ export class Group implements Shape {
     return false;
   }
 
-  getBounds(): Bounds {
+  private getBaseBounds(): Bounds {
     if (this.children.length === 0) {
       return { x: 0, y: 0, width: 0, height: 0 };
     }
@@ -82,6 +100,7 @@ export class Group implements Shape {
     let maxY = -Infinity;
 
     for (const child of this.children) {
+      // Get child bounds without considering group rotation
       const bounds = child.getBounds();
       minX = Math.min(minX, bounds.x);
       minY = Math.min(minY, bounds.y);
@@ -95,6 +114,23 @@ export class Group implements Shape {
       width: maxX - minX,
       height: maxY - minY
     };
+  }
+
+  getBounds(): Bounds {
+    return getRotatedBounds(this.getBaseBounds(), this.rotation);
+  }
+
+  getRotationCenter(): Point {
+    const bounds = this.getBaseBounds();
+    return {
+      x: bounds.x + bounds.width / 2,
+      y: bounds.y + bounds.height / 2
+    };
+  }
+
+  setRotation(angle: number): void {
+    this.rotation = normalizeRotation(angle);
+    this.updateElement();
   }
 
   move(dx: number, dy: number): void {
@@ -184,14 +220,15 @@ export class Group implements Shape {
       id: this.id,
       type: 'group',
       style: { ...this.style },
-      children: this.children.map(child => child.serialize())
+      children: this.children.map(child => child.serialize()),
+      rotation: this.rotation
     };
   }
 
   clone(): Group {
     // Deep clone all children
     const clonedChildren = this.children.map(child => child.clone());
-    return new Group(generateId(), clonedChildren, { ...this.style });
+    return new Group(generateId(), clonedChildren, { ...this.style }, this.rotation);
   }
 
   applyTransform(translateX: number, translateY: number, scaleX: number, scaleY: number): void {

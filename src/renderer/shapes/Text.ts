@@ -1,5 +1,5 @@
 import { Point, Bounds, ShapeStyle, TextData, TextAnchor, generateId } from '../../shared/types';
-import { Shape, applyStyle } from './Shape';
+import { Shape, applyStyle, applyRotation, normalizeRotation, rotatePoint, getRotatedBounds } from './Shape';
 
 /**
  * Text shape implementation
@@ -7,6 +7,7 @@ import { Shape, applyStyle } from './Shape';
 export class Text implements Shape {
   readonly type = 'text';
   element: SVGTextElement | null = null;
+  rotation: number = 0;
 
   constructor(
     public readonly id: string,
@@ -21,8 +22,11 @@ export class Text implements Shape {
     public fontStyle: 'normal' | 'italic' = 'normal',
     public textUnderline: boolean = false,
     public textStrikethrough: boolean = false,
-    public lineHeight: number = 1.2
-  ) {}
+    public lineHeight: number = 1.2,
+    rotation: number = 0
+  ) {
+    this.rotation = normalizeRotation(rotation);
+  }
 
   /**
    * Create text from SVG element
@@ -129,6 +133,10 @@ export class Text implements Shape {
 
     applyStyle(text, this.style);
 
+    // Apply rotation
+    const center = this.getRotationCenter();
+    applyRotation(text, this.rotation, center.x, center.y);
+
     this.element = text;
     return text;
   }
@@ -149,17 +157,31 @@ export class Text implements Shape {
     this.renderContent(this.element);
 
     applyStyle(this.element, this.style);
+
+    // Apply rotation
+    const center = this.getRotationCenter();
+    applyRotation(this.element, this.rotation, center.x, center.y);
   }
 
   hitTest(point: Point, tolerance: number = 5): boolean {
-    const bounds = this.getBounds();
-    return point.x >= bounds.x - tolerance &&
-           point.x <= bounds.x + bounds.width + tolerance &&
-           point.y >= bounds.y - tolerance &&
-           point.y <= bounds.y + bounds.height + tolerance;
+    // If rotated, transform the test point to the shape's local coordinate system
+    let testPoint = point;
+    if (this.rotation !== 0) {
+      const center = this.getRotationCenter();
+      testPoint = rotatePoint(point, center, -this.rotation);
+    }
+
+    const bounds = this.getBaseBounds();
+    return testPoint.x >= bounds.x - tolerance &&
+           testPoint.x <= bounds.x + bounds.width + tolerance &&
+           testPoint.y >= bounds.y - tolerance &&
+           testPoint.y <= bounds.y + bounds.height + tolerance;
   }
 
-  getBounds(): Bounds {
+  /**
+   * Get base bounds (without rotation)
+   */
+  private getBaseBounds(): Bounds {
     // If element exists in DOM, use actual measurements
     if (this.element) {
       const bbox = this.element.getBBox();
@@ -193,6 +215,23 @@ export class Text implements Shape {
     };
   }
 
+  getBounds(): Bounds {
+    return getRotatedBounds(this.getBaseBounds(), this.rotation);
+  }
+
+  getRotationCenter(): Point {
+    const bounds = this.getBaseBounds();
+    return {
+      x: bounds.x + bounds.width / 2,
+      y: bounds.y + bounds.height / 2
+    };
+  }
+
+  setRotation(angle: number): void {
+    this.rotation = normalizeRotation(angle);
+    this.updateElement();
+  }
+
   move(dx: number, dy: number): void {
     this.x += dx;
     this.y += dy;
@@ -214,7 +253,8 @@ export class Text implements Shape {
       textUnderline: this.textUnderline,
       textStrikethrough: this.textStrikethrough,
       lineHeight: this.lineHeight,
-      style: { ...this.style }
+      style: { ...this.style },
+      rotation: this.rotation
     };
   }
 
@@ -232,7 +272,8 @@ export class Text implements Shape {
       this.fontStyle,
       this.textUnderline,
       this.textStrikethrough,
-      this.lineHeight
+      this.lineHeight,
+      this.rotation
     );
   }
 

@@ -2,7 +2,7 @@
  * Tool types available in the editor
  */
 export type ToolType = 'select' | 'line' | 'ellipse' | 'rectangle' | 'text' | 'pan'
-  | 'node' | 'edge' | 'delete-node' | 'delete-edge' | 'polygon' | 'polyline' | 'path';
+  | 'node' | 'edge' | 'delete-node' | 'delete-edge' | 'polygon' | 'polyline' | 'path' | 'rotate';
 
 /**
  * Shape types that can be created
@@ -96,6 +96,7 @@ export interface BaseShapeData {
   id: string;
   type: ShapeType;
   style: ShapeStyle;
+  rotation?: number;  // Rotation angle in degrees (0-360)
 }
 
 /**
@@ -220,6 +221,7 @@ export interface GroupData {
   type: 'group';
   style: ShapeStyle;
   children: ShapeData[];
+  rotation?: number;  // Rotation angle in degrees (0-360)
 }
 
 /**
