@@ -12,6 +12,13 @@
   cursor: crosshair;
 }
 
+/* Disable text selection on canvas elements */
+#canvas text {
+  user-select: none;
+  -webkit-user-select: none;
+  pointer-events: auto;
+}
+
 /* Canvas boundary (white document area) */
 #canvas-boundary {
   pointer-events: none;
