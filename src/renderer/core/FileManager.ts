@@ -12,7 +12,7 @@ import { Path } from '../shapes/Path';
 import { Image } from '../shapes/Image';
 import { Group } from '../shapes/Group';
 import { getGraphManager } from './GraphManager';
-import { parseTransform, combineTransforms, ParsedTransform, IDENTITY_TRANSFORM, isIdentityTransform } from './TransformParser';
+import { parseTransform, combineTransforms, ParsedTransform, IDENTITY_TRANSFORM, isIdentityTransform, hasRotation, hasSkew } from './TransformParser';
 import { serializePath } from './PathParser';
 
 // Marker definitions for SVG export
@@ -809,6 +809,7 @@ export class FileManager {
   private static applyTransformToShape(shape: Shape, transform: ParsedTransform): void {
     if (isIdentityTransform(transform)) return;
 
+    // Apply translate and scale transforms
     if (shape.applyTransform) {
       shape.applyTransform(
         transform.translateX,
@@ -816,6 +817,24 @@ export class FileManager {
         transform.scaleX,
         transform.scaleY
       );
+    }
+
+    // Apply skew transform (only for shapes that support it)
+    if (hasSkew(transform)) {
+      if (shape.applySkew) {
+        shape.applySkew(transform.skewX, transform.skewY);
+      } else {
+        console.warn(`Shape type "${shape.type}" does not support skew transform, skew will be ignored`);
+      }
+    }
+
+    // Apply rotation transform
+    // Note: For rotate(angle, cx, cy), this is a simplification that adds the rotation
+    // to the shape's own rotation property. The rotation center may differ from the
+    // shape's center, which could cause slight positioning differences.
+    if (hasRotation(transform)) {
+      const currentRotation = shape.rotation || 0;
+      shape.setRotation(currentRotation + transform.rotation);
     }
   }
 }

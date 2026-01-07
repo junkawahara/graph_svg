@@ -467,6 +467,63 @@ export class Path implements Shape {
     this.updateElement();
   }
 
+  applySkew(skewX: number, skewY: number): void {
+    const tanX = Math.tan(skewX * Math.PI / 180);
+    const tanY = Math.tan(skewY * Math.PI / 180);
+
+    // Helper to apply skew to a point
+    const skewPoint = (x: number, y: number): { x: number; y: number } => ({
+      x: x + y * tanX,
+      y: y + x * tanY
+    });
+
+    for (const cmd of this.commands) {
+      switch (cmd.type) {
+        case 'M':
+        case 'L': {
+          const skewed = skewPoint(cmd.x, cmd.y);
+          cmd.x = skewed.x;
+          cmd.y = skewed.y;
+          break;
+        }
+        case 'C': {
+          const cp1 = skewPoint(cmd.cp1x, cmd.cp1y);
+          const cp2 = skewPoint(cmd.cp2x, cmd.cp2y);
+          const end = skewPoint(cmd.x, cmd.y);
+          cmd.cp1x = cp1.x;
+          cmd.cp1y = cp1.y;
+          cmd.cp2x = cp2.x;
+          cmd.cp2y = cp2.y;
+          cmd.x = end.x;
+          cmd.y = end.y;
+          break;
+        }
+        case 'Q': {
+          const cp = skewPoint(cmd.cpx, cmd.cpy);
+          const end = skewPoint(cmd.x, cmd.y);
+          cmd.cpx = cp.x;
+          cmd.cpy = cp.y;
+          cmd.x = end.x;
+          cmd.y = end.y;
+          break;
+        }
+        case 'A': {
+          // For arcs, we apply skew to the endpoint
+          // Note: This is an approximation - true skew of an arc would convert it to a non-arc curve
+          const end = skewPoint(cmd.x, cmd.y);
+          cmd.x = end.x;
+          cmd.y = end.y;
+          // Adjust xAxisRotation by the skew angle (simplified)
+          if (skewX !== 0) {
+            cmd.xAxisRotation += skewX;
+          }
+          break;
+        }
+      }
+    }
+    this.updateElement();
+  }
+
   /**
    * Check if the path is closed (ends with Z command)
    */

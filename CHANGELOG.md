@@ -68,10 +68,14 @@
 ### 変更
 
 - SVG transform 属性対応
-  - SVGファイル読み込み時に `translate` と `scale` 変換を解析・適用
+  - SVGファイル読み込み時に全ての SVG transform を解析・適用
+  - 対応変換: `translate`、`scale`、`rotate`、`skewX`、`skewY`、`matrix`
+  - `rotate(angle)` および `rotate(angle, cx, cy)` 形式に対応
+  - `matrix(a, b, c, d, e, f)` を translate、scale、rotation、skew に分解して適用
+  - `skewX`/`skewY` は点ベースの図形（Line、Polygon、Polyline、Path、Group）に適用
+  - Rectangle、Ellipse 等の軸平行図形は skew 未対応（警告ログ出力）
   - グループ内グループのネストしたtransform合成に対応
   - 変換後は絶対座標として保持（書き出し時はtransformを使用しない）
-  - 未対応変換（rotate, skewX, skewY, matrix）は警告ログ出力後に無視
   - TransformParser ユーティリティを追加
 
 - Fit to Content 機能

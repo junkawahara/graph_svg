@@ -206,4 +206,21 @@ export class Line implements Shape {
     this.y2 = this.y2 * scaleY + translateY;
     this.updateElement();
   }
+
+  applySkew(skewX: number, skewY: number): void {
+    const tanX = Math.tan(skewX * Math.PI / 180);
+    const tanY = Math.tan(skewY * Math.PI / 180);
+
+    // Apply skew: skewX shifts x by y*tan(angle), skewY shifts y by x*tan(angle)
+    const newX1 = this.x1 + this.y1 * tanX;
+    const newY1 = this.y1 + this.x1 * tanY;
+    const newX2 = this.x2 + this.y2 * tanX;
+    const newY2 = this.y2 + this.x2 * tanY;
+
+    this.x1 = newX1;
+    this.y1 = newY1;
+    this.x2 = newX2;
+    this.y2 = newY2;
+    this.updateElement();
+  }
 }

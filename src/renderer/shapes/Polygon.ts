@@ -230,6 +230,19 @@ export class Polygon implements Shape {
     this.updateElement();
   }
 
+  applySkew(skewX: number, skewY: number): void {
+    const tanX = Math.tan(skewX * Math.PI / 180);
+    const tanY = Math.tan(skewY * Math.PI / 180);
+
+    for (const point of this.points) {
+      const newX = point.x + point.y * tanX;
+      const newY = point.y + point.x * tanY;
+      point.x = newX;
+      point.y = newY;
+    }
+    this.updateElement();
+  }
+
   /**
    * Set a specific vertex position
    */

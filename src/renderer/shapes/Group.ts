@@ -241,6 +241,16 @@ export class Group implements Shape {
     this.updateElement();
   }
 
+  applySkew(skewX: number, skewY: number): void {
+    // Recursively apply skew to all children
+    for (const child of this.children) {
+      if (child.applySkew) {
+        child.applySkew(skewX, skewY);
+      }
+    }
+    this.updateElement();
+  }
+
   /**
    * Get all child shapes (for ungrouping)
    */

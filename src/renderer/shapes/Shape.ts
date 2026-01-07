@@ -64,6 +64,14 @@ export interface Shape {
   applyTransform?(translateX: number, translateY: number, scaleX: number, scaleY: number): void;
 
   /**
+   * Apply skew transform to shape (modifies coordinates in place)
+   * Only supported by point-based shapes (Line, Polygon, Polyline, Path)
+   * @param skewX Skew angle along X axis in degrees
+   * @param skewY Skew angle along Y axis in degrees
+   */
+  applySkew?(skewX: number, skewY: number): void;
+
+  /**
    * Get the rotation center point of the shape
    */
   getRotationCenter(): Point;
