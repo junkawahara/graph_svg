@@ -28,6 +28,7 @@ import { Edge } from '../shapes/Edge';
 import { Polygon } from '../shapes/Polygon';
 import { Polyline } from '../shapes/Polyline';
 import { Path } from '../shapes/Path';
+import { Image } from '../shapes/Image';
 import { Group } from '../shapes/Group';
 import { Handle, HandleSet } from '../handles/Handle';
 import { LineHandles } from '../handles/LineHandles';
@@ -37,6 +38,7 @@ import { TextHandles } from '../handles/TextHandles';
 import { NodeHandles } from '../handles/NodeHandles';
 import { PolygonHandles, PolylineHandles } from '../handles/PolygonHandles';
 import { PathHandles } from '../handles/PathHandles';
+import { ImageHandles } from '../handles/ImageHandles';
 import { GroupHandles } from '../handles/GroupHandles';
 import { AddShapeCommand } from '../commands/AddShapeCommand';
 import { AddNodeCommand } from '../commands/AddNodeCommand';
@@ -472,6 +474,8 @@ export class Canvas {
       return new PolylineHandles(shape);
     } else if (shape instanceof Path) {
       return new PathHandles(shape);
+    } else if (shape instanceof Image) {
+      return new ImageHandles(shape);
     } else if (shape instanceof Group) {
       return new GroupHandles(shape);
     }

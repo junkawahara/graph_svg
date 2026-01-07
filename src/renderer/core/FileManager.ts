@@ -9,6 +9,7 @@ import { Edge } from '../shapes/Edge';
 import { Polygon } from '../shapes/Polygon';
 import { Polyline } from '../shapes/Polyline';
 import { Path } from '../shapes/Path';
+import { Image } from '../shapes/Image';
 import { Group } from '../shapes/Group';
 import { getGraphManager } from './GraphManager';
 import { parseTransform, combineTransforms, ParsedTransform, IDENTITY_TRANSFORM, isIdentityTransform } from './TransformParser';
@@ -177,6 +178,8 @@ export class FileManager {
       return `  <polyline id="${shape.id}" points="${points}" ${style}/>`;
     } else if (shape instanceof Path) {
       return this.pathToSvgElement(shape);
+    } else if (shape instanceof Image) {
+      return this.imageToSvgElement(shape);
     } else if (shape instanceof Group) {
       return this.groupToSvgElement(shape);
     }
@@ -255,6 +258,27 @@ export class FileManager {
     const style = this.styleToAttributes(path.style);
     const pathData = serializePath(path.commands);
     return `  <path id="${path.id}" d="${pathData}" ${style}/>`;
+  }
+
+  /**
+   * Convert an Image to SVG element string
+   */
+  private static imageToSvgElement(image: Image): string {
+    const attrs: string[] = [
+      `id="${image.id}"`,
+      `x="${image.x}"`,
+      `y="${image.y}"`,
+      `width="${image.width}"`,
+      `height="${image.height}"`,
+      `href="${image.href}"`,
+      `preserveAspectRatio="${image.preserveAspectRatio}"`
+    ];
+
+    if (image.style.opacity !== 1) {
+      attrs.push(`opacity="${image.style.opacity}"`);
+    }
+
+    return `  <image ${attrs.join(' ')}/>`;
   }
 
   /**
@@ -533,6 +557,18 @@ export class FileManager {
       shapes.push(polyline);
     });
 
+    // Parse image elements (excluding those inside groups)
+    const images = svg.querySelectorAll('image');
+    images.forEach(el => {
+      if (isInsideGroupOrNode(el)) return;
+
+      const style = this.parseStyleFromElement(el);
+      const image = Image.fromElement(el as SVGImageElement, style);
+      const transform = parseTransform(el.getAttribute('transform'));
+      this.applyTransformToShape(image, transform);
+      shapes.push(image);
+    });
+
     // Parse path elements (excluding those inside groups and edges)
     const allPaths = svg.querySelectorAll('path');
     allPaths.forEach(el => {
@@ -687,6 +723,10 @@ export class FileManager {
             }
           }
         }
+        break;
+
+      case 'image':
+        shape = Image.fromElement(el as SVGImageElement, style);
         break;
 
       default:

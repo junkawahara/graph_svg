@@ -9,6 +9,7 @@ import { Edge } from './Edge';
 import { Polygon } from './Polygon';
 import { Polyline } from './Polyline';
 import { Path } from './Path';
+import { Image } from './Image';
 import { Group } from './Group';
 
 /**
@@ -152,6 +153,19 @@ export function createShapeFromData(data: ShapeData, offsetX: number = 0, offset
       });
       return new Path(newId, offsetCommands, { ...data.style }, data.rotation || 0);
     }
+
+    case 'image':
+      return new Image(
+        newId,
+        data.x + offsetX,
+        data.y + offsetY,
+        data.width,
+        data.height,
+        data.href,
+        data.preserveAspectRatio,
+        { ...data.style },
+        data.rotation || 0
+      );
 
     case 'group':
       // Recursively create child shapes

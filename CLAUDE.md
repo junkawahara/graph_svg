@@ -73,6 +73,7 @@ src/
 │   │   ├── Polygon.ts       # 多角形
 │   │   ├── Polyline.ts      # ポリライン（折れ線）
 │   │   ├── Path.ts          # パス（SVG標準path要素）
+│   │   ├── Image.ts         # 画像（SVG image要素）
 │   │   ├── Text.ts          # テキスト
 │   │   ├── Node.ts          # グラフノード（楕円＋ラベル）
 │   │   ├── Edge.ts          # グラフエッジ（直線/曲線/自己ループ）
@@ -102,6 +103,7 @@ src/
 │   │   ├── NodeHandles.ts   # ノード用（4隅）
 │   │   ├── PolygonHandles.ts # 多角形/ポリライン用（各頂点）
 │   │   ├── PathHandles.ts   # パス用（アンカー＋制御点）
+│   │   ├── ImageHandles.ts  # 画像用（4隅）
 │   │   └── GroupHandles.ts  # グループ用（4隅＋破線境界）
 │   └── styles/              # CSS（main, toolbar, sidebar, canvas, dialog）
 └── shared/

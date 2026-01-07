@@ -51,6 +51,16 @@
   - 外部 SVG ファイル（PowerPoint等）のパス要素をインポート可能
   - サイドバーで d 属性を直接編集可能（パス選択時に表示）
 
+- SVG image 要素対応
+  - `<image>` 要素の読み込み・書き出し対応
+  - 埋め込み画像（Base64 data URI）対応
+  - 外部URL画像リンク対応
+  - SVG 2 の `href` 属性と SVG 1.1 の `xlink:href` 属性の両方に対応
+  - `preserveAspectRatio` 属性の保持
+  - 4隅リサイズハンドルで画像サイズ変更可能
+  - 移動・コピー/ペースト対応
+  - グループ内の画像もサポート
+
 ### 削除
 - BezierPath 機能を廃止し、Path に統合
   - 旧形式（data-shape-type="bezierPath"）は読み込み不可

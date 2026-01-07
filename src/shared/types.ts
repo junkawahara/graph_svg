@@ -7,7 +7,7 @@ export type ToolType = 'select' | 'line' | 'ellipse' | 'rectangle' | 'text' | 'p
 /**
  * Shape types that can be created
  */
-export type ShapeType = 'line' | 'ellipse' | 'rectangle' | 'text' | 'node' | 'edge' | 'polygon' | 'polyline' | 'group' | 'path';
+export type ShapeType = 'line' | 'ellipse' | 'rectangle' | 'text' | 'node' | 'edge' | 'polygon' | 'polyline' | 'group' | 'path' | 'image';
 
 /**
  * Edge direction for graph edges
@@ -215,6 +215,19 @@ export interface PathData extends BaseShapeData {
 }
 
 /**
+ * Image shape data
+ */
+export interface ImageData extends BaseShapeData {
+  type: 'image';
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  href: string;  // URL or data URI (base64)
+  preserveAspectRatio: string;
+}
+
+/**
  * Group shape data (contains other shapes)
  */
 export interface GroupData {
@@ -228,7 +241,7 @@ export interface GroupData {
 /**
  * Union type for all shape data
  */
-export type ShapeData = LineData | EllipseData | RectangleData | TextData | NodeData | EdgeData | PolygonData | PolylineData | PathData | GroupData;
+export type ShapeData = LineData | EllipseData | RectangleData | TextData | NodeData | EdgeData | PolygonData | PolylineData | PathData | ImageData | GroupData;
 
 /**
  * Event names used in EventBus
