@@ -1,4 +1,4 @@
-import { Point, Bounds, ShapeStyle, TextData, TextAnchor, generateId } from '../../shared/types';
+import { Point, Bounds, ShapeStyle, TextData, TextAnchor, DominantBaseline, generateId } from '../../shared/types';
 import { Shape, applyStyle, applyRotation, normalizeRotation, rotatePoint, getRotatedBounds } from './Shape';
 
 /**
@@ -19,6 +19,7 @@ export class Text implements Shape {
     public fontWeight: 'normal' | 'bold',
     public style: ShapeStyle,
     public textAnchor: TextAnchor = 'start',
+    public dominantBaseline: DominantBaseline = 'auto',
     public fontStyle: 'normal' | 'italic' = 'normal',
     public textUnderline: boolean = false,
     public textStrikethrough: boolean = false,
@@ -66,6 +67,7 @@ export class Text implements Shape {
       (el.getAttribute('font-weight') === 'bold' ? 'bold' : 'normal'),
       style,
       (el.getAttribute('text-anchor') as TextAnchor) || 'start',
+      (el.getAttribute('dominant-baseline') as DominantBaseline) || 'auto',
       (el.getAttribute('font-style') === 'italic' ? 'italic' : 'normal'),
       textUnderline,
       textStrikethrough,
@@ -123,7 +125,7 @@ export class Text implements Shape {
     text.setAttribute('font-size', String(this.fontSize));
     text.setAttribute('font-family', this.fontFamily);
     text.setAttribute('font-weight', this.fontWeight);
-    text.setAttribute('dominant-baseline', 'hanging');
+    text.setAttribute('dominant-baseline', this.dominantBaseline);
     text.setAttribute('text-anchor', this.textAnchor);
     text.setAttribute('font-style', this.fontStyle);
     text.setAttribute('text-decoration', this.getTextDecoration());
@@ -149,6 +151,7 @@ export class Text implements Shape {
     this.element.setAttribute('font-size', String(this.fontSize));
     this.element.setAttribute('font-family', this.fontFamily);
     this.element.setAttribute('font-weight', this.fontWeight);
+    this.element.setAttribute('dominant-baseline', this.dominantBaseline);
     this.element.setAttribute('text-anchor', this.textAnchor);
     this.element.setAttribute('font-style', this.fontStyle);
     this.element.setAttribute('text-decoration', this.getTextDecoration());
@@ -249,6 +252,7 @@ export class Text implements Shape {
       fontFamily: this.fontFamily,
       fontWeight: this.fontWeight,
       textAnchor: this.textAnchor,
+      dominantBaseline: this.dominantBaseline,
       fontStyle: this.fontStyle,
       textUnderline: this.textUnderline,
       textStrikethrough: this.textStrikethrough,
@@ -269,6 +273,7 @@ export class Text implements Shape {
       this.fontWeight,
       { ...this.style },
       this.textAnchor,
+      this.dominantBaseline,
       this.fontStyle,
       this.textUnderline,
       this.textStrikethrough,

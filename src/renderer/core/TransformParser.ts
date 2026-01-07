@@ -55,10 +55,18 @@ function decomposeMatrix(a: number, b: number, c: number, d: number, e: number, 
 
   // Calculate scale and rotation from the 2x2 matrix [a, c; b, d]
   // Scale X is the length of the first column vector [a, b]
-  const scaleX = Math.sqrt(a * a + b * b);
+  let scaleX = Math.sqrt(a * a + b * b);
 
   // Rotation angle from the first column vector
-  const rotation = Math.atan2(b, a) * (180 / Math.PI);
+  let rotation = Math.atan2(b, a) * (180 / Math.PI);
+
+  // Normalize: prefer -90° to +90° range for rotation by flipping scaleX if needed
+  // This correctly handles horizontal flip (matrix(-1,0,0,1,...)) as scaleX=-1, rotation=0
+  // instead of scaleX=1, rotation=180°
+  if (Math.abs(rotation) > 90) {
+    scaleX = -scaleX;
+    rotation = rotation > 0 ? rotation - 180 : rotation + 180;
+  }
 
   // Scale Y is derived from the determinant divided by scaleX
   // Determinant = a*d - b*c

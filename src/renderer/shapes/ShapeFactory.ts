@@ -66,6 +66,7 @@ export function createShapeFromData(data: ShapeData, offsetX: number = 0, offset
         { ...data.style },
         // New properties with defaults for backward compatibility
         data.textAnchor || 'start',
+        data.dominantBaseline || 'auto',
         data.fontStyle || 'normal',
         data.textUnderline || false,
         data.textStrikethrough || false,

@@ -20,6 +20,11 @@ export type EdgeDirection = 'none' | 'forward' | 'backward';
 export type TextAnchor = 'start' | 'middle' | 'end';
 
 /**
+ * SVG dominant-baseline values
+ */
+export type DominantBaseline = 'auto' | 'hanging' | 'middle' | 'central' | 'text-bottom' | 'text-top' | 'alphabetic';
+
+/**
  * 2D point coordinate
  */
 export interface Point {
@@ -146,6 +151,7 @@ export interface TextData extends BaseShapeData {
   fontFamily: string;
   fontWeight: 'normal' | 'bold';
   textAnchor: TextAnchor;
+  dominantBaseline: DominantBaseline;
   fontStyle: 'normal' | 'italic';
   textUnderline: boolean;
   textStrikethrough: boolean;

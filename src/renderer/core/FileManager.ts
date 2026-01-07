@@ -155,7 +155,7 @@ export class FileManager {
       if (lines.length === 1) {
         // Single line
         const escapedContent = this.escapeXml(shape.content);
-        return `  <text id="${shape.id}" x="${shape.x}" y="${shape.y}" font-size="${shape.fontSize}" font-family="${shape.fontFamily}" font-weight="${shape.fontWeight}" text-anchor="${shape.textAnchor}"${fontStyleAttr}${textDecorationAttr} dominant-baseline="hanging" ${style}>${escapedContent}</text>`;
+        return `  <text id="${shape.id}" x="${shape.x}" y="${shape.y}" font-size="${shape.fontSize}" font-family="${shape.fontFamily}" font-weight="${shape.fontWeight}" text-anchor="${shape.textAnchor}"${fontStyleAttr}${textDecorationAttr} dominant-baseline="${shape.dominantBaseline}" ${style}>${escapedContent}</text>`;
       } else {
         // Multi-line with tspans
         const tspanLines = lines.map((line, index) => {
@@ -164,7 +164,7 @@ export class FileManager {
           return `    <tspan x="${shape.x}" dy="${dy}">${escapedLine}</tspan>`;
         }).join('\n');
 
-        return `  <text id="${shape.id}" x="${shape.x}" y="${shape.y}" font-size="${shape.fontSize}" font-family="${shape.fontFamily}" font-weight="${shape.fontWeight}" text-anchor="${shape.textAnchor}"${fontStyleAttr}${textDecorationAttr} dominant-baseline="hanging" ${style}>\n${tspanLines}\n  </text>`;
+        return `  <text id="${shape.id}" x="${shape.x}" y="${shape.y}" font-size="${shape.fontSize}" font-family="${shape.fontFamily}" font-weight="${shape.fontWeight}" text-anchor="${shape.textAnchor}"${fontStyleAttr}${textDecorationAttr} dominant-baseline="${shape.dominantBaseline}" ${style}>\n${tspanLines}\n  </text>`;
       }
     } else if (shape instanceof Node) {
       return this.nodeToSvgElement(shape);
@@ -767,12 +767,21 @@ export class FileManager {
   private static parseStyleFromElement(el: SVGElement): ShapeStyle {
     const fill = el.getAttribute('fill') || DEFAULT_STYLE.fill;
     const fillNone = fill === 'none';
+    const strokeAttr = el.getAttribute('stroke');
+    const strokeWidthAttr = el.getAttribute('stroke-width');
+
+    // If stroke is not specified or is "none", set strokeWidth to 0
+    // SVG default for stroke is "none", not a color
+    const hasStroke = strokeAttr && strokeAttr !== 'none';
+    const strokeWidth = hasStroke
+      ? parseFloat(strokeWidthAttr || String(DEFAULT_STYLE.strokeWidth))
+      : (strokeWidthAttr ? parseFloat(strokeWidthAttr) : 0);
 
     return {
       fill: fillNone ? DEFAULT_STYLE.fill : fill,
       fillNone,
-      stroke: el.getAttribute('stroke') || DEFAULT_STYLE.stroke,
-      strokeWidth: parseFloat(el.getAttribute('stroke-width') || String(DEFAULT_STYLE.strokeWidth)),
+      stroke: strokeAttr || DEFAULT_STYLE.stroke,
+      strokeWidth,
       opacity: parseFloat(el.getAttribute('opacity') || '1'),
       strokeDasharray: el.getAttribute('stroke-dasharray') || '',
       strokeLinecap: (el.getAttribute('stroke-linecap') as StrokeLinecap) || DEFAULT_STYLE.strokeLinecap
