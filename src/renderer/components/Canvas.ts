@@ -301,7 +301,7 @@ export class Canvas {
     this.canvasBoundaryRect.setAttribute('stroke-width', '1');
     this.canvasBoundaryRect.style.pointerEvents = 'none';
 
-    // Create resize handle (blue circle at bottom-right corner)
+    // Create resize handle (blue circle at bottom-right corner, hidden by default)
     this.canvasResizeHandle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
     this.canvasResizeHandle.setAttribute('id', 'canvas-resize-handle');
     this.canvasResizeHandle.setAttribute('cx', String(canvasSize.width));
@@ -311,6 +311,9 @@ export class Canvas {
     this.canvasResizeHandle.setAttribute('stroke', '#ffffff');
     this.canvasResizeHandle.setAttribute('stroke-width', '2');
     this.canvasResizeHandle.style.cursor = 'nwse-resize';
+    this.canvasResizeHandle.style.opacity = '0';
+    this.canvasResizeHandle.style.transition = 'opacity 0.15s ease';
+    this.canvasResizeHandle.style.pointerEvents = 'none';
 
     // Insert canvas boundary BEFORE the grid layer (so grid appears on top)
     if (this.gridGroup) {
@@ -830,11 +833,19 @@ export class Canvas {
         return;
       }
 
-      // Update cursor for canvas resize handle hover
+      // Update cursor and handle visibility for canvas resize handle hover
       if (this.hitTestCanvasResizeHandle(point)) {
         this.svg.style.cursor = 'nwse-resize';
-      } else if (!this.isPanning && !this.isSpacePressed) {
-        this.updateCursor();
+        if (this.canvasResizeHandle) {
+          this.canvasResizeHandle.style.opacity = '1';
+        }
+      } else {
+        if (this.canvasResizeHandle && !this.isResizingCanvas) {
+          this.canvasResizeHandle.style.opacity = '0';
+        }
+        if (!this.isPanning && !this.isSpacePressed) {
+          this.updateCursor();
+        }
       }
 
       this.currentTool?.onMouseMove(point, e);
@@ -875,6 +886,11 @@ export class Canvas {
     });
 
     this.svg.addEventListener('mouseleave', () => {
+      // Hide canvas resize handle
+      if (this.canvasResizeHandle) {
+        this.canvasResizeHandle.style.opacity = '0';
+      }
+
       // Cancel canvas resize on leave
       if (this.isResizingCanvas && this.canvasResizeStartSize) {
         editorState.setCanvasSize(this.canvasResizeStartSize.width, this.canvasResizeStartSize.height);
