@@ -176,7 +176,12 @@ export function applyStyle(element: SVGElement, style: ShapeStyle): void {
     element.setAttribute('fill', style.fill);
   }
   element.setAttribute('stroke', style.stroke);
-  element.setAttribute('stroke-width', String(style.strokeWidth));
+  // Only set stroke-width if > 0, otherwise remove it
+  if (style.strokeWidth > 0) {
+    element.setAttribute('stroke-width', String(style.strokeWidth));
+  } else {
+    element.removeAttribute('stroke-width');
+  }
   element.setAttribute('opacity', String(style.opacity));
 
   if (style.strokeDasharray) {

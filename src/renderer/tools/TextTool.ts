@@ -41,7 +41,7 @@ export class TextTool implements Tool {
     this.isDialogOpen = false;
 
     if (result) {
-      // Create text shape
+      // Create text shape with text-specific defaults (black fill, no stroke)
       const text = new Text(
         generateId(),
         placement.x,
@@ -50,7 +50,7 @@ export class TextTool implements Tool {
         result.fontSize,
         result.fontFamily,
         result.fontWeight,
-        { ...editorState.currentStyle }
+        { ...editorState.currentStyle, fill: '#000000', fillNone: false, strokeWidth: 0 }
       );
 
       eventBus.emit('shape:added', text);

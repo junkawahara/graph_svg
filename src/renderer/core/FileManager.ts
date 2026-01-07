@@ -376,7 +376,10 @@ export class FileManager {
     }
 
     attrs.push(`stroke="${style.stroke}"`);
-    attrs.push(`stroke-width="${style.strokeWidth}"`);
+    // Only output stroke-width if > 0
+    if (style.strokeWidth > 0) {
+      attrs.push(`stroke-width="${style.strokeWidth}"`);
+    }
 
     if (style.opacity !== 1) {
       attrs.push(`opacity="${style.opacity}"`);
