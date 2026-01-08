@@ -19,8 +19,8 @@ export function createShapeFromData(data: ShapeData, offsetX: number = 0, offset
   const newId = generateId();
 
   switch (data.type) {
-    case 'line':
-      return new Line(
+    case 'line': {
+      const line = new Line(
         newId,
         data.x1 + offsetX,
         data.y1 + offsetY,
@@ -31,9 +31,12 @@ export function createShapeFromData(data: ShapeData, offsetX: number = 0, offset
         { ...data.style },
         data.rotation || 0
       );
+      line.className = data.className;
+      return line;
+    }
 
-    case 'ellipse':
-      return new Ellipse(
+    case 'ellipse': {
+      const ellipse = new Ellipse(
         newId,
         data.cx + offsetX,
         data.cy + offsetY,
@@ -42,9 +45,12 @@ export function createShapeFromData(data: ShapeData, offsetX: number = 0, offset
         { ...data.style },
         data.rotation || 0
       );
+      ellipse.className = data.className;
+      return ellipse;
+    }
 
-    case 'rectangle':
-      return new Rectangle(
+    case 'rectangle': {
+      const rectangle = new Rectangle(
         newId,
         data.x + offsetX,
         data.y + offsetY,
@@ -53,9 +59,12 @@ export function createShapeFromData(data: ShapeData, offsetX: number = 0, offset
         { ...data.style },
         data.rotation || 0
       );
+      rectangle.className = data.className;
+      return rectangle;
+    }
 
-    case 'text':
-      return new Text(
+    case 'text': {
+      const text = new Text(
         newId,
         data.x + offsetX,
         data.y + offsetY,
@@ -73,9 +82,12 @@ export function createShapeFromData(data: ShapeData, offsetX: number = 0, offset
         data.lineHeight || 1.2,
         data.rotation || 0
       );
+      text.className = data.className;
+      return text;
+    }
 
-    case 'node':
-      return new Node(
+    case 'node': {
+      const node = new Node(
         newId,
         data.cx + offsetX,
         data.cy + offsetY,
@@ -87,10 +99,13 @@ export function createShapeFromData(data: ShapeData, offsetX: number = 0, offset
         { ...data.style },
         data.rotation || 0
       );
+      node.className = data.className;
+      return node;
+    }
 
-    case 'edge':
+    case 'edge': {
       // Edge doesn't support rotation
-      return new Edge(
+      const edge = new Edge(
         newId,
         data.sourceNodeId,
         data.targetNodeId,
@@ -100,22 +115,31 @@ export function createShapeFromData(data: ShapeData, offsetX: number = 0, offset
         data.selfLoopAngle,
         { ...data.style }
       );
+      edge.className = data.className;
+      return edge;
+    }
 
-    case 'polygon':
-      return new Polygon(
+    case 'polygon': {
+      const polygon = new Polygon(
         newId,
         data.points.map(p => ({ x: p.x + offsetX, y: p.y + offsetY })),
         { ...data.style },
         data.rotation || 0
       );
+      polygon.className = data.className;
+      return polygon;
+    }
 
-    case 'polyline':
-      return new Polyline(
+    case 'polyline': {
+      const polyline = new Polyline(
         newId,
         data.points.map(p => ({ x: p.x + offsetX, y: p.y + offsetY })),
         { ...data.style },
         data.rotation || 0
       );
+      polyline.className = data.className;
+      return polyline;
+    }
 
     case 'path': {
       // Apply offset to all command coordinates
@@ -152,11 +176,13 @@ export function createShapeFromData(data: ShapeData, offsetX: number = 0, offset
             return { ...cmd };
         }
       });
-      return new Path(newId, offsetCommands, { ...data.style }, data.rotation || 0);
+      const path = new Path(newId, offsetCommands, { ...data.style }, data.rotation || 0);
+      path.className = data.className;
+      return path;
     }
 
-    case 'image':
-      return new Image(
+    case 'image': {
+      const image = new Image(
         newId,
         data.x + offsetX,
         data.y + offsetY,
@@ -167,8 +193,11 @@ export function createShapeFromData(data: ShapeData, offsetX: number = 0, offset
         { ...data.style },
         data.rotation || 0
       );
+      image.className = data.className;
+      return image;
+    }
 
-    case 'group':
+    case 'group': {
       // Recursively create child shapes
       const children = data.children
         .map(childData => createShapeFromData(childData, offsetX, offsetY))
@@ -178,7 +207,10 @@ export function createShapeFromData(data: ShapeData, offsetX: number = 0, offset
         return null;
       }
 
-      return new Group(newId, children, { ...data.style }, data.rotation || 0);
+      const group = new Group(newId, children, { ...data.style }, data.rotation || 0);
+      group.className = data.className;
+      return group;
+    }
 
     default:
       console.warn('Unknown shape type:', (data as any).type);

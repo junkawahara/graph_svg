@@ -206,3 +206,63 @@
 .style-btn s {
   text-decoration: line-through;
 }
+
+/* Rotation input wrapper */
+.rotation-input-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.rotation-input-wrapper input[type="number"] {
+  width: calc(100% - 20px);
+}
+
+.rotation-input-wrapper span {
+  width: auto;
+  text-align: left;
+}
+
+/* Style class selector */
+.class-selector {
+  display: flex;
+  gap: 4px;
+}
+
+.class-selector select {
+  flex: 1;
+  padding: 6px 10px;
+  background-color: #3c3c3c;
+  border: 1px solid #4a4a4a;
+  border-radius: 4px;
+  color: #cccccc;
+  font-size: 13px;
+}
+
+.class-selector select:focus {
+  outline: none;
+  border-color: #0e639c;
+}
+
+.class-btn {
+  width: 28px;
+  height: 28px;
+  border: 1px solid #4a4a4a;
+  background: #3c3c3c;
+  color: #cccccc;
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 16px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.class-btn:hover {
+  background: #4a4a4a;
+}
+
+.class-btn:active {
+  background: #555555;
+}

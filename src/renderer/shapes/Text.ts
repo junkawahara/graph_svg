@@ -8,6 +8,7 @@ export class Text implements Shape {
   readonly type = 'text';
   element: SVGTextElement | null = null;
   rotation: number = 0;
+  className?: string;
 
   constructor(
     public readonly id: string,
@@ -258,12 +259,13 @@ export class Text implements Shape {
       textStrikethrough: this.textStrikethrough,
       lineHeight: this.lineHeight,
       style: { ...this.style },
-      rotation: this.rotation
+      rotation: this.rotation,
+      className: this.className
     };
   }
 
   clone(): Text {
-    return new Text(
+    const cloned = new Text(
       generateId(),
       this.x,
       this.y,
@@ -280,6 +282,8 @@ export class Text implements Shape {
       this.lineHeight,
       this.rotation
     );
+    cloned.className = this.className;
+    return cloned;
   }
 
   applyTransform(translateX: number, translateY: number, scaleX: number, scaleY: number): void {

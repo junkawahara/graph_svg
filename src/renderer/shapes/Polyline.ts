@@ -8,6 +8,7 @@ export class Polyline implements Shape {
   readonly type = 'polyline';
   element: SVGPolylineElement | null = null;
   rotation: number = 0;
+  className?: string;
 
   constructor(
     public readonly id: string,
@@ -189,17 +190,20 @@ export class Polyline implements Shape {
       type: 'polyline',
       points: this.points.map(p => ({ ...p })),
       style: { ...this.style },
-      rotation: this.rotation
+      rotation: this.rotation,
+      className: this.className
     };
   }
 
   clone(): Polyline {
-    return new Polyline(
+    const cloned = new Polyline(
       generateId(),
       this.points.map(p => ({ ...p })),
       { ...this.style },
       this.rotation
     );
+    cloned.className = this.className;
+    return cloned;
   }
 
   applyTransform(translateX: number, translateY: number, scaleX: number, scaleY: number): void {

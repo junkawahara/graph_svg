@@ -9,6 +9,7 @@ export class Line implements Shape {
   readonly type = 'line';
   element: SVGLineElement | null = null;
   rotation: number = 0;
+  className?: string;
 
   constructor(
     public readonly id: string,
@@ -181,12 +182,13 @@ export class Line implements Shape {
       markerStart: this.markerStart,
       markerEnd: this.markerEnd,
       style: { ...this.style },
-      rotation: this.rotation
+      rotation: this.rotation,
+      className: this.className
     };
   }
 
   clone(): Line {
-    return new Line(
+    const cloned = new Line(
       generateId(),
       this.x1,
       this.y1,
@@ -197,6 +199,8 @@ export class Line implements Shape {
       { ...this.style },
       this.rotation
     );
+    cloned.className = this.className;
+    return cloned;
   }
 
   applyTransform(translateX: number, translateY: number, scaleX: number, scaleY: number): void {

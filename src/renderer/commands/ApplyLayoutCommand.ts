@@ -11,7 +11,8 @@ export class ApplyLayoutCommand implements Command {
   constructor(
     private layoutType: LayoutType,
     private canvasWidth: number,
-    private canvasHeight: number
+    private canvasHeight: number,
+    private padding: number = 50
   ) {
     // Capture positions before layout
     this.beforePositions = LayoutManager.capturePositions();
@@ -23,7 +24,7 @@ export class ApplyLayoutCommand implements Command {
       LayoutManager.applyPositions(this.afterPositions);
     } else {
       // First execution - run the layout algorithm
-      LayoutManager.applyLayout(this.layoutType, this.canvasWidth, this.canvasHeight);
+      LayoutManager.applyLayout(this.layoutType, this.canvasWidth, this.canvasHeight, this.padding);
       // Capture positions after layout
       this.afterPositions = LayoutManager.capturePositions();
     }

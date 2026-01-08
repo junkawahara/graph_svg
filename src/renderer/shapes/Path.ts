@@ -9,6 +9,7 @@ export class Path implements Shape {
   readonly type = 'path';
   element: SVGPathElement | null = null;
   rotation: number = 0;
+  className?: string;
 
   constructor(
     public readonly id: string,
@@ -418,17 +419,20 @@ export class Path implements Shape {
       type: 'path',
       commands: this.commands.map(cmd => ({ ...cmd })),
       style: { ...this.style },
-      rotation: this.rotation
+      rotation: this.rotation,
+      className: this.className
     };
   }
 
   clone(): Path {
-    return new Path(
+    const cloned = new Path(
       generateId(),
       this.commands.map(cmd => ({ ...cmd })),
       { ...this.style },
       this.rotation
     );
+    cloned.className = this.className;
+    return cloned;
   }
 
   applyTransform(translateX: number, translateY: number, scaleX: number, scaleY: number): void {

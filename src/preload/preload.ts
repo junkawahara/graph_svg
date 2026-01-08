@@ -113,6 +113,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
     const handler = (_event: IpcRendererEvent) => callback();
     ipcRenderer.on('menu:toggleDirectedEdge', handler);
     return () => ipcRenderer.removeListener('menu:toggleDirectedEdge', handler);
+  },
+  onMenuAlign: (callback: (alignment: string) => void) => {
+    const handler = (_event: IpcRendererEvent, alignment: string) => callback(alignment);
+    ipcRenderer.on('menu:align', handler);
+    return () => ipcRenderer.removeListener('menu:align', handler);
+  },
+  onMenuDistribute: (callback: (distribution: string) => void) => {
+    const handler = (_event: IpcRendererEvent, distribution: string) => callback(distribution);
+    ipcRenderer.on('menu:distribute', handler);
+    return () => ipcRenderer.removeListener('menu:distribute', handler);
   }
 });
 
@@ -147,6 +157,8 @@ declare global {
       onMenuZorder: (callback: (operation: string) => void) => () => void;
       onMenuAutoLayout: (callback: () => void) => () => void;
       onMenuToggleDirectedEdge: (callback: () => void) => () => void;
+      onMenuAlign: (callback: (alignment: string) => void) => () => void;
+      onMenuDistribute: (callback: (distribution: string) => void) => () => void;
     };
   }
 }

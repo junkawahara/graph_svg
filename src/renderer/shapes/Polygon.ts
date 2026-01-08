@@ -8,6 +8,7 @@ export class Polygon implements Shape {
   readonly type = 'polygon';
   element: SVGPolygonElement | null = null;
   rotation: number = 0;
+  className?: string;
 
   constructor(
     public readonly id: string,
@@ -209,17 +210,20 @@ export class Polygon implements Shape {
       type: 'polygon',
       points: this.points.map(p => ({ ...p })),
       style: { ...this.style },
-      rotation: this.rotation
+      rotation: this.rotation,
+      className: this.className
     };
   }
 
   clone(): Polygon {
-    return new Polygon(
+    const cloned = new Polygon(
       generateId(),
       this.points.map(p => ({ ...p })),
       { ...this.style },
       this.rotation
     );
+    cloned.className = this.className;
+    return cloned;
   }
 
   applyTransform(translateX: number, translateY: number, scaleX: number, scaleY: number): void {

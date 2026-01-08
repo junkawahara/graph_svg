@@ -9,6 +9,7 @@ export class Group implements Shape {
   element: SVGGElement | null = null;
   children: Shape[];
   rotation: number = 0;
+  className?: string;
 
   constructor(
     public readonly id: string,
@@ -221,14 +222,17 @@ export class Group implements Shape {
       type: 'group',
       style: { ...this.style },
       children: this.children.map(child => child.serialize()),
-      rotation: this.rotation
+      rotation: this.rotation,
+      className: this.className
     };
   }
 
   clone(): Group {
     // Deep clone all children
     const clonedChildren = this.children.map(child => child.clone());
-    return new Group(generateId(), clonedChildren, { ...this.style }, this.rotation);
+    const cloned = new Group(generateId(), clonedChildren, { ...this.style }, this.rotation);
+    cloned.className = this.className;
+    return cloned;
   }
 
   applyTransform(translateX: number, translateY: number, scaleX: number, scaleY: number): void {

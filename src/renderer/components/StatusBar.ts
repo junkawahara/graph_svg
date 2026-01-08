@@ -19,6 +19,7 @@ const TOOL_NAMES: Record<ToolType, string> = {
   'delete-node': 'Delete Node',
   'delete-edge': 'Delete Edge',
   'pan': 'Pan',
+  'zoom': 'Zoom',
   'rotate': 'Rotate'
 };
 

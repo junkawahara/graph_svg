@@ -477,4 +477,20 @@ function setupMenuListeners(canvas: Canvas): void {
     editorState.setEdgeDirection(newDirection);
     eventBus.emit('edgeDirection:changed', newDirection);
   });
+
+  // Menu: Align
+  window.electronAPI.onMenuAlign((alignment: string) => {
+    const selected = selectionManager.getSelection();
+    if (selected.length >= 2) {
+      eventBus.emit('shapes:align', { shapes: selected, alignment });
+    }
+  });
+
+  // Menu: Distribute
+  window.electronAPI.onMenuDistribute((distribution: string) => {
+    const selected = selectionManager.getSelection();
+    if (selected.length >= 3) {
+      eventBus.emit('shapes:distribute', { shapes: selected, distribution });
+    }
+  });
 }

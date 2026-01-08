@@ -1,7 +1,7 @@
 /**
  * Tool types available in the editor
  */
-export type ToolType = 'select' | 'line' | 'ellipse' | 'rectangle' | 'text' | 'pan'
+export type ToolType = 'select' | 'line' | 'ellipse' | 'rectangle' | 'text' | 'pan' | 'zoom'
   | 'node' | 'edge' | 'delete-node' | 'delete-edge' | 'polygon' | 'polyline' | 'path' | 'rotate';
 
 /**
@@ -82,6 +82,16 @@ export interface ShapeStyle {
 }
 
 /**
+ * Style class definition for CSS-based styling
+ */
+export interface StyleClass {
+  id: string;
+  name: string;        // CSS class name (without dot, e.g., "thick-blue")
+  style: ShapeStyle;
+  isBuiltin: boolean;
+}
+
+/**
  * Default style for new shapes
  */
 export const DEFAULT_STYLE: ShapeStyle = {
@@ -102,6 +112,7 @@ export interface BaseShapeData {
   type: ShapeType;
   style: ShapeStyle;
   rotation?: number;  // Rotation angle in degrees (0-360)
+  className?: string; // Applied CSS class name
 }
 
 /**
@@ -242,6 +253,7 @@ export interface GroupData {
   style: ShapeStyle;
   children: ShapeData[];
   rotation?: number;  // Rotation angle in degrees (0-360)
+  className?: string; // Applied CSS class name
 }
 
 /**
@@ -282,6 +294,8 @@ export type EventName =
   | 'graph:autoLayout'
   | 'shapes:group'
   | 'shapes:ungroup'
+  | 'shapes:align'
+  | 'shapes:distribute'
   | 'file:new'
   | 'file:save'
   | 'file:saveAs'

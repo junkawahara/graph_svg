@@ -17,6 +17,9 @@
         <button id="tool-pan" class="tool-btn" title="Pan (H)">
           <span class="icon">&#9995;</span>
         </button>
+        <button id="tool-zoom" class="tool-btn" title="Zoom (Z)">
+          <span class="icon">&#128269;</span>
+        </button>
         <button id="tool-line" class="tool-btn" title="Line (L)">
           <span class="icon">&#9135;</span>
         </button>
@@ -116,6 +119,18 @@
       <!-- Sidebar -->
       <div id="sidebar">
         <h3>Properties</h3>
+
+        <!-- Style Class selector (shown when shapes are selected) -->
+        <div id="style-class-section" class="property-section" style="display: none;">
+          <label class="section-label">Style Class</label>
+          <div class="class-selector">
+            <select id="prop-style-class">
+              <option value="">(none)</option>
+            </select>
+            <button id="btn-save-class" class="class-btn" title="Save current style as new class">+</button>
+            <button id="btn-manage-classes" class="class-btn" title="Manage style classes">⚙</button>
+          </div>
+        </div>
 
         <!-- Default Node Size (shown when node tool is active) -->
         <div id="default-node-size-section" class="property-section" style="display: none;">

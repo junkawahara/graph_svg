@@ -9,6 +9,7 @@ export class Image implements Shape {
   readonly type = 'image';
   element: SVGImageElement | null = null;
   rotation: number = 0;
+  className?: string;
 
   constructor(
     public readonly id: string,
@@ -143,12 +144,13 @@ export class Image implements Shape {
       href: this.href,
       preserveAspectRatio: this.preserveAspectRatio,
       style: { ...this.style },
-      rotation: this.rotation
+      rotation: this.rotation,
+      className: this.className
     };
   }
 
   clone(): Image {
-    return new Image(
+    const cloned = new Image(
       generateId(),
       this.x,
       this.y,
@@ -159,6 +161,8 @@ export class Image implements Shape {
       { ...this.style },
       this.rotation
     );
+    cloned.className = this.className;
+    return cloned;
   }
 
   applyTransform(translateX: number, translateY: number, scaleX: number, scaleY: number): void {

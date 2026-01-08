@@ -12,8 +12,9 @@ export class LayoutManager {
    * @param layoutType The layout algorithm to use
    * @param canvasWidth Canvas width for centering
    * @param canvasHeight Canvas height for centering
+   * @param padding Padding from canvas edges (default: 50)
    */
-  static applyLayout(layoutType: LayoutType, canvasWidth: number, canvasHeight: number): void {
+  static applyLayout(layoutType: LayoutType, canvasWidth: number, canvasHeight: number, padding: number = 50): void {
     const gm = getGraphManager();
     const nodeIds = gm.getAllNodeIds();
     const edgeIds = gm.getAllEdgeIds();
@@ -92,7 +93,7 @@ export class LayoutManager {
     });
 
     // Center the result on canvas
-    this.centerOnCanvas(nodeIds, canvasWidth, canvasHeight);
+    this.centerOnCanvas(nodeIds, canvasWidth, canvasHeight, padding);
 
     // DEBUG: Log positions after centering
     console.log('--- After Centering (Final Positions) ---');
@@ -180,39 +181,45 @@ export class LayoutManager {
   /**
    * Scale and center all nodes to fit the canvas
    */
-  private static centerOnCanvas(nodeIds: string[], canvasWidth: number, canvasHeight: number): void {
+  private static centerOnCanvas(nodeIds: string[], canvasWidth: number, canvasHeight: number, padding: number): void {
     const gm = getGraphManager();
 
     if (nodeIds.length === 0) return;
 
-    // Calculate bounding box of all nodes
-    let minX = Infinity, minY = Infinity;
-    let maxX = -Infinity, maxY = -Infinity;
+    // Calculate bounding box of node CENTERS (not including radii)
+    let minCX = Infinity, minCY = Infinity;
+    let maxCX = -Infinity, maxCY = -Infinity;
+    let maxRX = 0, maxRY = 0;
 
     nodeIds.forEach(id => {
       const node = gm.getNodeShape(id);
       if (node) {
-        minX = Math.min(minX, node.cx - node.rx);
-        minY = Math.min(minY, node.cy - node.ry);
-        maxX = Math.max(maxX, node.cx + node.rx);
-        maxY = Math.max(maxY, node.cy + node.ry);
+        minCX = Math.min(minCX, node.cx);
+        minCY = Math.min(minCY, node.cy);
+        maxCX = Math.max(maxCX, node.cx);
+        maxCY = Math.max(maxCY, node.cy);
+        maxRX = Math.max(maxRX, node.rx);
+        maxRY = Math.max(maxRY, node.ry);
       }
     });
 
-    // Calculate current bounds dimensions
-    const boundsWidth = maxX - minX;
-    const boundsHeight = maxY - minY;
+    // Calculate current bounds dimensions (centers only)
+    const centersWidth = maxCX - minCX;
+    const centersHeight = maxCY - minCY;
 
     // DEBUG: Log centering calculations
     console.log('--- Centering Calculations ---');
-    console.log(`  Bounding box: minX=${minX.toFixed(2)}, minY=${minY.toFixed(2)}, maxX=${maxX.toFixed(2)}, maxY=${maxY.toFixed(2)}`);
-    console.log(`  Bounds size: width=${boundsWidth.toFixed(2)}, height=${boundsHeight.toFixed(2)}`);
+    console.log(`  Centers bounding box: minCX=${minCX.toFixed(2)}, minCY=${minCY.toFixed(2)}, maxCX=${maxCX.toFixed(2)}, maxCY=${maxCY.toFixed(2)}`);
+    console.log(`  Centers size: width=${centersWidth.toFixed(2)}, height=${centersHeight.toFixed(2)}`);
+    console.log(`  Max node radius: rx=${maxRX}, ry=${maxRY}`);
+
+    // Calculate canvas center
+    const canvasCenterX = canvasWidth / 2;
+    const canvasCenterY = canvasHeight / 2;
 
     // Skip if bounds are zero (single node or identical positions)
-    if (boundsWidth <= 0 && boundsHeight <= 0) {
+    if (centersWidth <= 0 && centersHeight <= 0) {
       // Just center a single node
-      const canvasCenterX = canvasWidth / 2;
-      const canvasCenterY = canvasHeight / 2;
       nodeIds.forEach(id => {
         const node = gm.getNodeShape(id);
         if (node) {
@@ -224,37 +231,32 @@ export class LayoutManager {
       return;
     }
 
-    // Target area: use 80% of canvas with padding
-    const padding = 50;
-    const targetWidth = canvasWidth - padding * 2;
-    const targetHeight = canvasHeight - padding * 2;
+    // Target area: canvas minus padding and node radii
+    const targetWidth = canvasWidth - padding * 2 - maxRX * 2;
+    const targetHeight = canvasHeight - padding * 2 - maxRY * 2;
 
-    // Calculate scale factor to fit nodes into target area
-    const scaleX = boundsWidth > 0 ? targetWidth / boundsWidth : 1;
-    const scaleY = boundsHeight > 0 ? targetHeight / boundsHeight : 1;
-    const scale = Math.min(scaleX, scaleY, 3); // Cap scale at 3x to avoid excessive spreading
+    // Calculate scale factor to fit node centers into target area
+    const scaleX = centersWidth > 0 ? targetWidth / centersWidth : 1;
+    const scaleY = centersHeight > 0 ? targetHeight / centersHeight : 1;
+    const scale = Math.min(scaleX, scaleY); // Use full canvas area
 
-    // Calculate center of bounding box
-    const boundsCenterX = (minX + maxX) / 2;
-    const boundsCenterY = (minY + maxY) / 2;
-
-    // Calculate canvas center
-    const canvasCenterX = canvasWidth / 2;
-    const canvasCenterY = canvasHeight / 2;
+    // Calculate center of centers bounding box
+    const centersCenterX = (minCX + maxCX) / 2;
+    const centersCenterY = (minCY + maxCY) / 2;
 
     // DEBUG: Log scale and center info
-    console.log(`  Target area: ${targetWidth.toFixed(2)} x ${targetHeight.toFixed(2)} (padding=${padding})`);
+    console.log(`  Target area: ${targetWidth.toFixed(2)} x ${targetHeight.toFixed(2)} (padding=${padding}, nodeRadius=${maxRX}x${maxRY})`);
     console.log(`  Scale factors: scaleX=${scaleX.toFixed(4)}, scaleY=${scaleY.toFixed(4)}, final scale=${scale.toFixed(4)}`);
-    console.log(`  Bounds center: (${boundsCenterX.toFixed(2)}, ${boundsCenterY.toFixed(2)})`);
+    console.log(`  Centers center: (${centersCenterX.toFixed(2)}, ${centersCenterY.toFixed(2)})`);
     console.log(`  Canvas center: (${canvasCenterX.toFixed(2)}, ${canvasCenterY.toFixed(2)})`);
 
     // Apply scale and center to all nodes
     nodeIds.forEach(id => {
       const node = gm.getNodeShape(id);
       if (node) {
-        // Scale relative to bounds center, then translate to canvas center
-        const relX = node.cx - boundsCenterX;
-        const relY = node.cy - boundsCenterY;
+        // Scale relative to centers center, then translate to canvas center
+        const relX = node.cx - centersCenterX;
+        const relY = node.cy - centersCenterY;
         node.cx = canvasCenterX + relX * scale;
         node.cy = canvasCenterY + relY * scale;
         node.updateElement();

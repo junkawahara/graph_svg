@@ -18,6 +18,7 @@ import { PolygonTool } from '../tools/PolygonTool';
 import { PolylineTool } from '../tools/PolylineTool';
 import { PathTool } from '../tools/PathTool';
 import { RotateTool } from '../tools/RotateTool';
+import { ZoomTool } from '../tools/ZoomTool';
 import { Shape } from '../shapes/Shape';
 import { Line } from '../shapes/Line';
 import { Ellipse } from '../shapes/Ellipse';
@@ -51,6 +52,8 @@ import { ZOrderCommand, ZOrderOperation } from '../commands/ZOrderCommand';
 import { ApplyLayoutCommand } from '../commands/ApplyLayoutCommand';
 import { GroupShapesCommand } from '../commands/GroupShapesCommand';
 import { UngroupShapesCommand } from '../commands/UngroupShapesCommand';
+import { AlignShapesCommand, AlignmentType } from '../commands/AlignShapesCommand';
+import { DistributeShapesCommand, DistributionType } from '../commands/DistributeShapesCommand';
 import { EditSvgCommand } from '../commands/EditSvgCommand';
 import { initMarkerManager } from '../core/MarkerManager';
 import { SvgEditDialog } from './SvgEditDialog';
@@ -202,6 +205,20 @@ export class Canvas {
     // Listen for ungroup requests
     eventBus.on('shapes:ungroup', (group: Group) => {
       const command = new UngroupShapesCommand(this, group);
+      historyManager.execute(command);
+    });
+
+    // Listen for align requests
+    eventBus.on('shapes:align', (data: { shapes: Shape[]; alignment: string }) => {
+      if (data.shapes.length < 2) return;
+      const command = new AlignShapesCommand(data.shapes, data.alignment as AlignmentType);
+      historyManager.execute(command);
+    });
+
+    // Listen for distribute requests
+    eventBus.on('shapes:distribute', (data: { shapes: Shape[]; distribution: string }) => {
+      if (data.shapes.length < 3) return;
+      const command = new DistributeShapesCommand(data.shapes, data.distribution as DistributionType);
       historyManager.execute(command);
     });
 
@@ -396,6 +413,13 @@ export class Canvas {
       getShapes: () => this.getShapes(),
       getSvgElement: () => this.svg,
       updateHandles: () => this.updateHandles()
+    }));
+    this.tools.set('zoom', new ZoomTool({
+      getSvgElement: () => this.svg,
+      zoomInAt: (screenX, screenY) => this.zoomInAt(screenX, screenY),
+      zoomOutAt: (screenX, screenY) => this.zoomOutAt(screenX, screenY),
+      zoomToRect: (x, y, w, h) => this.zoomToRect(x, y, w, h),
+      screenToSvg: (screenX, screenY) => this.screenToSvg(screenX, screenY)
     }));
     console.log('Canvas: All tools registered');
 
@@ -757,6 +781,47 @@ export class Canvas {
   }
 
   /**
+   * Zoom in at a specific screen point
+   */
+  zoomInAt(screenX: number, screenY: number): void {
+    this.zoomAt(screenX, screenY, this.ZOOM_FACTOR * 3);
+  }
+
+  /**
+   * Zoom out at a specific screen point
+   */
+  zoomOutAt(screenX: number, screenY: number): void {
+    this.zoomAt(screenX, screenY, -this.ZOOM_FACTOR * 3);
+  }
+
+  /**
+   * Zoom to fit a rectangle (in SVG coordinates) in the view
+   */
+  zoomToRect(svgX: number, svgY: number, svgWidth: number, svgHeight: number): void {
+    const containerRect = this.container.getBoundingClientRect();
+    const containerWidth = containerRect.width;
+    const containerHeight = containerRect.height;
+
+    // Calculate the scale needed to fit the rectangle
+    const scaleX = containerWidth / svgWidth;
+    const scaleY = containerHeight / svgHeight;
+    const newScale = Math.min(scaleX, scaleY) * 0.9; // 0.9 to add some margin
+
+    // Clamp to min/max scale
+    this.scale = Math.min(this.MAX_SCALE, Math.max(this.MIN_SCALE, newScale));
+
+    // Center the rectangle in the view
+    const centerX = svgX + svgWidth / 2;
+    const centerY = svgY + svgHeight / 2;
+
+    // Calculate pan to center the rectangle
+    this.panX = centerX - (containerWidth / 2) / this.scale;
+    this.panY = centerY - (containerHeight / 2) / this.scale;
+
+    this.updateViewBox();
+  }
+
+  /**
    * Update cursor based on current tool
    */
   private updateCursor(): void {
@@ -785,6 +850,9 @@ export class Canvas {
         break;
       case 'pan':
         this.svg.style.cursor = 'grab';
+        break;
+      case 'zoom':
+        this.svg.style.cursor = 'zoom-in';
         break;
       case 'rotate':
         this.svg.style.cursor = 'crosshair';
@@ -977,7 +1045,7 @@ export class Canvas {
   /**
    * Apply automatic graph layout using cytoscape.js
    */
-  private applyAutoLayout(): void {
+  private async applyAutoLayout(): Promise<void> {
     const gm = getGraphManager();
     const nodeIds = gm.getAllNodeIds();
 
@@ -987,13 +1055,15 @@ export class Canvas {
       return;
     }
 
-    // Get canvas dimensions
-    const rect = this.container.getBoundingClientRect();
-    const canvasWidth = rect.width;
-    const canvasHeight = rect.height;
+    // Get logical canvas dimensions (not screen size)
+    const canvasSize = editorState.canvasSize;
+
+    // Read settings for padding
+    const settings = await window.electronAPI.readSettings();
+    const padding = settings.autoLayoutPadding ?? 50;
 
     // Create and execute the layout command
-    const command = new ApplyLayoutCommand('cose', canvasWidth, canvasHeight);
+    const command = new ApplyLayoutCommand('cose', canvasSize.width, canvasSize.height, padding);
     historyManager.execute(command);
 
     // Clear selection and update handles
@@ -1040,6 +1110,48 @@ export class Canvas {
       menuItems.push({
         label: '1つ背面へ',
         action: () => eventBus.emit('shapes:zorder', { shapes: selectedShapes, operation: 'sendBackward' as ZOrderOperation })
+      });
+    }
+
+    // Align options (show when 2+ shapes selected)
+    if (selectedShapes.length >= 2) {
+      menuItems.push({
+        label: '─整列─',
+        action: () => {},
+        disabled: true
+      });
+      menuItems.push({
+        label: '左揃え',
+        action: () => eventBus.emit('shapes:align', { shapes: selectedShapes, alignment: 'left' })
+      });
+      menuItems.push({
+        label: '右揃え',
+        action: () => eventBus.emit('shapes:align', { shapes: selectedShapes, alignment: 'right' })
+      });
+      menuItems.push({
+        label: '上揃え',
+        action: () => eventBus.emit('shapes:align', { shapes: selectedShapes, alignment: 'top' })
+      });
+      menuItems.push({
+        label: '下揃え',
+        action: () => eventBus.emit('shapes:align', { shapes: selectedShapes, alignment: 'bottom' })
+      });
+    }
+
+    // Distribute options (show when 3+ shapes selected)
+    if (selectedShapes.length >= 3) {
+      menuItems.push({
+        label: '─均等配置─',
+        action: () => {},
+        disabled: true
+      });
+      menuItems.push({
+        label: '水平方向に均等配置',
+        action: () => eventBus.emit('shapes:distribute', { shapes: selectedShapes, distribution: 'horizontal' })
+      });
+      menuItems.push({
+        label: '垂直方向に均等配置',
+        action: () => eventBus.emit('shapes:distribute', { shapes: selectedShapes, distribution: 'vertical' })
       });
     }
 

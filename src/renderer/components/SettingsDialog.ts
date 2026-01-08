@@ -11,7 +11,11 @@ export class SettingsDialog {
   /**
    * Show the settings dialog
    */
+  private currentStyleClasses: AppSettings['styleClasses'] = [];
+
   show(currentSettings: AppSettings): Promise<AppSettings | null> {
+    // Store styleClasses to preserve them on save
+    this.currentStyleClasses = currentSettings.styleClasses || [];
     return new Promise((resolve) => {
       this.resolvePromise = resolve;
       this.createDialog(currentSettings);
@@ -46,6 +50,10 @@ export class SettingsDialog {
           <label for="fit-margin">Fit to Content 余白 (px)</label>
           <input type="number" id="fit-margin" value="${currentSettings.fitToContentMargin}" min="0" max="100" step="5">
         </div>
+        <div class="dialog-field">
+          <label for="auto-layout-padding">自動レイアウト 余白 (px)</label>
+          <input type="number" id="auto-layout-padding" value="${currentSettings.autoLayoutPadding ?? 50}" min="0" step="10">
+        </div>
       </div>
       <div class="dialog-footer">
         <button class="dialog-btn dialog-btn-cancel">キャンセル</button>
@@ -60,6 +68,7 @@ export class SettingsDialog {
     const snapOnStartupCheckbox = this.dialog.querySelector('#snap-on-startup') as HTMLInputElement;
     const gridSizeInput = this.dialog.querySelector('#grid-size') as HTMLInputElement;
     const fitMarginInput = this.dialog.querySelector('#fit-margin') as HTMLInputElement;
+    const autoLayoutPaddingInput = this.dialog.querySelector('#auto-layout-padding') as HTMLInputElement;
     const okBtn = this.dialog.querySelector('.dialog-btn-ok') as HTMLButtonElement;
     const cancelBtn = this.dialog.querySelector('.dialog-btn-cancel') as HTMLButtonElement;
 
@@ -73,13 +82,13 @@ export class SettingsDialog {
         this.close(null);
       } else if (e.key === 'Enter') {
         e.preventDefault();
-        this.submitDialog(snapOnStartupCheckbox, gridSizeInput, fitMarginInput);
+        this.submitDialog(snapOnStartupCheckbox, gridSizeInput, fitMarginInput, autoLayoutPaddingInput);
       }
     });
 
     // Button handlers
     okBtn.addEventListener('click', () => {
-      this.submitDialog(snapOnStartupCheckbox, gridSizeInput, fitMarginInput);
+      this.submitDialog(snapOnStartupCheckbox, gridSizeInput, fitMarginInput, autoLayoutPaddingInput);
     });
 
     cancelBtn.addEventListener('click', () => {
@@ -87,13 +96,16 @@ export class SettingsDialog {
     });
   }
 
-  private submitDialog(snapOnStartupCheckbox: HTMLInputElement, gridSizeInput: HTMLInputElement, fitMarginInput: HTMLInputElement): void {
+  private submitDialog(snapOnStartupCheckbox: HTMLInputElement, gridSizeInput: HTMLInputElement, fitMarginInput: HTMLInputElement, autoLayoutPaddingInput: HTMLInputElement): void {
     const gridSize = Math.max(5, Math.min(100, parseInt(gridSizeInput.value, 10) || 10));
     const fitToContentMargin = Math.max(0, Math.min(100, parseInt(fitMarginInput.value, 10) || 20));
+    const autoLayoutPadding = Math.max(0, parseInt(autoLayoutPaddingInput.value, 10) || 50);
     const result: AppSettings = {
       snapOnStartup: snapOnStartupCheckbox.checked,
       gridSize,
-      fitToContentMargin
+      fitToContentMargin,
+      autoLayoutPadding,
+      styleClasses: this.currentStyleClasses
     };
 
     this.close(result);

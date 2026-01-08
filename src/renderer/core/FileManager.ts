@@ -1,4 +1,4 @@
-import { ShapeStyle, DEFAULT_STYLE, StrokeLinecap, MarkerType, EdgeDirection, CanvasSize, DEFAULT_CANVAS_SIZE, Point } from '../../shared/types';
+import { ShapeStyle, StyleClass, DEFAULT_STYLE, StrokeLinecap, MarkerType, EdgeDirection, CanvasSize, DEFAULT_CANVAS_SIZE, Point } from '../../shared/types';
 import { Shape } from '../shapes/Shape';
 import { Line } from '../shapes/Line';
 import { Ellipse } from '../shapes/Ellipse';
@@ -14,6 +14,7 @@ import { Group } from '../shapes/Group';
 import { getGraphManager } from './GraphManager';
 import { parseTransform, combineTransforms, ParsedTransform, IDENTITY_TRANSFORM, isIdentityTransform, hasRotation, hasSkew } from './TransformParser';
 import { serializePath } from './PathParser';
+import { styleClassManager } from './StyleClassManager';
 
 // Marker definitions for SVG export
 const MARKER_SVG_DEFS: Record<Exclude<MarkerType, 'none'>, { path: string; filled: boolean; strokeWidth?: number }> = {
@@ -37,10 +38,36 @@ export class FileManager {
       `  <!-- Created with DrawSVG -->`
     ];
 
-    // Add marker defs if any lines use markers
+    // Collect used class names
+    const usedClasses = this.collectUsedClasses(shapes);
+
+    // Generate defs section (markers and style classes)
+    const hasDefs = usedClasses.size > 0;
     const markerDefs = this.generateMarkerDefs(shapes);
-    if (markerDefs) {
-      svgLines.push(markerDefs);
+
+    if (hasDefs || markerDefs) {
+      svgLines.push('  <defs>');
+
+      // Add style block for used classes
+      if (usedClasses.size > 0) {
+        svgLines.push('    <style>');
+        usedClasses.forEach(className => {
+          const styleClass = styleClassManager.getClass(className);
+          if (styleClass) {
+            svgLines.push(`      .${className} { ${this.styleToCSS(styleClass.style)} }`);
+          }
+        });
+        svgLines.push('    </style>');
+      }
+
+      // Add marker definitions (without outer <defs> wrapper)
+      if (markerDefs) {
+        // Extract inner content from markerDefs (it already has <defs> wrapper)
+        const innerMarkerDefs = markerDefs.replace(/^\s*<defs>\n?/, '').replace(/\n?\s*<\/defs>\s*$/, '');
+        svgLines.push(innerMarkerDefs);
+      }
+
+      svgLines.push('  </defs>');
     }
 
     shapes.forEach(shape => {
@@ -49,6 +76,59 @@ export class FileManager {
 
     svgLines.push('</svg>');
     return svgLines.join('\n');
+  }
+
+  /**
+   * Collect all used class names from shapes recursively
+   */
+  private static collectUsedClasses(shapes: Shape[]): Set<string> {
+    const usedClasses = new Set<string>();
+
+    const collect = (shapeList: Shape[]) => {
+      for (const shape of shapeList) {
+        if (shape.className) {
+          usedClasses.add(shape.className);
+        }
+        if (shape instanceof Group) {
+          collect(shape.children);
+        }
+      }
+    };
+
+    collect(shapes);
+    return usedClasses;
+  }
+
+  /**
+   * Convert ShapeStyle to CSS string
+   */
+  private static styleToCSS(style: ShapeStyle): string {
+    const props: string[] = [];
+
+    if (style.fillNone) {
+      props.push('fill: none');
+    } else {
+      props.push(`fill: ${style.fill}`);
+    }
+
+    if (style.strokeWidth > 0) {
+      props.push(`stroke: ${style.stroke}`);
+      props.push(`stroke-width: ${style.strokeWidth}`);
+      if (style.strokeDasharray) {
+        props.push(`stroke-dasharray: ${style.strokeDasharray}`);
+      }
+      if (style.strokeLinecap !== 'butt') {
+        props.push(`stroke-linecap: ${style.strokeLinecap}`);
+      }
+    } else {
+      props.push('stroke: none');
+    }
+
+    if (style.opacity !== 1) {
+      props.push(`opacity: ${style.opacity}`);
+    }
+
+    return props.join('; ');
   }
 
   /**
@@ -122,7 +202,9 @@ export class FileManager {
    * Convert a shape to SVG element string
    */
   private static shapeToSvgElement(shape: Shape): string {
-    const style = this.styleToAttributes(shape.style);
+    // Get style attributes (either full style or diff from class)
+    const style = this.getShapeStyleAttributes(shape);
+    const classAttr = shape.className ? `class="${shape.className}" ` : '';
 
     if (shape instanceof Line) {
       let markerAttrs = '';
@@ -132,11 +214,11 @@ export class FileManager {
       if (shape.markerEnd !== 'none') {
         markerAttrs += ` marker-end="url(#marker-${shape.markerEnd}-end)"`;
       }
-      return `  <line id="${shape.id}" x1="${shape.x1}" y1="${shape.y1}" x2="${shape.x2}" y2="${shape.y2}" ${style}${markerAttrs}/>`;
+      return `  <line id="${shape.id}" ${classAttr}x1="${shape.x1}" y1="${shape.y1}" x2="${shape.x2}" y2="${shape.y2}" ${style}${markerAttrs}/>`;
     } else if (shape instanceof Ellipse) {
-      return `  <ellipse id="${shape.id}" cx="${shape.cx}" cy="${shape.cy}" rx="${shape.rx}" ry="${shape.ry}" ${style}/>`;
+      return `  <ellipse id="${shape.id}" ${classAttr}cx="${shape.cx}" cy="${shape.cy}" rx="${shape.rx}" ry="${shape.ry}" ${style}/>`;
     } else if (shape instanceof Rectangle) {
-      return `  <rect id="${shape.id}" x="${shape.x}" y="${shape.y}" width="${shape.width}" height="${shape.height}" ${style}/>`;
+      return `  <rect id="${shape.id}" ${classAttr}x="${shape.x}" y="${shape.y}" width="${shape.width}" height="${shape.height}" ${style}/>`;
     } else if (shape instanceof Text) {
       // Build text-decoration attribute
       const decorations: string[] = [];
@@ -155,7 +237,7 @@ export class FileManager {
       if (lines.length === 1) {
         // Single line
         const escapedContent = this.escapeXml(shape.content);
-        return `  <text id="${shape.id}" x="${shape.x}" y="${shape.y}" font-size="${shape.fontSize}" font-family="${shape.fontFamily}" font-weight="${shape.fontWeight}" text-anchor="${shape.textAnchor}"${fontStyleAttr}${textDecorationAttr} dominant-baseline="${shape.dominantBaseline}" ${style}>${escapedContent}</text>`;
+        return `  <text id="${shape.id}" ${classAttr}x="${shape.x}" y="${shape.y}" font-size="${shape.fontSize}" font-family="${shape.fontFamily}" font-weight="${shape.fontWeight}" text-anchor="${shape.textAnchor}"${fontStyleAttr}${textDecorationAttr} dominant-baseline="${shape.dominantBaseline}" ${style}>${escapedContent}</text>`;
       } else {
         // Multi-line with tspans
         const tspanLines = lines.map((line, index) => {
@@ -164,7 +246,7 @@ export class FileManager {
           return `    <tspan x="${shape.x}" dy="${dy}">${escapedLine}</tspan>`;
         }).join('\n');
 
-        return `  <text id="${shape.id}" x="${shape.x}" y="${shape.y}" font-size="${shape.fontSize}" font-family="${shape.fontFamily}" font-weight="${shape.fontWeight}" text-anchor="${shape.textAnchor}"${fontStyleAttr}${textDecorationAttr} dominant-baseline="${shape.dominantBaseline}" ${style}>\n${tspanLines}\n  </text>`;
+        return `  <text id="${shape.id}" ${classAttr}x="${shape.x}" y="${shape.y}" font-size="${shape.fontSize}" font-family="${shape.fontFamily}" font-weight="${shape.fontWeight}" text-anchor="${shape.textAnchor}"${fontStyleAttr}${textDecorationAttr} dominant-baseline="${shape.dominantBaseline}" ${style}>\n${tspanLines}\n  </text>`;
       }
     } else if (shape instanceof Node) {
       return this.nodeToSvgElement(shape);
@@ -172,10 +254,10 @@ export class FileManager {
       return this.edgeToSvgElement(shape);
     } else if (shape instanceof Polygon) {
       const points = shape.points.map(p => `${p.x},${p.y}`).join(' ');
-      return `  <polygon id="${shape.id}" points="${points}" ${style}/>`;
+      return `  <polygon id="${shape.id}" ${classAttr}points="${points}" ${style}/>`;
     } else if (shape instanceof Polyline) {
       const points = shape.points.map(p => `${p.x},${p.y}`).join(' ');
-      return `  <polyline id="${shape.id}" points="${points}" ${style}/>`;
+      return `  <polyline id="${shape.id}" ${classAttr}points="${points}" ${style}/>`;
     } else if (shape instanceof Path) {
       return this.pathToSvgElement(shape);
     } else if (shape instanceof Image) {
@@ -188,14 +270,75 @@ export class FileManager {
   }
 
   /**
+   * Get style attributes for a shape
+   * If shape has className, returns only diff from class style
+   * Otherwise returns full style attributes
+   */
+  private static getShapeStyleAttributes(shape: Shape): string {
+    if (shape.className) {
+      // Get diff from class style
+      const diff = styleClassManager.computeStyleDiff(shape.className, shape.style);
+      return this.partialStyleToAttributes(diff);
+    } else {
+      // No class, output full style
+      return this.styleToAttributes(shape.style);
+    }
+  }
+
+  /**
+   * Convert partial style to SVG attributes string
+   */
+  private static partialStyleToAttributes(style: Partial<ShapeStyle>): string {
+    const attrs: string[] = [];
+
+    if (style.fillNone !== undefined) {
+      if (style.fillNone) {
+        attrs.push('fill="none"');
+      } else if (style.fill) {
+        attrs.push(`fill="${style.fill}"`);
+      }
+    } else if (style.fill !== undefined) {
+      attrs.push(`fill="${style.fill}"`);
+    }
+
+    if (style.strokeWidth !== undefined) {
+      if (style.strokeWidth > 0) {
+        if (style.stroke !== undefined) {
+          attrs.push(`stroke="${style.stroke}"`);
+        }
+        attrs.push(`stroke-width="${style.strokeWidth}"`);
+      } else {
+        attrs.push('stroke="none"');
+      }
+    } else if (style.stroke !== undefined) {
+      attrs.push(`stroke="${style.stroke}"`);
+    }
+
+    if (style.strokeDasharray !== undefined && style.strokeDasharray) {
+      attrs.push(`stroke-dasharray="${style.strokeDasharray}"`);
+    }
+
+    if (style.strokeLinecap !== undefined && style.strokeLinecap !== 'butt') {
+      attrs.push(`stroke-linecap="${style.strokeLinecap}"`);
+    }
+
+    if (style.opacity !== undefined && style.opacity !== 1) {
+      attrs.push(`opacity="${style.opacity}"`);
+    }
+
+    return attrs.join(' ');
+  }
+
+  /**
    * Convert a Node to SVG element string
    */
   private static nodeToSvgElement(node: Node): string {
-    const style = this.styleToAttributes(node.style);
+    const style = this.getShapeStyleAttributes(node);
+    const classAttr = node.className ? `class="${node.className}" ` : '';
     const escapedLabel = this.escapeXml(node.label);
     const lines: string[] = [];
 
-    lines.push(`  <g id="${node.id}" data-graph-type="node" data-label="${escapedLabel}">`);
+    lines.push(`  <g id="${node.id}" ${classAttr}data-graph-type="node" data-label="${escapedLabel}">`);
     lines.push(`    <ellipse cx="${node.cx}" cy="${node.cy}" rx="${node.rx}" ry="${node.ry}" ${style}/>`);
     lines.push(`    <text x="${node.cx}" y="${node.cy}" text-anchor="middle" dominant-baseline="middle" font-size="${node.fontSize}" font-family="${node.fontFamily}" fill="${node.style.stroke}" pointer-events="none">${escapedLabel}</text>`);
     lines.push(`  </g>`);
@@ -255,15 +398,17 @@ export class FileManager {
    * Convert a Path to SVG element string
    */
   private static pathToSvgElement(path: Path): string {
-    const style = this.styleToAttributes(path.style);
+    const style = this.getShapeStyleAttributes(path);
+    const classAttr = path.className ? `class="${path.className}" ` : '';
     const pathData = serializePath(path.commands);
-    return `  <path id="${path.id}" d="${pathData}" ${style}/>`;
+    return `  <path id="${path.id}" ${classAttr}d="${pathData}" ${style}/>`;
   }
 
   /**
    * Convert an Image to SVG element string
    */
   private static imageToSvgElement(image: Image): string {
+    const classAttr = image.className ? `class="${image.className}" ` : '';
     const attrs: string[] = [
       `id="${image.id}"`,
       `x="${image.x}"`,
@@ -278,7 +423,7 @@ export class FileManager {
       attrs.push(`opacity="${image.style.opacity}"`);
     }
 
-    return `  <image ${attrs.join(' ')}/>`;
+    return `  <image ${classAttr}${attrs.join(' ')}/>`;
   }
 
   /**
@@ -343,9 +488,10 @@ export class FileManager {
    * Convert a Group to SVG element string
    */
   private static groupToSvgElement(group: Group, indent: string = '  '): string {
+    const classAttr = group.className ? `class="${group.className}" ` : '';
     const lines: string[] = [];
 
-    lines.push(`${indent}<g id="${group.id}" data-group-type="group">`);
+    lines.push(`${indent}<g id="${group.id}" ${classAttr}data-group-type="group">`);
 
     // Recursively convert children
     for (const child of group.children) {
@@ -425,6 +571,13 @@ export class FileManager {
       height: isNaN(height) || height <= 0 ? DEFAULT_CANVAS_SIZE.height : height
     };
 
+    // Parse <style> block and register temporary classes
+    const styleElement = svg.querySelector('style');
+    const fileClasses = this.parseStyleBlock(styleElement?.textContent || '');
+    if (fileClasses.length > 0) {
+      styleClassManager.registerTemporaryClasses(fileClasses);
+    }
+
     const shapes: Shape[] = [];
     const gm = getGraphManager();
 
@@ -433,9 +586,11 @@ export class FileManager {
     nodeElements.forEach(el => {
       const ellipse = el.querySelector('ellipse');
       if (ellipse) {
-        const style = this.parseStyleFromElement(ellipse);
+        const className = el.getAttribute('class') || undefined;
+        const style = this.parseStyleWithClass(ellipse, className);
         const node = Node.fromElement(el as SVGGElement, style);
         if (node) {
+          node.className = className;
           const transform = parseTransform(el.getAttribute('transform'));
           this.applyTransformToShape(node, transform);
           shapes.push(node);
@@ -476,10 +631,12 @@ export class FileManager {
     lines.forEach(el => {
       if (isInsideGroupOrNode(el)) return;
 
-      const style = this.parseStyleFromElement(el);
+      const className = el.getAttribute('class') || undefined;
+      const style = this.parseStyleWithClass(el, className);
       const markerStart = this.parseMarkerType(el.getAttribute('marker-start'));
       const markerEnd = this.parseMarkerType(el.getAttribute('marker-end'));
       const line = Line.fromElement(el, style, markerStart, markerEnd);
+      line.className = className;
       const transform = parseTransform(el.getAttribute('transform'));
       this.applyTransformToShape(line, transform);
       shapes.push(line);
@@ -490,8 +647,10 @@ export class FileManager {
     ellipses.forEach(el => {
       if (isInsideGroupOrNode(el)) return;
 
-      const style = this.parseStyleFromElement(el);
+      const className = el.getAttribute('class') || undefined;
+      const style = this.parseStyleWithClass(el, className);
       const ellipse = Ellipse.fromElement(el, style);
+      ellipse.className = className;
       const transform = parseTransform(el.getAttribute('transform'));
       this.applyTransformToShape(ellipse, transform);
       shapes.push(ellipse);
@@ -502,11 +661,13 @@ export class FileManager {
     circles.forEach(el => {
       if (isInsideGroupOrNode(el)) return;
 
-      const style = this.parseStyleFromElement(el);
+      const className = el.getAttribute('class') || undefined;
+      const style = this.parseStyleWithClass(el, className);
       const cx = parseFloat(el.getAttribute('cx') || '0');
       const cy = parseFloat(el.getAttribute('cy') || '0');
       const r = parseFloat(el.getAttribute('r') || '0');
       const ellipse = Ellipse.fromCenter({ x: cx, y: cy }, r, r, style);
+      ellipse.className = className;
       const transform = parseTransform(el.getAttribute('transform'));
       this.applyTransformToShape(ellipse, transform);
       shapes.push(ellipse);
@@ -517,8 +678,10 @@ export class FileManager {
     rects.forEach(el => {
       if (isInsideGroupOrNode(el)) return;
 
-      const style = this.parseStyleFromElement(el);
+      const className = el.getAttribute('class') || undefined;
+      const style = this.parseStyleWithClass(el, className);
       const rectangle = Rectangle.fromElement(el, style);
+      rectangle.className = className;
       const transform = parseTransform(el.getAttribute('transform'));
       this.applyTransformToShape(rectangle, transform);
       shapes.push(rectangle);
@@ -529,8 +692,10 @@ export class FileManager {
     texts.forEach(el => {
       if (isInsideGroupOrNode(el)) return;
 
-      const style = this.parseTextStyleFromElement(el);
+      const className = el.getAttribute('class') || undefined;
+      const style = this.parseTextStyleWithClass(el, className);
       const text = Text.fromElement(el, style);
+      text.className = className;
       const transform = parseTransform(el.getAttribute('transform'));
       this.applyTransformToShape(text, transform);
       shapes.push(text);
@@ -541,8 +706,10 @@ export class FileManager {
     polygons.forEach(el => {
       if (isInsideGroupOrNode(el)) return;
 
-      const style = this.parseStyleFromElement(el);
+      const className = el.getAttribute('class') || undefined;
+      const style = this.parseStyleWithClass(el, className);
       const polygon = Polygon.fromElement(el, style);
+      polygon.className = className;
       const transform = parseTransform(el.getAttribute('transform'));
       this.applyTransformToShape(polygon, transform);
       shapes.push(polygon);
@@ -553,8 +720,10 @@ export class FileManager {
     polylines.forEach(el => {
       if (isInsideGroupOrNode(el)) return;
 
-      const style = this.parseStyleFromElement(el);
+      const className = el.getAttribute('class') || undefined;
+      const style = this.parseStyleWithClass(el, className);
       const polyline = Polyline.fromElement(el, style);
+      polyline.className = className;
       const transform = parseTransform(el.getAttribute('transform'));
       this.applyTransformToShape(polyline, transform);
       shapes.push(polyline);
@@ -565,8 +734,10 @@ export class FileManager {
     images.forEach(el => {
       if (isInsideGroupOrNode(el)) return;
 
-      const style = this.parseStyleFromElement(el);
+      const className = el.getAttribute('class') || undefined;
+      const style = this.parseStyleWithClass(el, className);
       const image = Image.fromElement(el as SVGImageElement, style);
+      image.className = className;
       const transform = parseTransform(el.getAttribute('transform'));
       this.applyTransformToShape(image, transform);
       shapes.push(image);
@@ -582,9 +753,11 @@ export class FileManager {
       const dAttr = el.getAttribute('d');
       if (!dAttr) return;
 
-      const style = this.parseStyleFromElement(el as SVGElement);
+      const className = el.getAttribute('class') || undefined;
+      const style = this.parseStyleWithClass(el as SVGElement, className);
       const path = Path.fromPathData(dAttr, style);
       if (path.commands.length > 0) {
+        path.className = className;
         const transform = parseTransform(el.getAttribute('transform'));
         this.applyTransformToShape(path, transform);
         shapes.push(path);
@@ -615,6 +788,7 @@ export class FileManager {
     parentTransform: ParsedTransform = IDENTITY_TRANSFORM
   ): Group | null {
     const id = groupEl.id || `group-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const className = groupEl.getAttribute('class') || undefined;
     const children: Shape[] = [];
 
     // Parse group's own transform and combine with parent
@@ -633,7 +807,9 @@ export class FileManager {
       return null;
     }
 
-    return new Group(id, children, { ...DEFAULT_STYLE });
+    const group = new Group(id, children, { ...DEFAULT_STYLE });
+    group.className = className;
+    return group;
   }
 
   /**
@@ -645,6 +821,7 @@ export class FileManager {
     parentTransform: ParsedTransform = IDENTITY_TRANSFORM
   ): Shape | null {
     const tagName = el.tagName.toLowerCase();
+    const className = el.getAttribute('class') || undefined;
 
     // Parse element's own transform and combine with parent
     const myTransform = parseTransform(el.getAttribute('transform'));
@@ -658,9 +835,11 @@ export class FileManager {
       if (el.getAttribute('data-graph-type') === 'node') {
         const ellipse = el.querySelector('ellipse');
         if (ellipse) {
-          const style = this.parseStyleFromElement(ellipse);
+          const nodeClassName = el.getAttribute('class') || undefined;
+          const style = this.parseStyleWithClass(ellipse, nodeClassName);
           const node = Node.fromElement(el as SVGGElement, style);
           if (node) {
+            node.className = nodeClassName;
             this.applyTransformToShape(node, combinedTransform);
             gm.registerNode(node.id);
             gm.setNodeShape(node.id, node);
@@ -672,8 +851,8 @@ export class FileManager {
     }
 
     const style = tagName === 'text'
-      ? this.parseTextStyleFromElement(el)
-      : this.parseStyleFromElement(el);
+      ? this.parseTextStyleWithClass(el, className)
+      : this.parseStyleWithClass(el, className);
     let shape: Shape | null = null;
 
     switch (tagName) {
@@ -738,8 +917,9 @@ export class FileManager {
         return null;
     }
 
-    // Apply combined transform to the shape
+    // Apply combined transform and className to the shape
     if (shape) {
+      shape.className = className;
       this.applyTransformToShape(shape, combinedTransform);
     }
 
@@ -871,5 +1051,164 @@ export class FileManager {
       const currentRotation = shape.rotation || 0;
       shape.setRotation(currentRotation + transform.rotation);
     }
+  }
+
+  /**
+   * Parse style from element with class support
+   * Merges class style with inline attributes (inline takes precedence)
+   */
+  private static parseStyleWithClass(el: SVGElement, className: string | undefined): ShapeStyle {
+    // Get base style from class if available
+    let baseStyle = { ...DEFAULT_STYLE };
+    if (className) {
+      const styleClass = styleClassManager.getClass(className);
+      if (styleClass) {
+        baseStyle = { ...styleClass.style };
+      }
+    }
+
+    // Parse inline attributes and override class style
+    const inlineStyle = this.parseStyleFromElement(el);
+
+    // Only override if attribute is explicitly set
+    if (el.hasAttribute('fill') || el.getAttribute('fill')) {
+      baseStyle.fill = inlineStyle.fill;
+      baseStyle.fillNone = inlineStyle.fillNone;
+    }
+    if (el.hasAttribute('stroke')) {
+      baseStyle.stroke = inlineStyle.stroke;
+    }
+    if (el.hasAttribute('stroke-width')) {
+      baseStyle.strokeWidth = inlineStyle.strokeWidth;
+    }
+    if (el.hasAttribute('stroke-dasharray')) {
+      baseStyle.strokeDasharray = inlineStyle.strokeDasharray;
+    }
+    if (el.hasAttribute('stroke-linecap')) {
+      baseStyle.strokeLinecap = inlineStyle.strokeLinecap;
+    }
+    if (el.hasAttribute('opacity')) {
+      baseStyle.opacity = inlineStyle.opacity;
+    }
+
+    return baseStyle;
+  }
+
+  /**
+   * Parse text style from element with class support
+   */
+  private static parseTextStyleWithClass(el: SVGElement, className: string | undefined): ShapeStyle {
+    // Get base style from class if available
+    let baseStyle = { ...DEFAULT_STYLE, strokeWidth: 0 }; // Text default: no stroke
+    if (className) {
+      const styleClass = styleClassManager.getClass(className);
+      if (styleClass) {
+        baseStyle = { ...styleClass.style };
+      }
+    }
+
+    // Parse inline attributes
+    const inlineStyle = this.parseTextStyleFromElement(el);
+
+    // Only override if attribute is explicitly set
+    if (el.hasAttribute('fill') || el.getAttribute('fill')) {
+      baseStyle.fill = inlineStyle.fill;
+      baseStyle.fillNone = inlineStyle.fillNone;
+    }
+    if (el.hasAttribute('stroke')) {
+      baseStyle.stroke = inlineStyle.stroke;
+    }
+    if (el.hasAttribute('stroke-width')) {
+      baseStyle.strokeWidth = inlineStyle.strokeWidth;
+    }
+    if (el.hasAttribute('stroke-dasharray')) {
+      baseStyle.strokeDasharray = inlineStyle.strokeDasharray;
+    }
+    if (el.hasAttribute('stroke-linecap')) {
+      baseStyle.strokeLinecap = inlineStyle.strokeLinecap;
+    }
+    if (el.hasAttribute('opacity')) {
+      baseStyle.opacity = inlineStyle.opacity;
+    }
+
+    return baseStyle;
+  }
+
+  /**
+   * Parse CSS classes from <style> block content
+   * Returns StyleClass objects for each found class definition
+   */
+  private static parseStyleBlock(cssContent: string): StyleClass[] {
+    const classes: StyleClass[] = [];
+    if (!cssContent.trim()) return classes;
+
+    // Match CSS class rules: .className { properties }
+    const classRegex = /\.([a-zA-Z][a-zA-Z0-9_-]*)\s*\{([^}]*)\}/g;
+    let match;
+
+    while ((match = classRegex.exec(cssContent)) !== null) {
+      const className = match[1];
+      const cssProps = match[2];
+
+      // Parse CSS properties into ShapeStyle
+      const style = this.parseCSSProperties(cssProps);
+
+      classes.push({
+        id: `file-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        name: className,
+        style,
+        isBuiltin: false
+      });
+    }
+
+    return classes;
+  }
+
+  /**
+   * Parse CSS properties string into ShapeStyle object
+   */
+  private static parseCSSProperties(cssProps: string): ShapeStyle {
+    const style: ShapeStyle = { ...DEFAULT_STYLE };
+    const props = cssProps.split(';').map(p => p.trim()).filter(p => p);
+
+    for (const prop of props) {
+      const colonIndex = prop.indexOf(':');
+      if (colonIndex === -1) continue;
+
+      const name = prop.substring(0, colonIndex).trim();
+      const value = prop.substring(colonIndex + 1).trim();
+
+      switch (name) {
+        case 'fill':
+          if (value === 'none') {
+            style.fillNone = true;
+          } else {
+            style.fill = value;
+            style.fillNone = false;
+          }
+          break;
+        case 'stroke':
+          if (value !== 'none') {
+            style.stroke = value;
+          }
+          break;
+        case 'stroke-width':
+          style.strokeWidth = parseFloat(value) || 0;
+          break;
+        case 'stroke-dasharray':
+          style.strokeDasharray = value;
+          break;
+        case 'stroke-linecap':
+          if (value === 'butt' || value === 'round' || value === 'square') {
+            style.strokeLinecap = value;
+          }
+          break;
+        case 'opacity':
+          style.opacity = parseFloat(value) || 1;
+          break;
+      }
+    }
+
+    return style;
   }
 }

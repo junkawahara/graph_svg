@@ -199,6 +199,11 @@ function createMenu(): void {
           accelerator: 'H',
           click: () => mainWindow?.webContents.send('menu:tool', 'pan')
         },
+        {
+          label: 'ズーム',
+          accelerator: 'Z',
+          click: () => mainWindow?.webContents.send('menu:tool', 'zoom')
+        },
         { type: 'separator' },
         {
           label: '直線',
@@ -278,6 +283,54 @@ function createMenu(): void {
           label: '最背面に移動',
           accelerator: 'CmdOrCtrl+Shift+[',
           click: () => mainWindow?.webContents.send('menu:zorder', 'sendToBack')
+        },
+        { type: 'separator' },
+        {
+          label: '整列',
+          submenu: [
+            {
+              label: '左揃え',
+              accelerator: 'CmdOrCtrl+Shift+Left',
+              click: () => mainWindow?.webContents.send('menu:align', 'left')
+            },
+            {
+              label: '右揃え',
+              accelerator: 'CmdOrCtrl+Shift+Right',
+              click: () => mainWindow?.webContents.send('menu:align', 'right')
+            },
+            {
+              label: '上揃え',
+              accelerator: 'CmdOrCtrl+Shift+Up',
+              click: () => mainWindow?.webContents.send('menu:align', 'top')
+            },
+            {
+              label: '下揃え',
+              accelerator: 'CmdOrCtrl+Shift+Down',
+              click: () => mainWindow?.webContents.send('menu:align', 'bottom')
+            },
+            { type: 'separator' },
+            {
+              label: '水平方向中央揃え',
+              click: () => mainWindow?.webContents.send('menu:align', 'horizontalCenter')
+            },
+            {
+              label: '垂直方向中央揃え',
+              click: () => mainWindow?.webContents.send('menu:align', 'verticalCenter')
+            }
+          ]
+        },
+        {
+          label: '均等配置',
+          submenu: [
+            {
+              label: '水平方向に均等配置',
+              click: () => mainWindow?.webContents.send('menu:distribute', 'horizontal')
+            },
+            {
+              label: '垂直方向に均等配置',
+              click: () => mainWindow?.webContents.send('menu:distribute', 'vertical')
+            }
+          ]
         },
         { type: 'separator' },
         {

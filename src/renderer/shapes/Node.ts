@@ -11,6 +11,7 @@ export class Node implements Shape {
   private ellipseElement: SVGEllipseElement | null = null;
   private textElement: SVGTextElement | null = null;
   rotation: number = 0;
+  className?: string;
 
   constructor(
     public readonly id: string,
@@ -195,12 +196,13 @@ export class Node implements Shape {
       fontSize: this.fontSize,
       fontFamily: this.fontFamily,
       style: { ...this.style },
-      rotation: this.rotation
+      rotation: this.rotation,
+      className: this.className
     };
   }
 
   clone(): Node {
-    return new Node(
+    const cloned = new Node(
       generateId(),
       this.cx,
       this.cy,
@@ -212,6 +214,8 @@ export class Node implements Shape {
       { ...this.style },
       this.rotation
     );
+    cloned.className = this.className;
+    return cloned;
   }
 
   applyTransform(translateX: number, translateY: number, scaleX: number, scaleY: number): void {

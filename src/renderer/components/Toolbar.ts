@@ -67,6 +67,7 @@ export class Toolbar {
       { id: 'tool-delete-node', type: 'delete-node' },
       { id: 'tool-delete-edge', type: 'delete-edge' },
       { id: 'tool-pan', type: 'pan' },
+      { id: 'tool-zoom', type: 'zoom' },
       { id: 'tool-rotate', type: 'rotate' }
     ];
 
@@ -493,6 +494,9 @@ export class Toolbar {
           break;
         case 'o':
           editorState.setTool('rotate');
+          break;
+        case 'z':
+          editorState.setTool('zoom');
           break;
         case 'g':
           editorState.toggleSnap();

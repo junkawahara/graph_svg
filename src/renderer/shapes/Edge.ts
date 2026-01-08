@@ -11,6 +11,7 @@ export class Edge implements Shape {
   readonly type = 'edge';
   element: SVGPathElement | null = null;
   rotation: number = 0;  // Always 0 - edges don't rotate
+  className?: string;
 
   constructor(
     public readonly id: string,
@@ -441,12 +442,13 @@ export class Edge implements Shape {
       curveOffset: this.curveOffset,
       isSelfLoop: this.isSelfLoop,
       selfLoopAngle: this.selfLoopAngle,
-      style: { ...this.style }
+      style: { ...this.style },
+      className: this.className
     };
   }
 
   clone(): Edge {
-    return new Edge(
+    const cloned = new Edge(
       generateId(),
       this.sourceNodeId,
       this.targetNodeId,
@@ -456,5 +458,7 @@ export class Edge implements Shape {
       this.selfLoopAngle,
       { ...this.style }
     );
+    cloned.className = this.className;
+    return cloned;
   }
 }

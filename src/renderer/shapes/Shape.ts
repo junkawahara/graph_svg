@@ -13,6 +13,9 @@ export interface Shape {
   /** Visual style */
   style: ShapeStyle;
 
+  /** Applied CSS class name (undefined = no class) */
+  className?: string;
+
   /** SVG element for this shape */
   element: SVGElement | null;
 

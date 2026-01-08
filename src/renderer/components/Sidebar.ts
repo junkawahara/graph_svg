@@ -1,8 +1,9 @@
-import { ShapeStyle, StrokeLinecap, MarkerType, EdgeDirection, CanvasSize, ToolType, TextAnchor } from '../../shared/types';
+import { ShapeStyle, StrokeLinecap, MarkerType, EdgeDirection, CanvasSize, ToolType, TextAnchor, StyleClass } from '../../shared/types';
 import { eventBus } from '../core/EventBus';
 import { editorState } from '../core/EditorState';
 import { selectionManager } from '../core/SelectionManager';
 import { historyManager } from '../core/HistoryManager';
+import { styleClassManager } from '../core/StyleClassManager';
 import { Shape } from '../shapes/Shape';
 import { Text } from '../shapes/Text';
 import { Line } from '../shapes/Line';
@@ -19,6 +20,9 @@ import { EdgeDirectionChangeCommand } from '../commands/EdgeDirectionChangeComma
 import { ResizeShapeCommand } from '../commands/ResizeShapeCommand';
 import { CanvasResizeCommand } from '../commands/CanvasResizeCommand';
 import { RotateShapeCommand } from '../commands/RotateShapeCommand';
+import { ApplyClassCommand } from '../commands/ApplyClassCommand';
+import { ClassNameDialog } from './ClassNameDialog';
+import { StyleClassManagementDialog } from './StyleClassManagementDialog';
 import { parsePath, serializePath } from '../core/PathParser';
 
 /**
@@ -106,6 +110,12 @@ export class Sidebar {
   private rotationPropertyContainer: HTMLDivElement | null = null;
   private rotationInput: HTMLInputElement | null = null;
 
+  // Style class selector
+  private styleClassSection: HTMLDivElement | null = null;
+  private styleClassSelect: HTMLSelectElement | null = null;
+  private saveClassButton: HTMLButtonElement | null = null;
+  private manageClassesButton: HTMLButtonElement | null = null;
+
   private isUpdatingUI = false; // Prevent feedback loop
 
   constructor() {
@@ -191,7 +201,14 @@ export class Sidebar {
     this.rotationPropertyContainer = document.getElementById('rotation-property') as HTMLDivElement;
     this.rotationInput = document.getElementById('prop-rotation') as HTMLInputElement;
 
+    // Style class selector
+    this.styleClassSection = document.getElementById('style-class-section') as HTMLDivElement;
+    this.styleClassSelect = document.getElementById('prop-style-class') as HTMLSelectElement;
+    this.saveClassButton = document.getElementById('btn-save-class') as HTMLButtonElement;
+    this.manageClassesButton = document.getElementById('btn-manage-classes') as HTMLButtonElement;
+
     this.setupInputListeners();
+    this.setupStyleClassListeners();
     this.setupTextInputListeners();
     this.setupLineInputListeners();
     this.setupNodeInputListeners();
@@ -474,6 +491,199 @@ export class Sidebar {
   }
 
   /**
+   * Setup style class selector listeners
+   */
+  private setupStyleClassListeners(): void {
+    // Class select change
+    if (this.styleClassSelect) {
+      this.styleClassSelect.addEventListener('change', () => {
+        if (this.isUpdatingUI) return;
+        this.applyClassChange();
+      });
+    }
+
+    // Save class button
+    if (this.saveClassButton) {
+      this.saveClassButton.addEventListener('click', () => {
+        this.saveCurrentStyleAsClass();
+      });
+    }
+
+    // Manage classes button
+    if (this.manageClassesButton) {
+      this.manageClassesButton.addEventListener('click', () => {
+        this.showManageClassesDialog();
+      });
+    }
+
+    // Populate class options on initialization
+    this.populateClassOptions();
+  }
+
+  /**
+   * Populate class dropdown options
+   */
+  private populateClassOptions(): void {
+    if (!this.styleClassSelect) return;
+
+    const classes = styleClassManager.getAllClassesSync();
+
+    // Clear existing options except first (none)
+    while (this.styleClassSelect.options.length > 1) {
+      this.styleClassSelect.remove(1);
+    }
+
+    // Group classes
+    const builtinClasses = classes.filter(c => c.isBuiltin);
+    const customClasses = classes.filter(c => !c.isBuiltin);
+
+    // Add built-in classes
+    if (builtinClasses.length > 0) {
+      const builtinGroup = document.createElement('optgroup');
+      builtinGroup.label = 'Built-in';
+      builtinClasses.forEach(cls => {
+        const option = document.createElement('option');
+        option.value = cls.name;
+        option.textContent = cls.name;
+        builtinGroup.appendChild(option);
+      });
+      this.styleClassSelect.appendChild(builtinGroup);
+    }
+
+    // Add custom classes
+    if (customClasses.length > 0) {
+      const customGroup = document.createElement('optgroup');
+      customGroup.label = 'Custom';
+      customClasses.forEach(cls => {
+        const option = document.createElement('option');
+        option.value = cls.name;
+        option.textContent = cls.name;
+        customGroup.appendChild(option);
+      });
+      this.styleClassSelect.appendChild(customGroup);
+    }
+  }
+
+  /**
+   * Show style class section when shapes are selected
+   */
+  private showStyleClassSection(shapes: Shape[]): void {
+    if (!this.styleClassSection || !this.styleClassSelect) return;
+
+    this.styleClassSection.style.display = 'block';
+
+    // Update dropdown to show current class
+    this.isUpdatingUI = true;
+
+    if (shapes.length === 1) {
+      const className = shapes[0].className || '';
+      this.styleClassSelect.value = className;
+    } else {
+      // Multiple shapes - check if all have same class
+      const firstClass = shapes[0].className || '';
+      const allSame = shapes.every(s => (s.className || '') === firstClass);
+      this.styleClassSelect.value = allSame ? firstClass : '';
+    }
+
+    this.isUpdatingUI = false;
+  }
+
+  /**
+   * Hide style class section
+   */
+  private hideStyleClassSection(): void {
+    if (this.styleClassSection) {
+      this.styleClassSection.style.display = 'none';
+    }
+  }
+
+  /**
+   * Apply class change to selected shapes
+   */
+  private applyClassChange(): void {
+    if (this.isUpdatingUI || !this.styleClassSelect) return;
+
+    const selectedShapes = selectionManager.getSelection();
+    if (selectedShapes.length === 0) return;
+
+    const className = this.styleClassSelect.value || undefined;
+
+    // Get style for the class (or default if none)
+    let newStyle: ShapeStyle;
+    if (className) {
+      const styleClass = styleClassManager.getClass(className);
+      if (styleClass) {
+        newStyle = { ...styleClass.style };
+      } else {
+        return; // Class not found
+      }
+    } else {
+      // Removing class - keep current style
+      newStyle = { ...selectedShapes[0].style };
+    }
+
+    // Create command and execute
+    const command = new ApplyClassCommand([...selectedShapes], className, newStyle);
+    historyManager.execute(command);
+
+    // Update UI to show new style
+    if (selectedShapes.length === 1) {
+      this.updateUIFromStyle(selectedShapes[0].style);
+    }
+  }
+
+  /**
+   * Save current style as a new class
+   */
+  private async saveCurrentStyleAsClass(): Promise<void> {
+    const selectedShapes = selectionManager.getSelection();
+    if (selectedShapes.length === 0) return;
+
+    // Get style from first selected shape
+    const style = { ...selectedShapes[0].style };
+
+    // Show class name dialog
+    const dialog = new ClassNameDialog();
+    const name = await dialog.show();
+    if (!name) return;
+
+    try {
+      // Add class to manager
+      const newClass = await styleClassManager.addClass(name, style);
+
+      // Refresh dropdown
+      this.populateClassOptions();
+
+      // Apply the new class to selected shapes
+      if (this.styleClassSelect) {
+        this.styleClassSelect.value = newClass.name;
+        this.applyClassChange();
+      }
+    } catch (error) {
+      console.error('Failed to save class:', error);
+    }
+  }
+
+  /**
+   * Show the style class management dialog
+   */
+  private async showManageClassesDialog(): Promise<void> {
+    const dialog = new StyleClassManagementDialog();
+    const changed = await dialog.show();
+
+    if (changed) {
+      // Refresh dropdown after changes
+      this.populateClassOptions();
+
+      // Update selection UI if needed
+      const selectedShapes = selectionManager.getSelection();
+      if (selectedShapes.length > 0) {
+        this.showStyleClassSection(selectedShapes);
+      }
+    }
+  }
+
+  /**
    * Apply rotation change from input
    */
   private applyRotationChange(): void {
@@ -590,6 +800,9 @@ export class Sidebar {
         // Show selected shape's style
         this.updateUIFromStyle(shape.style);
 
+        // Show style class section
+        this.showStyleClassSection(shapes);
+
         // Show/hide text properties based on shape type
         if (shape instanceof Text) {
           this.showTextProperties(shape);
@@ -633,6 +846,7 @@ export class Sidebar {
       } else if (shapes.length === 0) {
         // Show editor's current style (for new shapes)
         this.updateUIFromStyle(editorState.currentStyle);
+        this.hideStyleClassSection();
         this.hideTextProperties();
         this.hideLineProperties();
         this.hideNodeProperties();
@@ -641,7 +855,8 @@ export class Sidebar {
         this.hideAllPositionProperties();
         this.hideRotationProperty();
       } else {
-        // Multiple selection - hide special properties
+        // Multiple selection - show style class section, hide special properties
+        this.showStyleClassSection(shapes);
         this.hideTextProperties();
         this.hideLineProperties();
         this.hideNodeProperties();

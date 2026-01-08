@@ -8,6 +8,7 @@ export class Rectangle implements Shape {
   readonly type = 'rectangle';
   element: SVGRectElement | null = null;
   rotation: number = 0;
+  className?: string;
 
   constructor(
     public readonly id: string,
@@ -152,12 +153,13 @@ export class Rectangle implements Shape {
       width: this.width,
       height: this.height,
       style: { ...this.style },
-      rotation: this.rotation
+      rotation: this.rotation,
+      className: this.className
     };
   }
 
   clone(): Rectangle {
-    return new Rectangle(
+    const cloned = new Rectangle(
       generateId(),
       this.x,
       this.y,
@@ -166,6 +168,8 @@ export class Rectangle implements Shape {
       { ...this.style },
       this.rotation
     );
+    cloned.className = this.className;
+    return cloned;
   }
 
   applyTransform(translateX: number, translateY: number, scaleX: number, scaleY: number): void {

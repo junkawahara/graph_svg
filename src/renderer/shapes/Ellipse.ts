@@ -8,6 +8,7 @@ export class Ellipse implements Shape {
   readonly type = 'ellipse';
   element: SVGEllipseElement | null = null;
   rotation: number = 0;
+  className?: string;
 
   constructor(
     public readonly id: string,
@@ -151,12 +152,13 @@ export class Ellipse implements Shape {
       rx: this.rx,
       ry: this.ry,
       style: { ...this.style },
-      rotation: this.rotation
+      rotation: this.rotation,
+      className: this.className
     };
   }
 
   clone(): Ellipse {
-    return new Ellipse(
+    const cloned = new Ellipse(
       generateId(),
       this.cx,
       this.cy,
@@ -165,6 +167,8 @@ export class Ellipse implements Shape {
       { ...this.style },
       this.rotation
     );
+    cloned.className = this.className;
+    return cloned;
   }
 
   applyTransform(translateX: number, translateY: number, scaleX: number, scaleY: number): void {
