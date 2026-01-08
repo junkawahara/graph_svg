@@ -45,7 +45,7 @@ class GroupCornerHandle implements Handle {
     this.originalBounds = this.group.getBounds();
   }
 
-  onDrag(point: Point): void {
+  onDrag(point: Point, event?: MouseEvent): void {
     if (!this.originalBounds) {
       this.originalBounds = this.group.getBounds();
     }
@@ -124,8 +124,11 @@ class GroupCornerHandle implements Handle {
         originY = bounds.y;
     }
 
+    // Alt key enables position-only mode (scale positions without changing child sizes)
+    const positionOnly = event?.altKey ?? false;
+
     // Scale the group from the opposite corner
-    this.group.scale(sx, sy, { x: originX, y: originY });
+    this.group.scale(sx, sy, { x: originX, y: originY }, positionOnly);
 
     // Reset original bounds for next drag event
     this.originalBounds = this.group.getBounds();

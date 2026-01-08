@@ -21,7 +21,7 @@ export interface Handle {
   hitTest(point: Point, tolerance?: number): boolean;
 
   /** Handle drag operation - returns updated shape properties */
-  onDrag(point: Point): void;
+  onDrag(point: Point, event?: MouseEvent): void;
 }
 
 /**

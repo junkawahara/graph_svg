@@ -79,7 +79,7 @@ class PathAnchorHandle implements Handle {
     return Math.sqrt(dx * dx + dy * dy) <= tolerance;
   }
 
-  onDrag(point: Point): void {
+  onDrag(point: Point, _event?: MouseEvent): void {
     this.shape.setAnchorPoint(this.anchorIndex, point);
   }
 
@@ -133,7 +133,7 @@ class PathControlPointHandle implements Handle {
     return Math.sqrt(dx * dx + dy * dy) <= tolerance;
   }
 
-  onDrag(point: Point): void {
+  onDrag(point: Point, _event?: MouseEvent): void {
     this.shape.setControlPoint(this.cmdIndex, this.cpIndex, point);
   }
 

@@ -37,7 +37,7 @@ class EllipseCornerHandle implements Handle {
     return Math.sqrt(dx * dx + dy * dy) <= tolerance;
   }
 
-  onDrag(point: Point): void {
+  onDrag(point: Point, _event?: MouseEvent): void {
     const bounds = this.ellipse.getBounds();
     let newX = bounds.x;
     let newY = bounds.y;

@@ -30,7 +30,7 @@ class VertexHandle implements Handle {
     return Math.sqrt(dx * dx + dy * dy) <= tolerance;
   }
 
-  onDrag(point: Point): void {
+  onDrag(point: Point, _event?: MouseEvent): void {
     this.shape.setVertex(this.index, point);
   }
 

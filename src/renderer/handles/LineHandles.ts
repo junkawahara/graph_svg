@@ -29,7 +29,7 @@ class LineEndpointHandle implements Handle {
     return Math.sqrt(dx * dx + dy * dy) <= tolerance;
   }
 
-  onDrag(point: Point): void {
+  onDrag(point: Point, _event?: MouseEvent): void {
     if (this.position === 'start') {
       this.line.x1 = point.x;
       this.line.y1 = point.y;

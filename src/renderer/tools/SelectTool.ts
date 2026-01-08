@@ -126,7 +126,7 @@ export class SelectTool implements Tool {
     // Handle resizing
     if (this.isResizing && this.activeHandle && this.resizeShape) {
       const snappedPoint = editorState.snapPoint(point);
-      this.activeHandle.onDrag(snappedPoint);
+      this.activeHandle.onDrag(snappedPoint, event);
       this.callbacks.updateHandles();
       // Update connected edges if resizing a graph node
       if (this.resizeShape instanceof Node) {

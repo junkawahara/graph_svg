@@ -27,7 +27,7 @@ class TextCenterHandle implements Handle {
     return Math.sqrt(dx * dx + dy * dy) <= tolerance;
   }
 
-  onDrag(point: Point): void {
+  onDrag(point: Point, _event?: MouseEvent): void {
     // Move text to center on the drag point
     const bounds = this.text.getBounds();
     const dx = point.x - (bounds.x + bounds.width / 2);

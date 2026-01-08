@@ -143,8 +143,9 @@ export class Group implements Shape {
 
   /**
    * Scale the group from a specific origin point
+   * @param positionOnly If true, only scale positions without changing child sizes
    */
-  scale(sx: number, sy: number, origin: Point): void {
+  scale(sx: number, sy: number, origin: Point, positionOnly: boolean = false): void {
     for (const child of this.children) {
       const bounds = child.getBounds();
 
@@ -157,8 +158,10 @@ export class Group implements Shape {
       const dy = newY - bounds.y;
       child.move(dx, dy);
 
-      // Scale the child if it has scalable dimensions
-      this.scaleChild(child, sx, sy);
+      // Scale the child only if NOT positionOnly mode
+      if (!positionOnly) {
+        this.scaleChild(child, sx, sy, positionOnly);
+      }
     }
     this.updateElement();
   }
@@ -166,7 +169,7 @@ export class Group implements Shape {
   /**
    * Scale a child shape's dimensions
    */
-  private scaleChild(child: Shape, sx: number, sy: number): void {
+  private scaleChild(child: Shape, sx: number, sy: number, positionOnly: boolean = false): void {
     // Handle different shape types
     switch (child.type) {
       case 'rectangle': {
@@ -204,11 +207,11 @@ export class Group implements Shape {
         break;
       }
       case 'group': {
-        // Recursively scale nested groups
+        // Recursively scale nested groups (pass positionOnly flag)
         const group = child as Group;
         const childBounds = group.getBounds();
         const childOrigin = { x: childBounds.x, y: childBounds.y };
-        group.scale(sx, sy, childOrigin);
+        group.scale(sx, sy, childOrigin, positionOnly);
         break;
       }
       // text doesn't scale dimensions
