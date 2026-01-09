@@ -19,6 +19,9 @@ import { editorState } from './core/EditorState';
 import { createShapeFromData } from './shapes/ShapeFactory';
 import { PasteShapesCommand } from './commands/PasteShapesCommand';
 import { FitCanvasToContentCommand } from './commands/FitCanvasToContentCommand';
+import { ImportGraphCommand } from './commands/ImportGraphCommand';
+import { GraphFileParser } from './core/GraphFileParser';
+import { GraphImportDialog } from './components/GraphImportDialog';
 import { Shape } from './shapes/Shape';
 import { Group } from './shapes/Group';
 import { ToolType } from '../shared/types';
@@ -156,6 +159,59 @@ document.addEventListener('DOMContentLoaded', () => {
       editorState.markClean();
       console.log('File loaded:', result.path, `(${shapes.length} shapes, ${canvasSize.width}x${canvasSize.height})`);
     }
+  });
+
+  // Import graph file handler
+  window.electronAPI.onMenuImportGraph(async () => {
+    // Open graph file
+    const result = await window.electronAPI.openGraphFile();
+    if (!result) return;
+
+    // Parse the file
+    const parsed = GraphFileParser.parse(result.content, result.path);
+    const formatName = parsed.format === 'dimacs' ? 'DIMACS' : 'Edge List';
+
+    // Show options dialog
+    const importDialog = new GraphImportDialog();
+    const options = await importDialog.show(formatName, parsed.nodeLabels.length, parsed.edges.length);
+    if (!options) return;
+
+    // Check unsaved changes if clearing canvas
+    if (options.clearCanvas) {
+      const canProceed = await checkUnsavedChanges();
+      if (!canProceed) return;
+    }
+
+    // Get current style and canvas size
+    const currentStyle = editorState.currentStyle;
+    const canvasSz = editorState.canvasSize;
+    const nodeSize = editorState.defaultNodeSize;
+
+    // Create and execute import command
+    const command = new ImportGraphCommand(
+      canvas,
+      {
+        nodeLabels: parsed.nodeLabels,
+        edges: parsed.edges,
+        direction: options.directed ? 'forward' : 'none',
+        canvasWidth: canvasSz.width,
+        canvasHeight: canvasSz.height
+      },
+      currentStyle,
+      nodeSize,
+      options.clearCanvas
+    );
+    historyManager.execute(command);
+
+    // Clear selection
+    selectionManager.clearSelection();
+
+    // Mark dirty if adding to existing
+    if (!options.clearCanvas) {
+      editorState.markDirty();
+    }
+
+    console.log(`Imported graph: ${parsed.nodeLabels.length} nodes, ${parsed.edges.length} edges`);
   });
 
   // Mark as dirty when history changes (undo/redo stack modified)

@@ -9,6 +9,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   saveFileAs: (content: string, defaultPath?: string) => ipcRenderer.invoke('file:saveAs', content, defaultPath),
   saveFileToPath: (filePath: string, content: string) => ipcRenderer.invoke('file:saveToPath', filePath, content),
   openFile: () => ipcRenderer.invoke('file:open'),
+  openGraphFile: () => ipcRenderer.invoke('file:openGraph'),
 
   // Window operations
   setWindowTitle: (title: string) => ipcRenderer.invoke('window:setTitle', title),
@@ -33,6 +34,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
     const handler = (_event: IpcRendererEvent) => callback();
     ipcRenderer.on('menu:open', handler);
     return () => ipcRenderer.removeListener('menu:open', handler);
+  },
+  onMenuImportGraph: (callback: () => void) => {
+    const handler = (_event: IpcRendererEvent) => callback();
+    ipcRenderer.on('menu:importGraph', handler);
+    return () => ipcRenderer.removeListener('menu:importGraph', handler);
   },
   onMenuSave: (callback: () => void) => {
     const handler = (_event: IpcRendererEvent) => callback();
@@ -134,6 +140,7 @@ declare global {
       saveFileAs: (content: string, defaultPath?: string) => Promise<string | null>;
       saveFileToPath: (filePath: string, content: string) => Promise<boolean>;
       openFile: () => Promise<{ path: string; content: string } | null>;
+      openGraphFile: () => Promise<{ path: string; content: string } | null>;
       setWindowTitle: (title: string) => Promise<void>;
       allowClose: () => Promise<void>;
       readSettings: () => Promise<AppSettings>;
@@ -141,6 +148,7 @@ declare global {
       onOpenSettings: (callback: () => void) => () => void;
       onMenuNew: (callback: () => void) => () => void;
       onMenuOpen: (callback: () => void) => () => void;
+      onMenuImportGraph: (callback: () => void) => () => void;
       onMenuSave: (callback: () => void) => () => void;
       onMenuSaveAs: (callback: () => void) => () => void;
       onMenuUndo: (callback: () => void) => () => void;

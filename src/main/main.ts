@@ -69,6 +69,10 @@ function createMenu(): void {
           click: () => mainWindow?.webContents.send('menu:open')
         },
         {
+          label: 'グラフファイルをインポート...',
+          click: () => mainWindow?.webContents.send('menu:importGraph')
+        },
+        {
           label: '保存',
           accelerator: 'CmdOrCtrl+S',
           click: () => mainWindow?.webContents.send('menu:save')
@@ -479,6 +483,33 @@ ipcMain.handle('file:open', async (): Promise<{ path: string; content: string } 
     return { path: filePath, content };
   } catch (error) {
     console.error('Failed to open file:', error);
+    return null;
+  }
+});
+
+// Open graph file (edge list or DIMACS format)
+ipcMain.handle('file:openGraph', async (): Promise<{ path: string; content: string } | null> => {
+  if (!mainWindow) return null;
+
+  const result = await dialog.showOpenDialog(mainWindow, {
+    title: 'Import Graph File',
+    filters: [
+      { name: 'Graph Files', extensions: ['txt', 'dimacs', 'col', 'edgelist'] },
+      { name: 'All Files', extensions: ['*'] }
+    ],
+    properties: ['openFile']
+  });
+
+  if (result.canceled || result.filePaths.length === 0) {
+    return null;
+  }
+
+  try {
+    const filePath = result.filePaths[0];
+    const content = fs.readFileSync(filePath, 'utf-8');
+    return { path: filePath, content };
+  } catch (error) {
+    console.error('Failed to open graph file:', error);
     return null;
   }
 });
