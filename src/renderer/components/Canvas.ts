@@ -226,6 +226,15 @@ export class Canvas {
     eventBus.on('canvas:sizeChanged', (size: CanvasSize) => {
       this.updateCanvasBoundary();
     });
+
+    // Listen for history changes (undo/redo) to update handles
+    eventBus.on('history:changed', () => {
+      // Update handles for currently selected shapes after undo/redo
+      const selectedShapes = selectionManager.getSelection();
+      if (selectedShapes.length > 0) {
+        this.updateHandlesForSelection(selectedShapes);
+      }
+    });
   }
 
   /**

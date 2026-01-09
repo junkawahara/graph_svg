@@ -33,6 +33,7 @@ export class RotateTool implements Tool {
   private rotationHandle: SVGGElement | null = null;
   private guideLine: SVGLineElement | null = null;
   private handleDistance = 30; // Distance from shape bounds to rotation handle
+  private historyChangedHandler: (() => void) | null = null;
 
   constructor(callbacks: RotateToolCallbacks) {
     this.callbacks = callbacks;
@@ -40,11 +41,23 @@ export class RotateTool implements Tool {
 
   onActivate(): void {
     this.showRotationHandles();
+    // Listen for history changes to update rotation handles after undo/redo
+    this.historyChangedHandler = () => {
+      if (!this.isRotating) {
+        this.showRotationHandles();
+      }
+    };
+    eventBus.on('history:changed', this.historyChangedHandler);
   }
 
   onDeactivate(): void {
     this.removeRotationHandles();
     this.resetState();
+    // Remove history listener
+    if (this.historyChangedHandler) {
+      eventBus.off('history:changed', this.historyChangedHandler);
+      this.historyChangedHandler = null;
+    }
   }
 
   onMouseDown(point: Point, event: MouseEvent): void {
