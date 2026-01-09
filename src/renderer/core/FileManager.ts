@@ -247,7 +247,10 @@ export class FileManager {
       if (shape.markerEnd !== 'none') {
         markerAttrs += ` marker-end="url(#marker-${shape.markerEnd}-end)"`;
       }
-      return `  <line id="${shape.id}" ${classAttr}x1="${shape.x1}" y1="${shape.y1}" x2="${shape.x2}" y2="${shape.y2}" ${style}${markerAttrs}/>`;
+      // Add style="color:..." for currentColor inheritance in markers
+      const colorStyle = (shape.markerStart !== 'none' || shape.markerEnd !== 'none')
+        ? ` style="color: ${shape.style.stroke}"` : '';
+      return `  <line id="${shape.id}" ${classAttr}x1="${shape.x1}" y1="${shape.y1}" x2="${shape.x2}" y2="${shape.y2}" ${style}${markerAttrs}${colorStyle}/>`;
     } else if (shape instanceof Ellipse) {
       return `  <ellipse id="${shape.id}" ${classAttr}cx="${shape.cx}" cy="${shape.cy}" rx="${shape.rx}" ry="${shape.ry}" ${style}/>`;
     } else if (shape instanceof Rectangle) {
@@ -511,7 +514,10 @@ export class FileManager {
     if (path.markerEnd !== 'none') {
       markerAttrs += ` marker-end="url(#marker-${path.markerEnd}-end)"`;
     }
-    return `  <path id="${path.id}" ${classAttr}d="${pathData}" ${style}${markerAttrs}/>`;
+    // Add style="color:..." for currentColor inheritance in markers
+    const colorStyle = (path.markerStart !== 'none' || path.markerEnd !== 'none')
+      ? ` style="color: ${path.style.stroke}"` : '';
+    return `  <path id="${path.id}" ${classAttr}d="${pathData}" ${style}${markerAttrs}${colorStyle}/>`;
   }
 
   /**
