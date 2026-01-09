@@ -16,12 +16,28 @@ import { parseTransform, combineTransforms, ParsedTransform, IDENTITY_TRANSFORM,
 import { serializePath } from './PathParser';
 import { styleClassManager } from './StyleClassManager';
 
-// Marker definitions for SVG export
-const MARKER_SVG_DEFS: Record<Exclude<MarkerType, 'none'>, { path: string; filled: boolean; strokeWidth?: number }> = {
-  'triangle': { path: 'M 0 0 L 10 5 L 0 10 Z', filled: true },
-  'triangle-open': { path: 'M 0 1 L 8 5 L 0 9', filled: false, strokeWidth: 1.5 },
-  'circle': { path: 'M 5 0 A 5 5 0 1 1 5 10 A 5 5 0 1 1 5 0 Z', filled: true },
-  'diamond': { path: 'M 5 0 L 10 5 L 5 10 L 0 5 Z', filled: true }
+// Marker shape definitions for SVG export
+interface MarkerShapeDef {
+  viewBox: string;
+  refX: number;
+  refY: number;
+  path: string;
+  filled: boolean;
+  strokeWidth?: number;
+}
+
+const MARKER_SHAPES: Record<string, MarkerShapeDef> = {
+  arrow: { viewBox: '0 0 10 10', refX: 9, refY: 5, path: 'M 0 1 L 8 5 L 0 9', filled: false, strokeWidth: 1.5 },
+  triangle: { viewBox: '0 0 10 10', refX: 9, refY: 5, path: 'M 0 0 L 10 5 L 0 10 Z', filled: true },
+  circle: { viewBox: '0 0 10 10', refX: 5, refY: 5, path: 'M 5 0 A 5 5 0 1 1 5 10 A 5 5 0 1 1 5 0 Z', filled: true },
+  diamond: { viewBox: '0 0 10 10', refX: 5, refY: 5, path: 'M 5 0 L 10 5 L 5 10 L 0 5 Z', filled: true }
+};
+
+// Size multipliers for markers
+const MARKER_SIZES: Record<string, number> = {
+  small: 3,
+  medium: 4,
+  large: 6
 };
 
 /**
@@ -132,7 +148,7 @@ export class FileManager {
   }
 
   /**
-   * Generate marker definitions for lines and edges that use them
+   * Generate marker definitions for lines, paths, and edges that use them
    */
   private static generateMarkerDefs(shapes: Shape[]): string | null {
     const usedMarkers = new Set<string>();
@@ -141,7 +157,17 @@ export class FileManager {
     // Recursively collect markers from shapes
     const collectMarkers = (shapeList: Shape[]) => {
       shapeList.forEach(shape => {
+        // Collect markers from Line
         if (shape instanceof Line) {
+          if (shape.markerStart !== 'none') {
+            usedMarkers.add(`${shape.markerStart}-start`);
+          }
+          if (shape.markerEnd !== 'none') {
+            usedMarkers.add(`${shape.markerEnd}-end`);
+          }
+        }
+        // Collect markers from Path
+        if (shape instanceof Path) {
           if (shape.markerStart !== 'none') {
             usedMarkers.add(`${shape.markerStart}-start`);
           }
@@ -168,22 +194,29 @@ export class FileManager {
 
     const defsLines: string[] = ['  <defs>'];
 
-    // Line markers
+    // Line/Path markers (format: 'arrow-small-start', 'triangle-medium-end', etc.)
     usedMarkers.forEach(markerKey => {
-      const [type, position] = markerKey.split('-') as [Exclude<MarkerType, 'none'>, string];
-      const def = MARKER_SVG_DEFS[type];
-      if (!def) return;
+      // Parse marker key: e.g., 'arrow-small-start' -> shape='arrow', size='small', position='start'
+      const lastDashIndex = markerKey.lastIndexOf('-');
+      const position = markerKey.substring(lastDashIndex + 1); // 'start' or 'end'
+      const typeWithSize = markerKey.substring(0, lastDashIndex); // e.g., 'arrow-small'
 
+      const typeDashIndex = typeWithSize.lastIndexOf('-');
+      const shapeType = typeWithSize.substring(0, typeDashIndex); // e.g., 'arrow'
+      const sizeStr = typeWithSize.substring(typeDashIndex + 1); // e.g., 'small'
+
+      const shapeDef = MARKER_SHAPES[shapeType as keyof typeof MARKER_SHAPES];
+      if (!shapeDef) return;
+
+      const markerSize = MARKER_SIZES[sizeStr] || 4;
       const orient = position === 'start' ? 'auto-start-reverse' : 'auto';
-      const refX = type === 'circle' || type === 'diamond' ? 5 : 9;
-      const refY = 5;
 
-      const fillAttr = def.filled
+      const fillAttr = shapeDef.filled
         ? 'fill="currentColor" stroke="none"'
-        : `fill="none" stroke="currentColor" stroke-width="${def.strokeWidth || 1}" stroke-linecap="round" stroke-linejoin="round"`;
+        : `fill="none" stroke="currentColor" stroke-width="${shapeDef.strokeWidth || 1}" stroke-linecap="round" stroke-linejoin="round"`;
 
-      defsLines.push(`    <marker id="marker-${type}-${position}" viewBox="0 0 10 10" refX="${refX}" refY="${refY}" markerWidth="4" markerHeight="4" markerUnits="strokeWidth" orient="${orient}">`);
-      defsLines.push(`      <path d="${def.path}" ${fillAttr}/>`);
+      defsLines.push(`    <marker id="marker-${typeWithSize}-${position}" viewBox="${shapeDef.viewBox}" refX="${shapeDef.refX}" refY="${shapeDef.refY}" markerWidth="${markerSize}" markerHeight="${markerSize}" markerUnits="strokeWidth" orient="${orient}">`);
+      defsLines.push(`      <path d="${shapeDef.path}" ${fillAttr}/>`);
       defsLines.push(`    </marker>`);
     });
 
@@ -354,25 +387,28 @@ export class FileManager {
     const sourceNode = gm.getNodeShape(edge.sourceNodeId);
     const targetNode = gm.getNodeShape(edge.targetNodeId);
 
-    // Build data attributes
-    let dataAttrs = `data-graph-type="edge" data-source-id="${edge.sourceNodeId}" data-target-id="${edge.targetNodeId}" data-direction="${edge.direction}" data-curve-offset="${edge.curveOffset}"`;
+    // Build data attributes for group
+    let groupDataAttrs = `data-graph-type="edge" data-source-id="${edge.sourceNodeId}" data-target-id="${edge.targetNodeId}" data-direction="${edge.direction}" data-curve-offset="${edge.curveOffset}"`;
     if (edge.isSelfLoop) {
-      dataAttrs += ` data-is-self-loop="true" data-self-loop-angle="${edge.selfLoopAngle}"`;
+      groupDataAttrs += ` data-is-self-loop="true" data-self-loop-angle="${edge.selfLoopAngle}"`;
+    }
+    if (edge.label) {
+      groupDataAttrs += ` data-label="${this.escapeXml(edge.label)}"`;
     }
 
-    // Build style attributes
-    const attrs: string[] = [];
-    attrs.push('fill="none"');
-    attrs.push(`stroke="${edge.style.stroke}"`);
-    attrs.push(`stroke-width="${edge.style.strokeWidth}"`);
+    // Build style attributes for path
+    const pathAttrs: string[] = [];
+    pathAttrs.push('fill="none"');
+    pathAttrs.push(`stroke="${edge.style.stroke}"`);
+    pathAttrs.push(`stroke-width="${edge.style.strokeWidth}"`);
     if (edge.style.opacity !== 1) {
-      attrs.push(`opacity="${edge.style.opacity}"`);
+      pathAttrs.push(`opacity="${edge.style.opacity}"`);
     }
     if (edge.style.strokeDasharray) {
-      attrs.push(`stroke-dasharray="${edge.style.strokeDasharray}"`);
+      pathAttrs.push(`stroke-dasharray="${edge.style.strokeDasharray}"`);
     }
     if (edge.style.strokeLinecap !== 'butt') {
-      attrs.push(`stroke-linecap="${edge.style.strokeLinecap}"`);
+      pathAttrs.push(`stroke-linecap="${edge.style.strokeLinecap}"`);
     }
 
     // Build marker attributes
@@ -391,7 +427,74 @@ export class FileManager {
       pathData = this.calculateEdgePath(edge, sourceNode, targetNode);
     }
 
-    return `  <path id="${edge.id}" ${dataAttrs} d="${pathData}" ${attrs.join(' ')}${markerAttrs}/>`;
+    // Build path element
+    const pathElement = `<path d="${pathData}" ${pathAttrs.join(' ')}${markerAttrs}/>`;
+
+    // If edge has a label, wrap in group with label elements
+    if (edge.label && sourceNode && targetNode) {
+      const midpoint = this.calculateEdgeMidpoint(edge, sourceNode, targetNode);
+      const labelBg = `<rect fill="white" stroke="none" rx="2" ry="2" x="${midpoint.x - 10}" y="${midpoint.y - 8}" width="20" height="16"/>`;
+      const labelText = `<text x="${midpoint.x}" y="${midpoint.y}" text-anchor="middle" dominant-baseline="middle" font-size="12" font-family="Arial" fill="${edge.style.stroke}" pointer-events="none">${this.escapeXml(edge.label)}</text>`;
+      return `  <g id="${edge.id}" ${groupDataAttrs}>
+    ${pathElement}
+    ${labelBg}
+    ${labelText}
+  </g>`;
+    }
+
+    // No label - return simple group with path
+    return `  <g id="${edge.id}" ${groupDataAttrs}>
+    ${pathElement}
+  </g>`;
+  }
+
+  /**
+   * Calculate edge midpoint for label positioning
+   */
+  private static calculateEdgeMidpoint(edge: Edge, sourceNode: Node, targetNode: Node): Point {
+    if (edge.isSelfLoop) {
+      const angle = edge.selfLoopAngle;
+      const loopSize = Math.max(sourceNode.rx, sourceNode.ry) * 1.5;
+      return {
+        x: sourceNode.cx + (sourceNode.rx + loopSize * 0.7) * Math.cos(angle),
+        y: sourceNode.cy + (sourceNode.ry + loopSize * 0.7) * Math.sin(angle)
+      };
+    }
+
+    const start = sourceNode.getConnectionPoint(targetNode.cx, targetNode.cy);
+    const end = targetNode.getConnectionPoint(sourceNode.cx, sourceNode.cy);
+
+    if (edge.curveOffset === 0) {
+      return {
+        x: (start.x + end.x) / 2,
+        y: (start.y + end.y) / 2
+      };
+    }
+
+    // Curved line - calculate point on quadratic bezier at t=0.5
+    const midX = (start.x + end.x) / 2;
+    const midY = (start.y + end.y) / 2;
+    const dx = end.x - start.x;
+    const dy = end.y - start.y;
+    const len = Math.sqrt(dx * dx + dy * dy);
+
+    if (len === 0) return { x: midX, y: midY };
+
+    const perpX = -dy / len;
+    const perpY = dx / len;
+    const ctrlX = midX + perpX * edge.curveOffset;
+    const ctrlY = midY + perpY * edge.curveOffset;
+
+    const newStart = sourceNode.getConnectionPoint(ctrlX, ctrlY);
+    const newEnd = targetNode.getConnectionPoint(ctrlX, ctrlY);
+
+    // Quadratic bezier at t=0.5
+    const t = 0.5;
+    const mt = 1 - t;
+    return {
+      x: mt * mt * newStart.x + 2 * mt * t * ctrlX + t * t * newEnd.x,
+      y: mt * mt * newStart.y + 2 * mt * t * ctrlY + t * t * newEnd.y
+    };
   }
 
   /**
@@ -401,7 +504,14 @@ export class FileManager {
     const style = this.getShapeStyleAttributes(path);
     const classAttr = path.className ? `class="${path.className}" ` : '';
     const pathData = serializePath(path.commands);
-    return `  <path id="${path.id}" ${classAttr}d="${pathData}" ${style}/>`;
+    let markerAttrs = '';
+    if (path.markerStart !== 'none') {
+      markerAttrs += ` marker-start="url(#marker-${path.markerStart}-start)"`;
+    }
+    if (path.markerEnd !== 'none') {
+      markerAttrs += ` marker-end="url(#marker-${path.markerEnd}-end)"`;
+    }
+    return `  <path id="${path.id}" ${classAttr}d="${pathData}" ${style}${markerAttrs}/>`;
   }
 
   /**
@@ -602,10 +712,11 @@ export class FileManager {
     });
 
     // Parse edge elements (after nodes are registered)
-    const edgeElements = svg.querySelectorAll('path[data-graph-type="edge"]');
+    // Support both legacy path format and new group format (for edges with labels)
+    const edgeElements = svg.querySelectorAll('path[data-graph-type="edge"], g[data-graph-type="edge"]');
     edgeElements.forEach(el => {
-      const style = this.parseEdgeStyleFromElement(el as SVGPathElement);
-      const edge = Edge.fromElement(el as SVGPathElement, style);
+      const style = this.parseEdgeStyleFromElement(el as SVGElement);
+      const edge = Edge.fromElement(el as SVGElement, style);
       if (edge) {
         shapes.push(edge);
         // Register with GraphManager
@@ -755,7 +866,9 @@ export class FileManager {
 
       const className = el.getAttribute('class') || undefined;
       const style = this.parseStyleWithClass(el as SVGElement, className);
-      const path = Path.fromPathData(dAttr, style);
+      const markerStart = this.parseMarkerType(el.getAttribute('marker-start'));
+      const markerEnd = this.parseMarkerType(el.getAttribute('marker-end'));
+      const path = Path.fromPathData(dAttr, style, markerStart, markerEnd);
       if (path.commands.length > 0) {
         path.className = className;
         const transform = parseTransform(el.getAttribute('transform'));
@@ -901,7 +1014,9 @@ export class FileManager {
           // Parse path element
           const dAttr = el.getAttribute('d');
           if (dAttr) {
-            const path = Path.fromPathData(dAttr, style);
+            const pathMarkerStart = this.parseMarkerType(el.getAttribute('marker-start'));
+            const pathMarkerEnd = this.parseMarkerType(el.getAttribute('marker-end'));
+            const path = Path.fromPathData(dAttr, style, pathMarkerStart, pathMarkerEnd);
             if (path.commands.length > 0) {
               shape = path;
             }
@@ -927,17 +1042,26 @@ export class FileManager {
   }
 
   /**
-   * Parse style attributes from edge path element
+   * Parse style attributes from edge element (path or group)
    */
-  private static parseEdgeStyleFromElement(el: SVGPathElement): ShapeStyle {
+  private static parseEdgeStyleFromElement(el: SVGElement): ShapeStyle {
+    // For group elements, get style from the path child
+    let styleEl: SVGElement = el;
+    if (el.tagName === 'g') {
+      const pathChild = el.querySelector('path');
+      if (pathChild) {
+        styleEl = pathChild;
+      }
+    }
+
     return {
       fill: DEFAULT_STYLE.fill,
       fillNone: true,
-      stroke: el.getAttribute('stroke') || DEFAULT_STYLE.stroke,
-      strokeWidth: parseFloat(el.getAttribute('stroke-width') || String(DEFAULT_STYLE.strokeWidth)),
-      opacity: parseFloat(el.getAttribute('opacity') || '1'),
-      strokeDasharray: el.getAttribute('stroke-dasharray') || '',
-      strokeLinecap: (el.getAttribute('stroke-linecap') as StrokeLinecap) || DEFAULT_STYLE.strokeLinecap
+      stroke: styleEl.getAttribute('stroke') || DEFAULT_STYLE.stroke,
+      strokeWidth: parseFloat(styleEl.getAttribute('stroke-width') || String(DEFAULT_STYLE.strokeWidth)),
+      opacity: parseFloat(styleEl.getAttribute('opacity') || '1'),
+      strokeDasharray: styleEl.getAttribute('stroke-dasharray') || '',
+      strokeLinecap: (styleEl.getAttribute('stroke-linecap') as StrokeLinecap) || DEFAULT_STYLE.strokeLinecap
     };
   }
 
@@ -995,13 +1119,14 @@ export class FileManager {
   private static parseMarkerType(markerAttr: string | null): MarkerType {
     if (!markerAttr) return 'none';
 
-    // Extract marker type from url(#marker-{type}-{position})
-    const match = markerAttr.match(/url\(#marker-([^-]+(?:-open)?)-(?:start|end)\)/);
+    // Extract marker type from url(#marker-{shape}-{size}-{position})
+    // e.g., url(#marker-arrow-small-start) -> 'arrow-small'
+    const match = markerAttr.match(/url\(#marker-(arrow|triangle|circle|diamond)-(small|medium|large)-(?:start|end)\)/);
     if (match) {
-      const type = match[1];
-      if (type === 'triangle' || type === 'triangle-open' || type === 'circle' || type === 'diamond') {
-        return type;
-      }
+      const shape = match[1];
+      const size = match[2];
+      const markerType = `${shape}-${size}` as MarkerType;
+      return markerType;
     }
     return 'none';
   }

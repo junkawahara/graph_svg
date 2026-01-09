@@ -64,9 +64,14 @@ export const DEFAULT_CANVAS_SIZE: CanvasSize = {
 export type StrokeLinecap = 'butt' | 'round' | 'square';
 
 /**
- * Marker/arrow types for line endpoints
+ * Marker/arrow types for line and path endpoints
+ * Format: {shape}-{size} where shape is arrow/triangle/circle/diamond and size is small/medium/large
  */
-export type MarkerType = 'none' | 'triangle' | 'triangle-open' | 'circle' | 'diamond';
+export type MarkerType = 'none'
+  | 'arrow-small' | 'arrow-medium' | 'arrow-large'
+  | 'triangle-small' | 'triangle-medium' | 'triangle-large'
+  | 'circle-small' | 'circle-medium' | 'circle-large'
+  | 'diamond-small' | 'diamond-medium' | 'diamond-large';
 
 /**
  * Style properties for shapes
@@ -194,6 +199,7 @@ export interface EdgeData extends BaseShapeData {
   curveOffset: number;
   isSelfLoop: boolean;
   selfLoopAngle: number;
+  label?: string;
 }
 
 /**
@@ -229,6 +235,8 @@ export type PathCommand =
 export interface PathData extends BaseShapeData {
   type: 'path';
   commands: PathCommand[];
+  markerStart: MarkerType;
+  markerEnd: MarkerType;
 }
 
 /**

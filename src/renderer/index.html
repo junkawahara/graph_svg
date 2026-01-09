@@ -388,6 +388,10 @@
               <option value="backward">Backward (←)</option>
             </select>
           </div>
+          <div class="property-group">
+            <label>Edge Label</label>
+            <input type="text" id="prop-edge-label" placeholder="Label">
+          </div>
         </div>
 
         <!-- Path-specific properties (hidden by default) -->
@@ -398,26 +402,58 @@
           </div>
         </div>
 
-        <!-- Line-specific properties (hidden by default) -->
-        <div id="line-properties" style="display: none;">
+        <!-- Marker properties for Line and Path (hidden by default) -->
+        <div id="marker-properties" style="display: none;">
           <div class="property-group">
             <label>Arrow Start</label>
             <select id="prop-marker-start">
               <option value="none">None</option>
-              <option value="triangle">Triangle</option>
-              <option value="triangle-open">Triangle (Open)</option>
-              <option value="circle">Circle</option>
-              <option value="diamond">Diamond</option>
+              <optgroup label="Arrow (>)">
+                <option value="arrow-small">Small</option>
+                <option value="arrow-medium">Medium</option>
+                <option value="arrow-large">Large</option>
+              </optgroup>
+              <optgroup label="Triangle">
+                <option value="triangle-small">Small</option>
+                <option value="triangle-medium">Medium</option>
+                <option value="triangle-large">Large</option>
+              </optgroup>
+              <optgroup label="Circle">
+                <option value="circle-small">Small</option>
+                <option value="circle-medium">Medium</option>
+                <option value="circle-large">Large</option>
+              </optgroup>
+              <optgroup label="Diamond">
+                <option value="diamond-small">Small</option>
+                <option value="diamond-medium">Medium</option>
+                <option value="diamond-large">Large</option>
+              </optgroup>
             </select>
           </div>
           <div class="property-group">
             <label>Arrow End</label>
             <select id="prop-marker-end">
               <option value="none">None</option>
-              <option value="triangle">Triangle</option>
-              <option value="triangle-open">Triangle (Open)</option>
-              <option value="circle">Circle</option>
-              <option value="diamond">Diamond</option>
+              <optgroup label="Arrow (>)">
+                <option value="arrow-small">Small</option>
+                <option value="arrow-medium">Medium</option>
+                <option value="arrow-large">Large</option>
+              </optgroup>
+              <optgroup label="Triangle">
+                <option value="triangle-small">Small</option>
+                <option value="triangle-medium">Medium</option>
+                <option value="triangle-large">Large</option>
+              </optgroup>
+              <optgroup label="Circle">
+                <option value="circle-small">Small</option>
+                <option value="circle-medium">Medium</option>
+                <option value="circle-large">Large</option>
+              </optgroup>
+              <optgroup label="Diamond">
+                <option value="diamond-small">Small</option>
+                <option value="diamond-medium">Medium</option>
+                <option value="diamond-large">Large</option>
+              </optgroup>
             </select>
           </div>
         </div>

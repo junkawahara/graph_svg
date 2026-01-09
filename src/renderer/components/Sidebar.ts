@@ -17,6 +17,7 @@ import { TextPropertyChangeCommand, TextPropertyUpdates } from '../commands/Text
 import { MarkerChangeCommand, MarkerUpdates } from '../commands/MarkerChangeCommand';
 import { NodeLabelChangeCommand, NodePropertyUpdates } from '../commands/NodeLabelChangeCommand';
 import { EdgeDirectionChangeCommand } from '../commands/EdgeDirectionChangeCommand';
+import { EdgeLabelChangeCommand } from '../commands/EdgeLabelChangeCommand';
 import { ResizeShapeCommand } from '../commands/ResizeShapeCommand';
 import { CanvasResizeCommand } from '../commands/CanvasResizeCommand';
 import { RotateShapeCommand } from '../commands/RotateShapeCommand';
@@ -50,8 +51,8 @@ export class Sidebar {
   private textUnderlineBtn: HTMLButtonElement;
   private textStrikethroughBtn: HTMLButtonElement;
 
-  // Line-specific properties (arrows)
-  private linePropertiesContainer: HTMLDivElement;
+  // Marker properties (for Line and Path)
+  private markerPropertiesContainer: HTMLDivElement;
   private markerStart: HTMLSelectElement;
   private markerEnd: HTMLSelectElement;
 
@@ -63,6 +64,7 @@ export class Sidebar {
   // Edge-specific properties
   private edgePropertiesContainer: HTMLDivElement | null = null;
   private edgeDirection: HTMLSelectElement | null = null;
+  private edgeLabel: HTMLInputElement | null = null;
 
   // Path-specific properties
   private pathPropertiesContainer: HTMLDivElement | null = null;
@@ -142,7 +144,7 @@ export class Sidebar {
     this.textStrikethroughBtn = document.getElementById('prop-text-strikethrough-btn') as HTMLButtonElement;
 
     // Line-specific elements
-    this.linePropertiesContainer = document.getElementById('line-properties') as HTMLDivElement;
+    this.markerPropertiesContainer = document.getElementById('marker-properties') as HTMLDivElement;
     this.markerStart = document.getElementById('prop-marker-start') as HTMLSelectElement;
     this.markerEnd = document.getElementById('prop-marker-end') as HTMLSelectElement;
 
@@ -154,6 +156,7 @@ export class Sidebar {
     // Edge-specific elements
     this.edgePropertiesContainer = document.getElementById('edge-properties') as HTMLDivElement;
     this.edgeDirection = document.getElementById('prop-edge-direction') as HTMLSelectElement;
+    this.edgeLabel = document.getElementById('prop-edge-label') as HTMLInputElement;
 
     // Path-specific elements
     this.pathPropertiesContainer = document.getElementById('path-properties') as HTMLDivElement;
@@ -382,6 +385,13 @@ export class Sidebar {
       this.edgeDirection.addEventListener('change', () => {
         if (this.isUpdatingUI) return;
         this.applyEdgeDirectionChange(this.edgeDirection!.value as EdgeDirection);
+      });
+    }
+
+    if (this.edgeLabel) {
+      this.edgeLabel.addEventListener('change', () => {
+        if (this.isUpdatingUI) return;
+        this.applyEdgeLabelChange(this.edgeLabel!.value);
       });
     }
   }
@@ -810,11 +820,11 @@ export class Sidebar {
           this.hideTextProperties();
         }
 
-        // Show/hide line properties based on shape type
-        if (shape instanceof Line) {
-          this.showLineProperties(shape);
+        // Show/hide marker properties based on shape type (Line or Path)
+        if (shape instanceof Line || shape instanceof Path) {
+          this.showMarkerProperties(shape);
         } else {
-          this.hideLineProperties();
+          this.hideMarkerProperties();
         }
 
         // Show/hide node properties based on shape type
@@ -848,7 +858,7 @@ export class Sidebar {
         this.updateUIFromStyle(editorState.currentStyle);
         this.hideStyleClassSection();
         this.hideTextProperties();
-        this.hideLineProperties();
+        this.hideMarkerProperties();
         this.hideNodeProperties();
         this.hideEdgeProperties();
         this.hidePathProperties();
@@ -858,7 +868,7 @@ export class Sidebar {
         // Multiple selection - show style class section, hide special properties
         this.showStyleClassSection(shapes);
         this.hideTextProperties();
-        this.hideLineProperties();
+        this.hideMarkerProperties();
         this.hideNodeProperties();
         this.hideEdgeProperties();
         this.hidePathProperties();
@@ -945,15 +955,17 @@ export class Sidebar {
   }
 
   /**
-   * Apply marker change to selected Line shape
+   * Apply marker change to selected Line or Path shape
    */
   private applyMarkerChange(updates: MarkerUpdates): void {
     const selectedShapes = selectionManager.getSelection();
 
-    if (selectedShapes.length === 1 && selectedShapes[0] instanceof Line) {
-      const lineShape = selectedShapes[0] as Line;
-      const command = new MarkerChangeCommand(lineShape, updates);
-      historyManager.execute(command);
+    if (selectedShapes.length === 1) {
+      const shape = selectedShapes[0];
+      if (shape instanceof Line || shape instanceof Path) {
+        const command = new MarkerChangeCommand(shape, updates);
+        historyManager.execute(command);
+      }
     }
   }
 
@@ -987,23 +999,23 @@ export class Sidebar {
   }
 
   /**
-   * Show line properties and populate with shape values
+   * Show marker properties and populate with shape values (for Line and Path)
    */
-  private showLineProperties(line: Line): void {
+  private showMarkerProperties(shape: Line | Path): void {
     this.isUpdatingUI = true;
 
-    this.linePropertiesContainer.style.display = 'block';
-    this.markerStart.value = line.markerStart;
-    this.markerEnd.value = line.markerEnd;
+    this.markerPropertiesContainer.style.display = 'block';
+    this.markerStart.value = shape.markerStart;
+    this.markerEnd.value = shape.markerEnd;
 
     this.isUpdatingUI = false;
   }
 
   /**
-   * Hide line properties
+   * Hide marker properties
    */
-  private hideLineProperties(): void {
-    this.linePropertiesContainer.style.display = 'none';
+  private hideMarkerProperties(): void {
+    this.markerPropertiesContainer.style.display = 'none';
   }
 
   /**
@@ -1028,6 +1040,20 @@ export class Sidebar {
     if (selectedShapes.length === 1 && selectedShapes[0] instanceof Edge) {
       const edge = selectedShapes[0] as Edge;
       const command = new EdgeDirectionChangeCommand(edge, direction);
+      historyManager.execute(command);
+    }
+  }
+
+  /**
+   * Apply edge label change
+   */
+  private applyEdgeLabelChange(label: string): void {
+    const selectedShapes = selectionManager.getSelection();
+
+    if (selectedShapes.length === 1 && selectedShapes[0] instanceof Edge) {
+      const edge = selectedShapes[0] as Edge;
+      const newLabel = label.trim() || undefined;
+      const command = new EdgeLabelChangeCommand(edge, newLabel);
       historyManager.execute(command);
     }
   }
@@ -1066,6 +1092,7 @@ export class Sidebar {
 
     this.edgePropertiesContainer.style.display = 'block';
     if (this.edgeDirection) this.edgeDirection.value = edge.direction;
+    if (this.edgeLabel) this.edgeLabel.value = edge.label || '';
 
     this.isUpdatingUI = false;
   }

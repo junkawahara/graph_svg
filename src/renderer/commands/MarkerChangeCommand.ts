@@ -1,5 +1,6 @@
 import { Command } from './Command';
 import { Line } from '../shapes/Line';
+import { Path } from '../shapes/Path';
 import { MarkerType } from '../../shared/types';
 
 export interface MarkerUpdates {
@@ -12,21 +13,24 @@ interface MarkerState {
   markerEnd: MarkerType;
 }
 
+// Type for shapes that support markers
+type MarkerShape = Line | Path;
+
 /**
- * Command for changing line markers (supports undo/redo)
+ * Command for changing markers on Line or Path shapes (supports undo/redo)
  */
 export class MarkerChangeCommand implements Command {
   private beforeState: MarkerState;
   private afterUpdates: MarkerUpdates;
 
   constructor(
-    private line: Line,
+    private shape: MarkerShape,
     markerUpdates: MarkerUpdates
   ) {
     // Capture before state
     this.beforeState = {
-      markerStart: line.markerStart,
-      markerEnd: line.markerEnd
+      markerStart: shape.markerStart,
+      markerEnd: shape.markerEnd
     };
 
     this.afterUpdates = markerUpdates;
@@ -34,18 +38,18 @@ export class MarkerChangeCommand implements Command {
 
   execute(): void {
     if (this.afterUpdates.markerStart !== undefined) {
-      this.line.markerStart = this.afterUpdates.markerStart;
+      this.shape.markerStart = this.afterUpdates.markerStart;
     }
     if (this.afterUpdates.markerEnd !== undefined) {
-      this.line.markerEnd = this.afterUpdates.markerEnd;
+      this.shape.markerEnd = this.afterUpdates.markerEnd;
     }
-    this.line.updateElement();
+    this.shape.updateElement();
   }
 
   undo(): void {
-    this.line.markerStart = this.beforeState.markerStart;
-    this.line.markerEnd = this.beforeState.markerEnd;
-    this.line.updateElement();
+    this.shape.markerStart = this.beforeState.markerStart;
+    this.shape.markerEnd = this.beforeState.markerEnd;
+    this.shape.updateElement();
   }
 
   getDescription(): string {

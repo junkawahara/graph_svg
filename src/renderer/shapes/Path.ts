@@ -1,6 +1,7 @@
-import { Point, Bounds, ShapeStyle, PathData, PathCommand, generateId } from '../../shared/types';
+import { Point, Bounds, ShapeStyle, PathData, PathCommand, MarkerType, generateId } from '../../shared/types';
 import { Shape, applyStyle, applyRotation, normalizeRotation, rotatePoint, getRotatedBounds } from './Shape';
 import { parsePath, serializePath, getPathPoints, sampleArc } from '../core/PathParser';
+import { getMarkerManager } from '../core/MarkerManager';
 
 /**
  * Path shape implementation - standard SVG path with multiple command types
@@ -15,6 +16,8 @@ export class Path implements Shape {
     public readonly id: string,
     public commands: PathCommand[],
     public style: ShapeStyle,
+    public markerStart: MarkerType = 'none',
+    public markerEnd: MarkerType = 'none',
     rotation: number = 0
   ) {
     this.rotation = normalizeRotation(rotation);
@@ -23,9 +26,9 @@ export class Path implements Shape {
   /**
    * Create path from d attribute string
    */
-  static fromPathData(d: string, style: ShapeStyle): Path {
+  static fromPathData(d: string, style: ShapeStyle, markerStart: MarkerType = 'none', markerEnd: MarkerType = 'none'): Path {
     const commands = parsePath(d);
-    return new Path(generateId(), commands, style);
+    return new Path(generateId(), commands, style, markerStart, markerEnd);
   }
 
   /**
@@ -47,7 +50,7 @@ export class Path implements Shape {
       commands.push({ type: 'Z' });
     }
 
-    return new Path(generateId(), commands, style);
+    return new Path(generateId(), commands, style, 'none', 'none');
   }
 
   /**
@@ -62,6 +65,7 @@ export class Path implements Shape {
     path.id = this.id;
     path.setAttribute('d', this.buildPathData());
     applyStyle(path, this.style);
+    this.applyMarkers(path);
 
     // Apply rotation
     const center = this.getRotationCenter();
@@ -71,11 +75,32 @@ export class Path implements Shape {
     return path;
   }
 
+  /**
+   * Apply marker attributes to path element
+   */
+  private applyMarkers(path: SVGPathElement): void {
+    const manager = getMarkerManager();
+    if (!manager) return;
+
+    if (this.markerStart !== 'none') {
+      path.setAttribute('marker-start', manager.getMarkerUrl(this.markerStart, 'start'));
+    } else {
+      path.removeAttribute('marker-start');
+    }
+
+    if (this.markerEnd !== 'none') {
+      path.setAttribute('marker-end', manager.getMarkerUrl(this.markerEnd, 'end'));
+    } else {
+      path.removeAttribute('marker-end');
+    }
+  }
+
   updateElement(): void {
     if (!this.element) return;
 
     this.element.setAttribute('d', this.buildPathData());
     applyStyle(this.element, this.style);
+    this.applyMarkers(this.element);
 
     // Apply rotation
     const center = this.getRotationCenter();
@@ -419,6 +444,8 @@ export class Path implements Shape {
       type: 'path',
       commands: this.commands.map(cmd => ({ ...cmd })),
       style: { ...this.style },
+      markerStart: this.markerStart,
+      markerEnd: this.markerEnd,
       rotation: this.rotation,
       className: this.className
     };
@@ -429,6 +456,8 @@ export class Path implements Shape {
       generateId(),
       this.commands.map(cmd => ({ ...cmd })),
       { ...this.style },
+      this.markerStart,
+      this.markerEnd,
       this.rotation
     );
     cloned.className = this.className;

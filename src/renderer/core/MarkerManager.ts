@@ -7,17 +7,12 @@ interface MarkerDefinition {
   path: string;
   filled: boolean;
   strokeWidth?: number;
+  markerSize: number; // markerWidth and markerHeight
 }
 
-const MARKER_DEFS: Record<Exclude<MarkerType, 'none'>, MarkerDefinition> = {
-  'triangle': {
-    viewBox: '0 0 10 10',
-    refX: 9,
-    refY: 5,
-    path: 'M 0 0 L 10 5 L 0 10 Z',
-    filled: true
-  },
-  'triangle-open': {
+// Base shapes for each marker type
+const SHAPE_PATHS = {
+  arrow: {
     viewBox: '0 0 10 10',
     refX: 9,
     refY: 5,
@@ -25,14 +20,21 @@ const MARKER_DEFS: Record<Exclude<MarkerType, 'none'>, MarkerDefinition> = {
     filled: false,
     strokeWidth: 1.5
   },
-  'circle': {
+  triangle: {
+    viewBox: '0 0 10 10',
+    refX: 9,
+    refY: 5,
+    path: 'M 0 0 L 10 5 L 0 10 Z',
+    filled: true
+  },
+  circle: {
     viewBox: '0 0 10 10',
     refX: 5,
     refY: 5,
     path: 'M 5 0 A 5 5 0 1 1 5 10 A 5 5 0 1 1 5 0 Z',
     filled: true
   },
-  'diamond': {
+  diamond: {
     viewBox: '0 0 10 10',
     refX: 5,
     refY: 5,
@@ -40,6 +42,40 @@ const MARKER_DEFS: Record<Exclude<MarkerType, 'none'>, MarkerDefinition> = {
     filled: true
   }
 };
+
+// Size multipliers
+const SIZES = {
+  small: 3,
+  medium: 4,
+  large: 6
+};
+
+// Generate all marker definitions
+function generateMarkerDefs(): Record<Exclude<MarkerType, 'none'>, MarkerDefinition> {
+  const defs: Partial<Record<Exclude<MarkerType, 'none'>, MarkerDefinition>> = {};
+
+  for (const [shape, shapeDef] of Object.entries(SHAPE_PATHS)) {
+    for (const [size, markerSize] of Object.entries(SIZES)) {
+      const key = `${shape}-${size}` as Exclude<MarkerType, 'none'>;
+      defs[key] = {
+        ...shapeDef,
+        markerSize
+      };
+    }
+  }
+
+  return defs as Record<Exclude<MarkerType, 'none'>, MarkerDefinition>;
+}
+
+const MARKER_DEFS = generateMarkerDefs();
+
+// All marker types (excluding 'none')
+const ALL_MARKER_TYPES: Exclude<MarkerType, 'none'>[] = [
+  'arrow-small', 'arrow-medium', 'arrow-large',
+  'triangle-small', 'triangle-medium', 'triangle-large',
+  'circle-small', 'circle-medium', 'circle-large',
+  'diamond-small', 'diamond-medium', 'diamond-large'
+];
 
 /**
  * Manages SVG marker definitions for arrow heads
@@ -71,9 +107,7 @@ export class MarkerManager {
    * Register all marker definitions
    */
   private registerAllMarkers(): void {
-    const markerTypes: Exclude<MarkerType, 'none'>[] = ['triangle', 'triangle-open', 'circle', 'diamond'];
-
-    for (const type of markerTypes) {
+    for (const type of ALL_MARKER_TYPES) {
       // Create end marker (points forward)
       this.createMarker(type, 'end', 'auto');
       // Create start marker (points backward)
@@ -93,8 +127,8 @@ export class MarkerManager {
     marker.setAttribute('viewBox', def.viewBox);
     marker.setAttribute('refX', String(def.refX));
     marker.setAttribute('refY', String(def.refY));
-    marker.setAttribute('markerWidth', '4');
-    marker.setAttribute('markerHeight', '4');
+    marker.setAttribute('markerWidth', String(def.markerSize));
+    marker.setAttribute('markerHeight', String(def.markerSize));
     marker.setAttribute('markerUnits', 'strokeWidth');
     marker.setAttribute('orient', orient);
 
@@ -156,4 +190,18 @@ export function initMarkerManager(svg: SVGSVGElement): MarkerManager {
  */
 export function getMarkerManager(): MarkerManager | null {
   return markerManagerInstance;
+}
+
+/**
+ * Get all marker types (for UI generation)
+ */
+export function getAllMarkerTypes(): Exclude<MarkerType, 'none'>[] {
+  return ALL_MARKER_TYPES;
+}
+
+/**
+ * Get marker definition (for FileManager serialization)
+ */
+export function getMarkerDefinition(type: Exclude<MarkerType, 'none'>): MarkerDefinition {
+  return MARKER_DEFS[type];
 }

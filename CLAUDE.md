@@ -205,19 +205,24 @@ src/
 - Font Family（フォントファミリー）
 - Bold（太字）
 
-## 直線プロパティ（矢印）
+## マーカープロパティ（矢印）
 
-直線図形選択時のみ表示:
+直線またはパス図形選択時のみ表示:
 - Arrow Start（始点マーカー）
 - Arrow End（終点マーカー）
 
-マーカー種類:
-- None（なし）
-- Triangle（三角形）
-- Triangle Open（中抜き三角形）
-- Circle（円）
-- Diamond（ひし形）
+マーカー形状（4種類）:
+- Arrow（開いた矢印 >）
+- Triangle（塗りつぶし三角 ▶）
+- Circle（塗りつぶし丸 ●）
+- Diamond（塗りつぶしひし形 ◆）
 
+マーカーサイズ（3サイズ）:
+- Small
+- Medium
+- Large
+
+※ 合計12種類 + None = 13オプション
 ※ マーカーの色は線の色（Stroke）に連動
 
 ## ズーム・パン
@@ -407,6 +412,7 @@ Rectangle、Ellipse、Text、Node、Image などの軸平行図形には skew �
 
 エッジ選択時:
 - Direction（方向: Undirected / Forward / Backward）
+- Edge Label（ラベル文字列）
 
 ### SVG保存形式
 
@@ -417,12 +423,73 @@ Rectangle、Ellipse、Text、Node、Image などの軸平行図形には skew �
   <text x="100" y="100" text-anchor="middle">A</text>
 </g>
 
-<!-- エッジ -->
-<path id="edge-456" data-graph-type="edge"
-      data-source-id="node-123" data-target-id="node-789"
-      data-direction="forward" data-curve-offset="0"
-      d="M 130 100 L 270 100" fill="none" stroke="..."/>
+<!-- エッジ（ラベルなし） -->
+<g id="edge-456" data-graph-type="edge"
+   data-source-id="node-123" data-target-id="node-789"
+   data-direction="forward" data-curve-offset="0">
+  <path d="M 130 100 L 270 100" fill="none" stroke="..."/>
+</g>
+
+<!-- エッジ（ラベルあり） -->
+<g id="edge-789" data-graph-type="edge"
+   data-source-id="node-123" data-target-id="node-456"
+   data-direction="none" data-curve-offset="0" data-label="weight">
+  <path d="M 130 100 L 270 100" fill="none" stroke="..."/>
+  <rect fill="white" stroke="none" rx="2" ry="2" .../>
+  <text x="200" y="100" text-anchor="middle" ...>weight</text>
+</g>
 ```
+
+### グラフファイルインポート
+
+テキストファイルからグラフを読み込む機能。
+
+#### 使い方
+
+1. 「ファイル」メニュー > 「グラフファイルをインポート...」を選択
+2. グラフファイル（.txt, .dimacs, .col, .edgelist）を選択
+3. ダイアログでオプションを選択:
+   - グラフの種類: 無向グラフ / 有向グラフ
+   - インポート方法: 既存のグラフに追加 / 新規グラフ（キャンバスをクリア）
+4. 「インポート」をクリック
+
+#### 対応フォーマット
+
+**Edge List形式**
+
+1行が1つの辺に対応。スペース区切りで頂点名を記述。
+
+```
+abc def
+def ghij3
+ghij3 45
+```
+
+3列目はエッジラベル（オプション）:
+```
+abc def 3
+def ghij3 cd
+```
+
+**DIMACS形式（変種）**
+
+```
+p 4 3
+c This is a comment line.
+e abc def
+e def ghij3
+e ghij3 45
+```
+
+- `p n m`: 頂点数n、辺数m
+- `c ...`: コメント行（無視）
+- `e src dst`: 辺の定義
+
+※ 孤立頂点（辺に現れない頂点）は連番ラベル（1, 2, 3...）で生成
+
+#### レイアウト
+
+インポート時は円形レイアウトで配置される。必要に応じて「配置」>「自動レイアウト」で再配置可能。
 
 ## グループ機能
 

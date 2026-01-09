@@ -176,7 +176,7 @@ export function createShapeFromData(data: ShapeData, offsetX: number = 0, offset
             return { ...cmd };
         }
       });
-      const path = new Path(newId, offsetCommands, { ...data.style }, data.rotation || 0);
+      const path = new Path(newId, offsetCommands, { ...data.style }, data.markerStart || 'none', data.markerEnd || 'none', data.rotation || 0);
       path.className = data.className;
       return path;
     }
