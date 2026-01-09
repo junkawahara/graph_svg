@@ -182,6 +182,8 @@ export function applyStyle(element: SVGElement, style: ShapeStyle): void {
   if (style.strokeWidth > 0) {
     element.setAttribute('stroke', style.stroke);
     element.setAttribute('stroke-width', String(style.strokeWidth));
+    // Set color property for currentColor inheritance (used by markers)
+    element.style.color = style.stroke;
   } else {
     element.setAttribute('stroke', 'none');
     element.removeAttribute('stroke-width');
