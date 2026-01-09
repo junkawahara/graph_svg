@@ -14,7 +14,7 @@ interface MarkerDefinition {
 const SHAPE_PATHS = {
   arrow: {
     viewBox: '0 0 10 10',
-    refX: 9,
+    refX: 8,
     refY: 5,
     path: 'M 0 1 L 8 5 L 0 9',
     filled: false,

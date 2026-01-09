@@ -27,7 +27,7 @@ interface MarkerShapeDef {
 }
 
 const MARKER_SHAPES: Record<string, MarkerShapeDef> = {
-  arrow: { viewBox: '0 0 10 10', refX: 9, refY: 5, path: 'M 0 1 L 8 5 L 0 9', filled: false, strokeWidth: 1.5 },
+  arrow: { viewBox: '0 0 10 10', refX: 8, refY: 5, path: 'M 0 1 L 8 5 L 0 9', filled: false, strokeWidth: 1.5 },
   triangle: { viewBox: '0 0 10 10', refX: 9, refY: 5, path: 'M 0 0 L 10 5 L 0 10 Z', filled: true },
   circle: { viewBox: '0 0 10 10', refX: 5, refY: 5, path: 'M 5 0 A 5 5 0 1 1 5 10 A 5 5 0 1 1 5 0 Z', filled: true },
   diamond: { viewBox: '0 0 10 10', refX: 5, refY: 5, path: 'M 5 0 L 10 5 L 5 10 L 0 5 Z', filled: true }
