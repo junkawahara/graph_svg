@@ -44,7 +44,7 @@ const SHAPE_PATHS = {
 };
 
 // Size multipliers
-const SIZES = {
+const SIZES: Record<string, number> = {
   small: 3,
   medium: 4,
   large: 6
@@ -79,15 +79,16 @@ const ALL_MARKER_TYPES: Exclude<MarkerType, 'none'>[] = [
 
 /**
  * Manages SVG marker definitions for arrow heads
+ * Creates color-specific markers on demand
  */
 export class MarkerManager {
   private defs: SVGDefsElement;
   private svg: SVGSVGElement;
+  private createdMarkers: Set<string> = new Set();
 
   constructor(svg: SVGSVGElement) {
     this.svg = svg;
     this.defs = this.createDefs();
-    this.registerAllMarkers();
   }
 
   /**
@@ -104,23 +105,28 @@ export class MarkerManager {
   }
 
   /**
-   * Register all marker definitions
+   * Normalize color to hex format without #
    */
-  private registerAllMarkers(): void {
-    for (const type of ALL_MARKER_TYPES) {
-      // Create end marker (points forward)
-      this.createMarker(type, 'end', 'auto');
-      // Create start marker (points backward)
-      this.createMarker(type, 'start', 'auto-start-reverse');
-    }
+  private normalizeColor(color: string): string {
+    // Remove # if present
+    return color.replace('#', '').toLowerCase();
   }
 
   /**
-   * Create a single marker element
+   * Ensure a color-specific marker exists, create if needed
    */
-  private createMarker(type: Exclude<MarkerType, 'none'>, position: 'start' | 'end', orient: string): void {
+  ensureMarker(type: MarkerType, position: 'start' | 'end', color: string): void {
+    if (type === 'none') return;
+
+    const colorHex = this.normalizeColor(color);
+    const id = this.getMarkerId(type, position, color);
+
+    if (this.createdMarkers.has(id)) return;
+
     const def = MARKER_DEFS[type];
-    const id = this.getMarkerId(type, position);
+    if (!def) return;
+
+    const orient = position === 'start' ? 'auto-start-reverse' : 'auto';
 
     const marker = document.createElementNS('http://www.w3.org/2000/svg', 'marker');
     marker.setAttribute('id', id);
@@ -136,11 +142,11 @@ export class MarkerManager {
     path.setAttribute('d', def.path);
 
     if (def.filled) {
-      path.setAttribute('fill', 'currentColor');
+      path.setAttribute('fill', `#${colorHex}`);
       path.setAttribute('stroke', 'none');
     } else {
       path.setAttribute('fill', 'none');
-      path.setAttribute('stroke', 'currentColor');
+      path.setAttribute('stroke', `#${colorHex}`);
       path.setAttribute('stroke-width', String(def.strokeWidth || 1));
       path.setAttribute('stroke-linecap', 'round');
       path.setAttribute('stroke-linejoin', 'round');
@@ -148,22 +154,28 @@ export class MarkerManager {
 
     marker.appendChild(path);
     this.defs.appendChild(marker);
+    this.createdMarkers.add(id);
   }
 
   /**
-   * Get marker ID for a given type and position
+   * Get marker ID for a given type, position, and color
    */
-  getMarkerId(type: MarkerType, position: 'start' | 'end'): string {
+  getMarkerId(type: MarkerType, position: 'start' | 'end', color?: string): string {
     if (type === 'none') return '';
+    if (color) {
+      const colorHex = this.normalizeColor(color);
+      return `marker-${type}-${colorHex}-${position}`;
+    }
     return `marker-${type}-${position}`;
   }
 
   /**
    * Get marker URL reference for use in marker-start/marker-end attributes
    */
-  getMarkerUrl(type: MarkerType, position: 'start' | 'end'): string {
+  getMarkerUrl(type: MarkerType, position: 'start' | 'end', color: string): string {
     if (type === 'none') return '';
-    return `url(#${this.getMarkerId(type, position)})`;
+    this.ensureMarker(type, position, color);
+    return `url(#${this.getMarkerId(type, position, color)})`;
   }
 
   /**

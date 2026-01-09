@@ -149,36 +149,44 @@ export class FileManager {
 
   /**
    * Generate marker definitions for lines, paths, and edges that use them
+   * Markers are color-specific to work correctly in all SVG viewers
    */
   private static generateMarkerDefs(shapes: Shape[]): string | null {
-    const usedMarkers = new Set<string>();
+    // Map: "type-color-position" -> { type, color, position }
+    const usedMarkers = new Map<string, { type: string; color: string; position: string }>();
     const usedEdgeColors = new Set<string>();
 
     // Recursively collect markers from shapes
     const collectMarkers = (shapeList: Shape[]) => {
       shapeList.forEach(shape => {
-        // Collect markers from Line
+        // Collect markers from Line (with color)
         if (shape instanceof Line) {
+          const colorHex = shape.style.stroke.replace('#', '').toLowerCase();
           if (shape.markerStart !== 'none') {
-            usedMarkers.add(`${shape.markerStart}-start`);
+            const key = `${shape.markerStart}-${colorHex}-start`;
+            usedMarkers.set(key, { type: shape.markerStart, color: colorHex, position: 'start' });
           }
           if (shape.markerEnd !== 'none') {
-            usedMarkers.add(`${shape.markerEnd}-end`);
+            const key = `${shape.markerEnd}-${colorHex}-end`;
+            usedMarkers.set(key, { type: shape.markerEnd, color: colorHex, position: 'end' });
           }
         }
-        // Collect markers from Path
+        // Collect markers from Path (with color)
         if (shape instanceof Path) {
+          const colorHex = shape.style.stroke.replace('#', '').toLowerCase();
           if (shape.markerStart !== 'none') {
-            usedMarkers.add(`${shape.markerStart}-start`);
+            const key = `${shape.markerStart}-${colorHex}-start`;
+            usedMarkers.set(key, { type: shape.markerStart, color: colorHex, position: 'start' });
           }
           if (shape.markerEnd !== 'none') {
-            usedMarkers.add(`${shape.markerEnd}-end`);
+            const key = `${shape.markerEnd}-${colorHex}-end`;
+            usedMarkers.set(key, { type: shape.markerEnd, color: colorHex, position: 'end' });
           }
         }
         // Collect edge arrow colors
         if (shape instanceof Edge) {
           if (shape.direction === 'forward' || shape.direction === 'backward') {
-            usedEdgeColors.add(shape.style.stroke.replace('#', ''));
+            usedEdgeColors.add(shape.style.stroke.replace('#', '').toLowerCase());
           }
         }
         // Recursively check group children
@@ -194,28 +202,25 @@ export class FileManager {
 
     const defsLines: string[] = ['  <defs>'];
 
-    // Line/Path markers (format: 'arrow-small-start', 'triangle-medium-end', etc.)
-    usedMarkers.forEach(markerKey => {
-      // Parse marker key: e.g., 'arrow-small-start' -> shape='arrow', size='small', position='start'
-      const lastDashIndex = markerKey.lastIndexOf('-');
-      const position = markerKey.substring(lastDashIndex + 1); // 'start' or 'end'
-      const typeWithSize = markerKey.substring(0, lastDashIndex); // e.g., 'arrow-small'
+    // Line/Path markers (color-specific)
+    usedMarkers.forEach(({ type, color, position }) => {
+      // Parse type: e.g., 'arrow-small' -> shape='arrow', size='small'
+      const typeDashIndex = type.lastIndexOf('-');
+      const shapeType = type.substring(0, typeDashIndex); // e.g., 'arrow'
+      const sizeStr = type.substring(typeDashIndex + 1); // e.g., 'small'
 
-      const typeDashIndex = typeWithSize.lastIndexOf('-');
-      const shapeType = typeWithSize.substring(0, typeDashIndex); // e.g., 'arrow'
-      const sizeStr = typeWithSize.substring(typeDashIndex + 1); // e.g., 'small'
-
-      const shapeDef = MARKER_SHAPES[shapeType as keyof typeof MARKER_SHAPES];
+      const shapeDef = MARKER_SHAPES[shapeType];
       if (!shapeDef) return;
 
       const markerSize = MARKER_SIZES[sizeStr] || 4;
       const orient = position === 'start' ? 'auto-start-reverse' : 'auto';
+      const markerId = `marker-${type}-${color}-${position}`;
 
       const fillAttr = shapeDef.filled
-        ? 'fill="currentColor" stroke="none"'
-        : `fill="none" stroke="currentColor" stroke-width="${shapeDef.strokeWidth || 1}" stroke-linecap="round" stroke-linejoin="round"`;
+        ? `fill="#${color}" stroke="none"`
+        : `fill="none" stroke="#${color}" stroke-width="${shapeDef.strokeWidth || 1}" stroke-linecap="round" stroke-linejoin="round"`;
 
-      defsLines.push(`    <marker id="marker-${typeWithSize}-${position}" viewBox="${shapeDef.viewBox}" refX="${shapeDef.refX}" refY="${shapeDef.refY}" markerWidth="${markerSize}" markerHeight="${markerSize}" markerUnits="strokeWidth" orient="${orient}">`);
+      defsLines.push(`    <marker id="${markerId}" viewBox="${shapeDef.viewBox}" refX="${shapeDef.refX}" refY="${shapeDef.refY}" markerWidth="${markerSize}" markerHeight="${markerSize}" markerUnits="strokeWidth" orient="${orient}">`);
       defsLines.push(`      <path d="${shapeDef.path}" ${fillAttr}/>`);
       defsLines.push(`    </marker>`);
     });
@@ -241,16 +246,14 @@ export class FileManager {
 
     if (shape instanceof Line) {
       let markerAttrs = '';
+      const colorHex = shape.style.stroke.replace('#', '').toLowerCase();
       if (shape.markerStart !== 'none') {
-        markerAttrs += ` marker-start="url(#marker-${shape.markerStart}-start)"`;
+        markerAttrs += ` marker-start="url(#marker-${shape.markerStart}-${colorHex}-start)"`;
       }
       if (shape.markerEnd !== 'none') {
-        markerAttrs += ` marker-end="url(#marker-${shape.markerEnd}-end)"`;
+        markerAttrs += ` marker-end="url(#marker-${shape.markerEnd}-${colorHex}-end)"`;
       }
-      // Add style="color:..." for currentColor inheritance in markers
-      const colorStyle = (shape.markerStart !== 'none' || shape.markerEnd !== 'none')
-        ? ` style="color: ${shape.style.stroke}"` : '';
-      return `  <line id="${shape.id}" ${classAttr}x1="${shape.x1}" y1="${shape.y1}" x2="${shape.x2}" y2="${shape.y2}" ${style}${markerAttrs}${colorStyle}/>`;
+      return `  <line id="${shape.id}" ${classAttr}x1="${shape.x1}" y1="${shape.y1}" x2="${shape.x2}" y2="${shape.y2}" ${style}${markerAttrs}/>`;
     } else if (shape instanceof Ellipse) {
       return `  <ellipse id="${shape.id}" ${classAttr}cx="${shape.cx}" cy="${shape.cy}" rx="${shape.rx}" ry="${shape.ry}" ${style}/>`;
     } else if (shape instanceof Rectangle) {
@@ -508,16 +511,14 @@ export class FileManager {
     const classAttr = path.className ? `class="${path.className}" ` : '';
     const pathData = serializePath(path.commands);
     let markerAttrs = '';
+    const colorHex = path.style.stroke.replace('#', '').toLowerCase();
     if (path.markerStart !== 'none') {
-      markerAttrs += ` marker-start="url(#marker-${path.markerStart}-start)"`;
+      markerAttrs += ` marker-start="url(#marker-${path.markerStart}-${colorHex}-start)"`;
     }
     if (path.markerEnd !== 'none') {
-      markerAttrs += ` marker-end="url(#marker-${path.markerEnd}-end)"`;
+      markerAttrs += ` marker-end="url(#marker-${path.markerEnd}-${colorHex}-end)"`;
     }
-    // Add style="color:..." for currentColor inheritance in markers
-    const colorStyle = (path.markerStart !== 'none' || path.markerEnd !== 'none')
-      ? ` style="color: ${path.style.stroke}"` : '';
-    return `  <path id="${path.id}" ${classAttr}d="${pathData}" ${style}${markerAttrs}${colorStyle}/>`;
+    return `  <path id="${path.id}" ${classAttr}d="${pathData}" ${style}${markerAttrs}/>`;
   }
 
   /**
@@ -1125,8 +1126,18 @@ export class FileManager {
   private static parseMarkerType(markerAttr: string | null): MarkerType {
     if (!markerAttr) return 'none';
 
-    // Extract marker type from url(#marker-{shape}-{size}-{position})
-    // e.g., url(#marker-arrow-small-start) -> 'arrow-small'
+    // Extract marker type from url(#marker-{shape}-{size}-{color}-{position})
+    // e.g., url(#marker-arrow-small-ff0000-start) -> 'arrow-small'
+    // Also support old format without color: url(#marker-arrow-small-start)
+    const matchWithColor = markerAttr.match(/url\(#marker-(arrow|triangle|circle|diamond)-(small|medium|large)-[0-9a-fA-F]{6}-(?:start|end)\)/);
+    if (matchWithColor) {
+      const shape = matchWithColor[1];
+      const size = matchWithColor[2];
+      const markerType = `${shape}-${size}` as MarkerType;
+      return markerType;
+    }
+
+    // Fallback to old format without color
     const match = markerAttr.match(/url\(#marker-(arrow|triangle|circle|diamond)-(small|medium|large)-(?:start|end)\)/);
     if (match) {
       const shape = match[1];

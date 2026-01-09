@@ -82,14 +82,16 @@ export class Path implements Shape {
     const manager = getMarkerManager();
     if (!manager) return;
 
+    const color = this.style.stroke;
+
     if (this.markerStart !== 'none') {
-      path.setAttribute('marker-start', manager.getMarkerUrl(this.markerStart, 'start'));
+      path.setAttribute('marker-start', manager.getMarkerUrl(this.markerStart, 'start', color));
     } else {
       path.removeAttribute('marker-start');
     }
 
     if (this.markerEnd !== 'none') {
-      path.setAttribute('marker-end', manager.getMarkerUrl(this.markerEnd, 'end'));
+      path.setAttribute('marker-end', manager.getMarkerUrl(this.markerEnd, 'end', color));
     } else {
       path.removeAttribute('marker-end');
     }

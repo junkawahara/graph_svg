@@ -73,14 +73,16 @@ export class Line implements Shape {
     const manager = getMarkerManager();
     if (!manager) return;
 
+    const color = this.style.stroke;
+
     if (this.markerStart !== 'none') {
-      line.setAttribute('marker-start', manager.getMarkerUrl(this.markerStart, 'start'));
+      line.setAttribute('marker-start', manager.getMarkerUrl(this.markerStart, 'start', color));
     } else {
       line.removeAttribute('marker-start');
     }
 
     if (this.markerEnd !== 'none') {
-      line.setAttribute('marker-end', manager.getMarkerUrl(this.markerEnd, 'end'));
+      line.setAttribute('marker-end', manager.getMarkerUrl(this.markerEnd, 'end', color));
     } else {
       line.removeAttribute('marker-end');
     }
