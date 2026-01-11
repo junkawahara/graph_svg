@@ -13,8 +13,8 @@ interface MarkerDefinition {
 // Base shapes for each marker type
 const SHAPE_PATHS = {
   arrow: {
-    viewBox: '0 0 12 10',
-    refX: 12,
+    viewBox: '0 0 9 10',
+    refX: 9,
     refY: 5,
     path: 'M 0 1 L 8 5 L 0 9',
     filled: false,
@@ -43,11 +43,18 @@ const SHAPE_PATHS = {
   }
 };
 
-// Size multipliers
+// Size multipliers (default)
 const SIZES: Record<string, number> = {
   small: 3,
   medium: 4,
   large: 6
+};
+
+// Arrow-specific sizes (2x larger)
+const ARROW_SIZES: Record<string, number> = {
+  small: 6,
+  medium: 8,
+  large: 12
 };
 
 // Generate all marker definitions
@@ -55,7 +62,8 @@ function generateMarkerDefs(): Record<Exclude<MarkerType, 'none'>, MarkerDefinit
   const defs: Partial<Record<Exclude<MarkerType, 'none'>, MarkerDefinition>> = {};
 
   for (const [shape, shapeDef] of Object.entries(SHAPE_PATHS)) {
-    for (const [size, markerSize] of Object.entries(SIZES)) {
+    const sizes = shape === 'arrow' ? ARROW_SIZES : SIZES;
+    for (const [size, markerSize] of Object.entries(sizes)) {
       const key = `${shape}-${size}` as Exclude<MarkerType, 'none'>;
       defs[key] = {
         ...shapeDef,
