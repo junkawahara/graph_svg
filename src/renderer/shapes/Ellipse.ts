@@ -1,5 +1,6 @@
 import { Point, Bounds, ShapeStyle, EllipseData, generateId } from '../../shared/types';
 import { Shape, applyStyle, applyRotation, normalizeRotation, rotatePoint, getRotatedBounds } from './Shape';
+import { round3 } from '../core/MathUtils';
 
 /**
  * Ellipse shape implementation
@@ -138,8 +139,8 @@ export class Ellipse implements Shape {
   }
 
   move(dx: number, dy: number): void {
-    this.cx += dx;
-    this.cy += dy;
+    this.cx = round3(this.cx + dx);
+    this.cy = round3(this.cy + dy);
     this.updateElement();
   }
 
@@ -172,10 +173,10 @@ export class Ellipse implements Shape {
   }
 
   applyTransform(translateX: number, translateY: number, scaleX: number, scaleY: number): void {
-    this.cx = this.cx * scaleX + translateX;
-    this.cy = this.cy * scaleY + translateY;
-    this.rx = this.rx * Math.abs(scaleX);
-    this.ry = this.ry * Math.abs(scaleY);
+    this.cx = round3(this.cx * scaleX + translateX);
+    this.cy = round3(this.cy * scaleY + translateY);
+    this.rx = round3(this.rx * Math.abs(scaleX));
+    this.ry = round3(this.ry * Math.abs(scaleY));
     this.updateElement();
   }
 }

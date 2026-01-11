@@ -1,5 +1,6 @@
 import { Point, Bounds, ShapeStyle, GroupData, ShapeData, generateId, DEFAULT_STYLE } from '../../shared/types';
 import { Shape, applyRotation, normalizeRotation, rotatePoint, getRotatedBounds } from './Shape';
+import { round3 } from '../core/MathUtils';
 
 /**
  * Group shape implementation - contains multiple shapes as children
@@ -150,12 +151,12 @@ export class Group implements Shape {
       const bounds = child.getBounds();
 
       // Calculate new position relative to origin
-      const newX = origin.x + (bounds.x - origin.x) * sx;
-      const newY = origin.y + (bounds.y - origin.y) * sy;
+      const newX = round3(origin.x + (bounds.x - origin.x) * sx);
+      const newY = round3(origin.y + (bounds.y - origin.y) * sy);
 
       // Move to new position
-      const dx = newX - bounds.x;
-      const dy = newY - bounds.y;
+      const dx = round3(newX - bounds.x);
+      const dy = round3(newY - bounds.y);
       child.move(dx, dy);
 
       // Scale the child only if NOT positionOnly mode
@@ -174,15 +175,15 @@ export class Group implements Shape {
     switch (child.type) {
       case 'rectangle': {
         const rect = child as any;
-        rect.width *= sx;
-        rect.height *= sy;
+        rect.width = round3(rect.width * sx);
+        rect.height = round3(rect.height * sy);
         break;
       }
       case 'ellipse':
       case 'node': {
         const ellipse = child as any;
-        ellipse.rx *= sx;
-        ellipse.ry *= sy;
+        ellipse.rx = round3(ellipse.rx * sx);
+        ellipse.ry = round3(ellipse.ry * sy);
         break;
       }
       case 'line': {
@@ -190,8 +191,8 @@ export class Group implements Shape {
         // For lines, adjust the endpoint relative to start
         const dx = (line.x2 - line.x1) * (sx - 1);
         const dy = (line.y2 - line.y1) * (sy - 1);
-        line.x2 += dx;
-        line.y2 += dy;
+        line.x2 = round3(line.x2 + dx);
+        line.y2 = round3(line.y2 + dy);
         break;
       }
       case 'polygon':
@@ -200,8 +201,8 @@ export class Group implements Shape {
         if (poly.points && poly.points.length > 0) {
           const firstPoint = poly.points[0];
           for (const point of poly.points) {
-            point.x = firstPoint.x + (point.x - firstPoint.x) * sx;
-            point.y = firstPoint.y + (point.y - firstPoint.y) * sy;
+            point.x = round3(firstPoint.x + (point.x - firstPoint.x) * sx);
+            point.y = round3(firstPoint.y + (point.y - firstPoint.y) * sy);
           }
         }
         break;

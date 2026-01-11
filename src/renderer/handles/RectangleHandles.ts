@@ -1,6 +1,7 @@
 import { Point } from '../../shared/types';
 import { Rectangle } from '../shapes/Rectangle';
 import { Handle, HandleSet, HandlePosition, createHandleElement, getCursorForHandle } from './Handle';
+import { round3 } from '../core/MathUtils';
 
 /**
  * Handle for rectangle corner
@@ -73,10 +74,10 @@ class RectangleCornerHandle implements Handle {
     if (newHeight < 6) newHeight = 6;
 
     // Update rectangle properties
-    this.rectangle.x = newX;
-    this.rectangle.y = newY;
-    this.rectangle.width = newWidth;
-    this.rectangle.height = newHeight;
+    this.rectangle.x = round3(newX);
+    this.rectangle.y = round3(newY);
+    this.rectangle.width = round3(newWidth);
+    this.rectangle.height = round3(newHeight);
 
     this.rectangle.updateElement();
   }

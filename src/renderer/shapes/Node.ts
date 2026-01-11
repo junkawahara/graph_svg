@@ -1,6 +1,7 @@
 import { Point, Bounds, ShapeStyle, NodeData, generateId } from '../../shared/types';
 import { Shape, applyStyle, applyRotation, normalizeRotation, rotatePoint, getRotatedBounds } from './Shape';
 import { getGraphManager } from '../core/GraphManager';
+import { round3 } from '../core/MathUtils';
 
 /**
  * Graph Node shape - a composite shape with ellipse and label
@@ -179,8 +180,8 @@ export class Node implements Shape {
   }
 
   move(dx: number, dy: number): void {
-    this.cx += dx;
-    this.cy += dy;
+    this.cx = round3(this.cx + dx);
+    this.cy = round3(this.cy + dy);
     this.updateElement();
   }
 
@@ -219,13 +220,13 @@ export class Node implements Shape {
   }
 
   applyTransform(translateX: number, translateY: number, scaleX: number, scaleY: number): void {
-    this.cx = this.cx * scaleX + translateX;
-    this.cy = this.cy * scaleY + translateY;
-    this.rx = this.rx * Math.abs(scaleX);
-    this.ry = this.ry * Math.abs(scaleY);
+    this.cx = round3(this.cx * scaleX + translateX);
+    this.cy = round3(this.cy * scaleY + translateY);
+    this.rx = round3(this.rx * Math.abs(scaleX));
+    this.ry = round3(this.ry * Math.abs(scaleY));
     // Scale font size by average scale factor
     const avgScale = (Math.abs(scaleX) + Math.abs(scaleY)) / 2;
-    this.fontSize = this.fontSize * avgScale;
+    this.fontSize = round3(this.fontSize * avgScale);
     this.updateElement();
   }
 

@@ -2,6 +2,7 @@ import { Point, Bounds, ShapeStyle, PathData, PathCommand, MarkerType, generateI
 import { Shape, applyStyle, applyRotation, normalizeRotation, rotatePoint, getRotatedBounds } from './Shape';
 import { parsePath, serializePath, getPathPoints, sampleArc } from '../core/PathParser';
 import { getMarkerManager } from '../core/MarkerManager';
+import { round3 } from '../core/MathUtils';
 
 /**
  * Path shape implementation - standard SVG path with multiple command types
@@ -413,27 +414,27 @@ export class Path implements Shape {
       switch (cmd.type) {
         case 'M':
         case 'L':
-          cmd.x += dx;
-          cmd.y += dy;
+          cmd.x = round3(cmd.x + dx);
+          cmd.y = round3(cmd.y + dy);
           break;
         case 'C':
-          cmd.cp1x += dx;
-          cmd.cp1y += dy;
-          cmd.cp2x += dx;
-          cmd.cp2y += dy;
-          cmd.x += dx;
-          cmd.y += dy;
+          cmd.cp1x = round3(cmd.cp1x + dx);
+          cmd.cp1y = round3(cmd.cp1y + dy);
+          cmd.cp2x = round3(cmd.cp2x + dx);
+          cmd.cp2y = round3(cmd.cp2y + dy);
+          cmd.x = round3(cmd.x + dx);
+          cmd.y = round3(cmd.y + dy);
           break;
         case 'Q':
-          cmd.cpx += dx;
-          cmd.cpy += dy;
-          cmd.x += dx;
-          cmd.y += dy;
+          cmd.cpx = round3(cmd.cpx + dx);
+          cmd.cpy = round3(cmd.cpy + dy);
+          cmd.x = round3(cmd.x + dx);
+          cmd.y = round3(cmd.y + dy);
           break;
         case 'A':
           // Arc: only move endpoint (radii and flags remain unchanged)
-          cmd.x += dx;
-          cmd.y += dy;
+          cmd.x = round3(cmd.x + dx);
+          cmd.y = round3(cmd.y + dy);
           break;
       }
     }
@@ -471,29 +472,29 @@ export class Path implements Shape {
       switch (cmd.type) {
         case 'M':
         case 'L':
-          cmd.x = cmd.x * scaleX + translateX;
-          cmd.y = cmd.y * scaleY + translateY;
+          cmd.x = round3(cmd.x * scaleX + translateX);
+          cmd.y = round3(cmd.y * scaleY + translateY);
           break;
         case 'C':
-          cmd.cp1x = cmd.cp1x * scaleX + translateX;
-          cmd.cp1y = cmd.cp1y * scaleY + translateY;
-          cmd.cp2x = cmd.cp2x * scaleX + translateX;
-          cmd.cp2y = cmd.cp2y * scaleY + translateY;
-          cmd.x = cmd.x * scaleX + translateX;
-          cmd.y = cmd.y * scaleY + translateY;
+          cmd.cp1x = round3(cmd.cp1x * scaleX + translateX);
+          cmd.cp1y = round3(cmd.cp1y * scaleY + translateY);
+          cmd.cp2x = round3(cmd.cp2x * scaleX + translateX);
+          cmd.cp2y = round3(cmd.cp2y * scaleY + translateY);
+          cmd.x = round3(cmd.x * scaleX + translateX);
+          cmd.y = round3(cmd.y * scaleY + translateY);
           break;
         case 'Q':
-          cmd.cpx = cmd.cpx * scaleX + translateX;
-          cmd.cpy = cmd.cpy * scaleY + translateY;
-          cmd.x = cmd.x * scaleX + translateX;
-          cmd.y = cmd.y * scaleY + translateY;
+          cmd.cpx = round3(cmd.cpx * scaleX + translateX);
+          cmd.cpy = round3(cmd.cpy * scaleY + translateY);
+          cmd.x = round3(cmd.x * scaleX + translateX);
+          cmd.y = round3(cmd.y * scaleY + translateY);
           break;
         case 'A':
           // Scale radii and endpoint
-          cmd.rx = cmd.rx * Math.abs(scaleX);
-          cmd.ry = cmd.ry * Math.abs(scaleY);
-          cmd.x = cmd.x * scaleX + translateX;
-          cmd.y = cmd.y * scaleY + translateY;
+          cmd.rx = round3(cmd.rx * Math.abs(scaleX));
+          cmd.ry = round3(cmd.ry * Math.abs(scaleY));
+          cmd.x = round3(cmd.x * scaleX + translateX);
+          cmd.y = round3(cmd.y * scaleY + translateY);
           // Note: xAxisRotation should be adjusted if scaleX and scaleY differ,
           // but this is complex; for now we keep it unchanged
           break;
@@ -508,8 +509,8 @@ export class Path implements Shape {
 
     // Helper to apply skew to a point
     const skewPoint = (x: number, y: number): { x: number; y: number } => ({
-      x: x + y * tanX,
-      y: y + x * tanY
+      x: round3(x + y * tanX),
+      y: round3(y + x * tanY)
     });
 
     for (const cmd of this.commands) {
@@ -588,8 +589,8 @@ export class Path implements Shape {
     for (const cmd of this.commands) {
       if (cmd.type === 'M' || cmd.type === 'L' || cmd.type === 'C' || cmd.type === 'Q' || cmd.type === 'A') {
         if (anchorIndex === index) {
-          cmd.x = point.x;
-          cmd.y = point.y;
+          cmd.x = round3(point.x);
+          cmd.y = round3(point.y);
           break;
         }
         anchorIndex++;
@@ -607,15 +608,15 @@ export class Path implements Shape {
 
     if (cmd.type === 'C') {
       if (cpIndex === 0) {
-        cmd.cp1x = point.x;
-        cmd.cp1y = point.y;
+        cmd.cp1x = round3(point.x);
+        cmd.cp1y = round3(point.y);
       } else {
-        cmd.cp2x = point.x;
-        cmd.cp2y = point.y;
+        cmd.cp2x = round3(point.x);
+        cmd.cp2y = round3(point.y);
       }
     } else if (cmd.type === 'Q' && cpIndex === 0) {
-      cmd.cpx = point.x;
-      cmd.cpy = point.y;
+      cmd.cpx = round3(point.x);
+      cmd.cpy = round3(point.y);
     }
     this.updateElement();
   }

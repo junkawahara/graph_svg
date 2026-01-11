@@ -1,4 +1,5 @@
 import { Point } from '../../shared/types';
+import { round3 } from './MathUtils';
 
 /**
  * Parsed transform result
@@ -236,8 +237,8 @@ export function combineTransforms(parent: ParsedTransform, child: ParsedTransfor
  */
 export function applyTransformToPoint(point: Point, transform: ParsedTransform): Point {
   return {
-    x: point.x * transform.scaleX + transform.translateX,
-    y: point.y * transform.scaleY + transform.translateY
+    x: round3(point.x * transform.scaleX + transform.translateX),
+    y: round3(point.y * transform.scaleY + transform.translateY)
   };
 }
 

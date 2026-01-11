@@ -25,6 +25,7 @@ import { ApplyClassCommand } from '../commands/ApplyClassCommand';
 import { ClassNameDialog } from './ClassNameDialog';
 import { StyleClassManagementDialog } from './StyleClassManagementDialog';
 import { parsePath, serializePath } from '../core/PathParser';
+import { round3 } from '../core/MathUtils';
 
 /**
  * Sidebar component - handles style property editing
@@ -1230,28 +1231,28 @@ export class Sidebar {
     this.isUpdatingUI = true;
 
     if (shape instanceof Line) {
-      if (this.lineX1Input) this.lineX1Input.value = String(Math.round(shape.x1));
-      if (this.lineY1Input) this.lineY1Input.value = String(Math.round(shape.y1));
-      if (this.lineX2Input) this.lineX2Input.value = String(Math.round(shape.x2));
-      if (this.lineY2Input) this.lineY2Input.value = String(Math.round(shape.y2));
+      if (this.lineX1Input) this.lineX1Input.value = String(round3(shape.x1));
+      if (this.lineY1Input) this.lineY1Input.value = String(round3(shape.y1));
+      if (this.lineX2Input) this.lineX2Input.value = String(round3(shape.x2));
+      if (this.lineY2Input) this.lineY2Input.value = String(round3(shape.y2));
     } else if (shape instanceof Node) {
-      if (this.nodeCxInput) this.nodeCxInput.value = String(Math.round(shape.cx));
-      if (this.nodeCyInput) this.nodeCyInput.value = String(Math.round(shape.cy));
-      if (this.nodeRxInput) this.nodeRxInput.value = String(Math.round(shape.rx));
-      if (this.nodeRyInput) this.nodeRyInput.value = String(Math.round(shape.ry));
+      if (this.nodeCxInput) this.nodeCxInput.value = String(round3(shape.cx));
+      if (this.nodeCyInput) this.nodeCyInput.value = String(round3(shape.cy));
+      if (this.nodeRxInput) this.nodeRxInput.value = String(round3(shape.rx));
+      if (this.nodeRyInput) this.nodeRyInput.value = String(round3(shape.ry));
     } else if (shape instanceof Ellipse) {
-      if (this.ellipseCxInput) this.ellipseCxInput.value = String(Math.round(shape.cx));
-      if (this.ellipseCyInput) this.ellipseCyInput.value = String(Math.round(shape.cy));
-      if (this.ellipseRxInput) this.ellipseRxInput.value = String(Math.round(shape.rx));
-      if (this.ellipseRyInput) this.ellipseRyInput.value = String(Math.round(shape.ry));
+      if (this.ellipseCxInput) this.ellipseCxInput.value = String(round3(shape.cx));
+      if (this.ellipseCyInput) this.ellipseCyInput.value = String(round3(shape.cy));
+      if (this.ellipseRxInput) this.ellipseRxInput.value = String(round3(shape.rx));
+      if (this.ellipseRyInput) this.ellipseRyInput.value = String(round3(shape.ry));
     } else if (shape instanceof Rectangle) {
-      if (this.rectXInput) this.rectXInput.value = String(Math.round(shape.x));
-      if (this.rectYInput) this.rectYInput.value = String(Math.round(shape.y));
-      if (this.rectWidthInput) this.rectWidthInput.value = String(Math.round(shape.width));
-      if (this.rectHeightInput) this.rectHeightInput.value = String(Math.round(shape.height));
+      if (this.rectXInput) this.rectXInput.value = String(round3(shape.x));
+      if (this.rectYInput) this.rectYInput.value = String(round3(shape.y));
+      if (this.rectWidthInput) this.rectWidthInput.value = String(round3(shape.width));
+      if (this.rectHeightInput) this.rectHeightInput.value = String(round3(shape.height));
     } else if (shape instanceof Text) {
-      if (this.textXInput) this.textXInput.value = String(Math.round(shape.x));
-      if (this.textYInput) this.textYInput.value = String(Math.round(shape.y));
+      if (this.textXInput) this.textXInput.value = String(round3(shape.x));
+      if (this.textYInput) this.textYInput.value = String(round3(shape.y));
     }
 
     this.isUpdatingUI = false;

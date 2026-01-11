@@ -1,5 +1,6 @@
 import { Point, Bounds, ShapeStyle, RectangleData, generateId } from '../../shared/types';
 import { Shape, applyStyle, applyRotation, normalizeRotation, rotatePoint, getRotatedBounds } from './Shape';
+import { round3 } from '../core/MathUtils';
 
 /**
  * Rectangle shape implementation
@@ -139,8 +140,8 @@ export class Rectangle implements Shape {
   }
 
   move(dx: number, dy: number): void {
-    this.x += dx;
-    this.y += dy;
+    this.x = round3(this.x + dx);
+    this.y = round3(this.y + dy);
     this.updateElement();
   }
 
@@ -173,16 +174,16 @@ export class Rectangle implements Shape {
   }
 
   applyTransform(translateX: number, translateY: number, scaleX: number, scaleY: number): void {
-    this.x = this.x * scaleX + translateX;
-    this.y = this.y * scaleY + translateY;
-    this.width = this.width * Math.abs(scaleX);
-    this.height = this.height * Math.abs(scaleY);
+    this.x = round3(this.x * scaleX + translateX);
+    this.y = round3(this.y * scaleY + translateY);
+    this.width = round3(this.width * Math.abs(scaleX));
+    this.height = round3(this.height * Math.abs(scaleY));
     // Handle negative scale (flip)
     if (scaleX < 0) {
-      this.x -= this.width;
+      this.x = round3(this.x - this.width);
     }
     if (scaleY < 0) {
-      this.y -= this.height;
+      this.y = round3(this.y - this.height);
     }
     this.updateElement();
   }

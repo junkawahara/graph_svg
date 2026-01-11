@@ -1,6 +1,7 @@
 import { Point } from '../../shared/types';
 import { Node } from '../shapes/Node';
 import { Handle, HandleSet, HandlePosition, createHandleElement, getCursorForHandle } from './Handle';
+import { round3 } from '../core/MathUtils';
 
 /**
  * Handle for node corner (resize)
@@ -73,10 +74,10 @@ class NodeCornerHandle implements Handle {
     if (newHeight < 20) newHeight = 20;
 
     // Update node properties
-    this.node.rx = newWidth / 2;
-    this.node.ry = newHeight / 2;
-    this.node.cx = newX + newWidth / 2;
-    this.node.cy = newY + newHeight / 2;
+    this.node.rx = round3(newWidth / 2);
+    this.node.ry = round3(newHeight / 2);
+    this.node.cx = round3(newX + newWidth / 2);
+    this.node.cy = round3(newY + newHeight / 2);
 
     this.node.updateElement();
   }

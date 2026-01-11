@@ -1,6 +1,7 @@
 import { Point } from '../../shared/types';
 import { Ellipse } from '../shapes/Ellipse';
 import { Handle, HandleSet, HandlePosition, createHandleElement, getCursorForHandle } from './Handle';
+import { round3 } from '../core/MathUtils';
 
 /**
  * Handle for ellipse corner
@@ -73,10 +74,10 @@ class EllipseCornerHandle implements Handle {
     if (newHeight < 6) newHeight = 6;
 
     // Update ellipse properties
-    this.ellipse.rx = newWidth / 2;
-    this.ellipse.ry = newHeight / 2;
-    this.ellipse.cx = newX + newWidth / 2;
-    this.ellipse.cy = newY + newHeight / 2;
+    this.ellipse.rx = round3(newWidth / 2);
+    this.ellipse.ry = round3(newHeight / 2);
+    this.ellipse.cx = round3(newX + newWidth / 2);
+    this.ellipse.cy = round3(newY + newHeight / 2);
 
     this.ellipse.updateElement();
   }

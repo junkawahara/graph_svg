@@ -1,6 +1,7 @@
 import { Point } from '../../shared/types';
 import { Line } from '../shapes/Line';
 import { Handle, HandleSet, HandlePosition, createHandleElement, getCursorForHandle } from './Handle';
+import { round3 } from '../core/MathUtils';
 
 /**
  * Handle for line endpoint
@@ -31,11 +32,11 @@ class LineEndpointHandle implements Handle {
 
   onDrag(point: Point, _event?: MouseEvent): void {
     if (this.position === 'start') {
-      this.line.x1 = point.x;
-      this.line.y1 = point.y;
+      this.line.x1 = round3(point.x);
+      this.line.y1 = round3(point.y);
     } else {
-      this.line.x2 = point.x;
-      this.line.y2 = point.y;
+      this.line.x2 = round3(point.x);
+      this.line.y2 = round3(point.y);
     }
     this.line.updateElement();
   }

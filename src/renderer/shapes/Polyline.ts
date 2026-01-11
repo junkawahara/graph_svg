@@ -1,5 +1,6 @@
 import { Point, Bounds, ShapeStyle, PolylineData, generateId } from '../../shared/types';
 import { Shape, applyStyle, applyRotation, normalizeRotation, rotatePoint, getRotatedBounds } from './Shape';
+import { round3 } from '../core/MathUtils';
 
 /**
  * Polyline shape implementation - open shape with multiple vertices
@@ -178,8 +179,8 @@ export class Polyline implements Shape {
 
   move(dx: number, dy: number): void {
     for (const p of this.points) {
-      p.x += dx;
-      p.y += dy;
+      p.x = round3(p.x + dx);
+      p.y = round3(p.y + dy);
     }
     this.updateElement();
   }
@@ -208,8 +209,8 @@ export class Polyline implements Shape {
 
   applyTransform(translateX: number, translateY: number, scaleX: number, scaleY: number): void {
     for (const point of this.points) {
-      point.x = point.x * scaleX + translateX;
-      point.y = point.y * scaleY + translateY;
+      point.x = round3(point.x * scaleX + translateX);
+      point.y = round3(point.y * scaleY + translateY);
     }
     this.updateElement();
   }
@@ -221,8 +222,8 @@ export class Polyline implements Shape {
     for (const point of this.points) {
       const newX = point.x + point.y * tanX;
       const newY = point.y + point.x * tanY;
-      point.x = newX;
-      point.y = newY;
+      point.x = round3(newX);
+      point.y = round3(newY);
     }
     this.updateElement();
   }
@@ -232,7 +233,7 @@ export class Polyline implements Shape {
    */
   setVertex(index: number, point: Point): void {
     if (index >= 0 && index < this.points.length) {
-      this.points[index] = { ...point };
+      this.points[index] = { x: round3(point.x), y: round3(point.y) };
       this.updateElement();
     }
   }

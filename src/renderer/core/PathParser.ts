@@ -1,4 +1,5 @@
 import { PathCommand } from '../../shared/types';
+import { round3 } from './MathUtils';
 
 /**
  * Parse SVG path d attribute and convert to normalized PathCommand array
@@ -281,19 +282,19 @@ export function serializePath(commands: PathCommand[]): string {
   for (const cmd of commands) {
     switch (cmd.type) {
       case 'M':
-        parts.push(`M ${cmd.x} ${cmd.y}`);
+        parts.push(`M ${round3(cmd.x)} ${round3(cmd.y)}`);
         break;
       case 'L':
-        parts.push(`L ${cmd.x} ${cmd.y}`);
+        parts.push(`L ${round3(cmd.x)} ${round3(cmd.y)}`);
         break;
       case 'C':
-        parts.push(`C ${cmd.cp1x} ${cmd.cp1y} ${cmd.cp2x} ${cmd.cp2y} ${cmd.x} ${cmd.y}`);
+        parts.push(`C ${round3(cmd.cp1x)} ${round3(cmd.cp1y)} ${round3(cmd.cp2x)} ${round3(cmd.cp2y)} ${round3(cmd.x)} ${round3(cmd.y)}`);
         break;
       case 'Q':
-        parts.push(`Q ${cmd.cpx} ${cmd.cpy} ${cmd.x} ${cmd.y}`);
+        parts.push(`Q ${round3(cmd.cpx)} ${round3(cmd.cpy)} ${round3(cmd.x)} ${round3(cmd.y)}`);
         break;
       case 'A':
-        parts.push(`A ${cmd.rx} ${cmd.ry} ${cmd.xAxisRotation} ${cmd.largeArcFlag ? 1 : 0} ${cmd.sweepFlag ? 1 : 0} ${cmd.x} ${cmd.y}`);
+        parts.push(`A ${round3(cmd.rx)} ${round3(cmd.ry)} ${round3(cmd.xAxisRotation)} ${cmd.largeArcFlag ? 1 : 0} ${cmd.sweepFlag ? 1 : 0} ${round3(cmd.x)} ${round3(cmd.y)}`);
         break;
       case 'Z':
         parts.push('Z');

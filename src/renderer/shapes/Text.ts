@@ -1,5 +1,6 @@
 import { Point, Bounds, ShapeStyle, TextData, TextAnchor, DominantBaseline, generateId } from '../../shared/types';
 import { Shape, applyStyle, applyRotation, normalizeRotation, rotatePoint, getRotatedBounds } from './Shape';
+import { round3 } from '../core/MathUtils';
 
 /**
  * Text shape implementation
@@ -237,8 +238,8 @@ export class Text implements Shape {
   }
 
   move(dx: number, dy: number): void {
-    this.x += dx;
-    this.y += dy;
+    this.x = round3(this.x + dx);
+    this.y = round3(this.y + dy);
     this.updateElement();
   }
 
@@ -287,11 +288,11 @@ export class Text implements Shape {
   }
 
   applyTransform(translateX: number, translateY: number, scaleX: number, scaleY: number): void {
-    this.x = this.x * scaleX + translateX;
-    this.y = this.y * scaleY + translateY;
+    this.x = round3(this.x * scaleX + translateX);
+    this.y = round3(this.y * scaleY + translateY);
     // Scale font size by average scale factor
     const avgScale = (Math.abs(scaleX) + Math.abs(scaleY)) / 2;
-    this.fontSize = this.fontSize * avgScale;
+    this.fontSize = round3(this.fontSize * avgScale);
     this.updateElement();
   }
 }
