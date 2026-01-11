@@ -346,7 +346,10 @@ export class Edge implements Shape {
    * Update the edge element (e.g., when nodes move)
    */
   updateElement(): void {
-    if (!this.pathElement) return;
+    // Get path element from DOM to ensure we're updating the correct element
+    const pathElement = this.element?.querySelector('path') as SVGPathElement | null;
+    if (!pathElement) return;
+    this.pathElement = pathElement;
 
     const gm = getGraphManager();
     const sourceNode = gm.getNodeShape(this.sourceNodeId);
@@ -370,6 +373,14 @@ export class Edge implements Shape {
     this.pathElement.setAttribute('stroke-width', String(this.style.strokeWidth));
     if (this.style.opacity !== undefined) {
       this.pathElement.setAttribute('opacity', String(this.style.opacity));
+    }
+    if (this.style.strokeDasharray) {
+      this.pathElement.setAttribute('stroke-dasharray', this.style.strokeDasharray);
+    } else {
+      this.pathElement.removeAttribute('stroke-dasharray');
+    }
+    if (this.style.strokeLinecap) {
+      this.pathElement.setAttribute('stroke-linecap', this.style.strokeLinecap);
     }
 
     // Update data-label attribute
