@@ -27,10 +27,10 @@ export class Ellipse implements Shape {
    * Create ellipse from bounding box (two corner points)
    */
   static fromBoundingBox(topLeft: Point, bottomRight: Point, style: ShapeStyle): Ellipse {
-    const cx = (topLeft.x + bottomRight.x) / 2;
-    const cy = (topLeft.y + bottomRight.y) / 2;
-    const rx = Math.abs(bottomRight.x - topLeft.x) / 2;
-    const ry = Math.abs(bottomRight.y - topLeft.y) / 2;
+    const cx = round3((topLeft.x + bottomRight.x) / 2);
+    const cy = round3((topLeft.y + bottomRight.y) / 2);
+    const rx = round3(Math.abs(bottomRight.x - topLeft.x) / 2);
+    const ry = round3(Math.abs(bottomRight.y - topLeft.y) / 2);
     return new Ellipse(generateId(), cx, cy, rx, ry, style);
   }
 
@@ -38,7 +38,7 @@ export class Ellipse implements Shape {
    * Create ellipse from center and radii
    */
   static fromCenter(center: Point, rx: number, ry: number, style: ShapeStyle): Ellipse {
-    return new Ellipse(generateId(), center.x, center.y, rx, ry, style);
+    return new Ellipse(generateId(), round3(center.x), round3(center.y), round3(rx), round3(ry), style);
   }
 
   /**

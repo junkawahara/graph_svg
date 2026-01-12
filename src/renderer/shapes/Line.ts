@@ -30,7 +30,7 @@ export class Line implements Shape {
    * Create line from two points
    */
   static fromPoints(start: Point, end: Point, style: ShapeStyle): Line {
-    return new Line(generateId(), start.x, start.y, end.x, end.y, 'none', 'none', style);
+    return new Line(generateId(), round3(start.x), round3(start.y), round3(end.x), round3(end.y), 'none', 'none', style);
   }
 
   /**

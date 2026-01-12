@@ -15,6 +15,7 @@ import { getGraphManager } from './GraphManager';
 import { parseTransform, combineTransforms, ParsedTransform, IDENTITY_TRANSFORM, isIdentityTransform, hasRotation, hasSkew } from './TransformParser';
 import { serializePath } from './PathParser';
 import { styleClassManager } from './StyleClassManager';
+import { round3 } from './MathUtils';
 
 // Marker shape definitions for SVG export
 interface MarkerShapeDef {
@@ -462,8 +463,8 @@ export class FileManager {
       const angle = edge.selfLoopAngle;
       const loopSize = Math.max(sourceNode.rx, sourceNode.ry) * 1.5;
       return {
-        x: sourceNode.cx + (sourceNode.rx + loopSize * 0.7) * Math.cos(angle),
-        y: sourceNode.cy + (sourceNode.ry + loopSize * 0.7) * Math.sin(angle)
+        x: round3(sourceNode.cx + (sourceNode.rx + loopSize * 0.7) * Math.cos(angle)),
+        y: round3(sourceNode.cy + (sourceNode.ry + loopSize * 0.7) * Math.sin(angle))
       };
     }
 
@@ -472,8 +473,8 @@ export class FileManager {
 
     if (edge.curveOffset === 0) {
       return {
-        x: (start.x + end.x) / 2,
-        y: (start.y + end.y) / 2
+        x: round3((start.x + end.x) / 2),
+        y: round3((start.y + end.y) / 2)
       };
     }
 
@@ -484,7 +485,7 @@ export class FileManager {
     const dy = end.y - start.y;
     const len = Math.sqrt(dx * dx + dy * dy);
 
-    if (len === 0) return { x: midX, y: midY };
+    if (len === 0) return { x: round3(midX), y: round3(midY) };
 
     const perpX = -dy / len;
     const perpY = dx / len;
@@ -498,8 +499,8 @@ export class FileManager {
     const t = 0.5;
     const mt = 1 - t;
     return {
-      x: mt * mt * newStart.x + 2 * mt * t * ctrlX + t * t * newEnd.x,
-      y: mt * mt * newStart.y + 2 * mt * t * ctrlY + t * t * newEnd.y
+      x: round3(mt * mt * newStart.x + 2 * mt * t * ctrlX + t * t * newEnd.x),
+      y: round3(mt * mt * newStart.y + 2 * mt * t * ctrlY + t * t * newEnd.y)
     };
   }
 
@@ -555,7 +556,7 @@ export class FileManager {
     const end = targetNode.getConnectionPoint(sourceNode.cx, sourceNode.cy);
 
     if (edge.curveOffset === 0) {
-      return `M ${start.x} ${start.y} L ${end.x} ${end.y}`;
+      return `M ${round3(start.x)} ${round3(start.y)} L ${round3(end.x)} ${round3(end.y)}`;
     }
 
     // Curved path for parallel edges
@@ -565,17 +566,17 @@ export class FileManager {
     const dy = end.y - start.y;
     const len = Math.sqrt(dx * dx + dy * dy);
 
-    if (len === 0) return `M ${start.x} ${start.y} L ${end.x} ${end.y}`;
+    if (len === 0) return `M ${round3(start.x)} ${round3(start.y)} L ${round3(end.x)} ${round3(end.y)}`;
 
     const perpX = -dy / len;
     const perpY = dx / len;
-    const ctrlX = midX + perpX * edge.curveOffset;
-    const ctrlY = midY + perpY * edge.curveOffset;
+    const ctrlX = round3(midX + perpX * edge.curveOffset);
+    const ctrlY = round3(midY + perpY * edge.curveOffset);
 
     const newStart = sourceNode.getConnectionPoint(ctrlX, ctrlY);
     const newEnd = targetNode.getConnectionPoint(ctrlX, ctrlY);
 
-    return `M ${newStart.x} ${newStart.y} Q ${ctrlX} ${ctrlY} ${newEnd.x} ${newEnd.y}`;
+    return `M ${round3(newStart.x)} ${round3(newStart.y)} Q ${ctrlX} ${ctrlY} ${round3(newEnd.x)} ${round3(newEnd.y)}`;
   }
 
   /**
@@ -588,15 +589,15 @@ export class FileManager {
     const startAngle = angle - Math.PI / 6;
     const endAngle = angle + Math.PI / 6;
 
-    const startX = node.cx + node.rx * Math.cos(startAngle);
-    const startY = node.cy + node.ry * Math.sin(startAngle);
-    const endX = node.cx + node.rx * Math.cos(endAngle);
-    const endY = node.cy + node.ry * Math.sin(endAngle);
+    const startX = round3(node.cx + node.rx * Math.cos(startAngle));
+    const startY = round3(node.cy + node.ry * Math.sin(startAngle));
+    const endX = round3(node.cx + node.rx * Math.cos(endAngle));
+    const endY = round3(node.cy + node.ry * Math.sin(endAngle));
 
-    const ctrl1X = node.cx + (node.rx + loopSize) * Math.cos(startAngle);
-    const ctrl1Y = node.cy + (node.ry + loopSize) * Math.sin(startAngle);
-    const ctrl2X = node.cx + (node.rx + loopSize) * Math.cos(endAngle);
-    const ctrl2Y = node.cy + (node.ry + loopSize) * Math.sin(endAngle);
+    const ctrl1X = round3(node.cx + (node.rx + loopSize) * Math.cos(startAngle));
+    const ctrl1Y = round3(node.cy + (node.ry + loopSize) * Math.sin(startAngle));
+    const ctrl2X = round3(node.cx + (node.rx + loopSize) * Math.cos(endAngle));
+    const ctrl2Y = round3(node.cy + (node.ry + loopSize) * Math.sin(endAngle));
 
     return `M ${startX} ${startY} C ${ctrl1X} ${ctrl1Y} ${ctrl2X} ${ctrl2Y} ${endX} ${endY}`;
   }
@@ -731,12 +732,13 @@ export class FileManager {
       }
     });
 
-    // Helper function to check if element is inside a group or node
-    const isInsideGroupOrNode = (el: Element): boolean => {
+    // Helper function to check if element is inside a group, node, or edge
+    const isInsideGroupOrNodeOrEdge = (el: Element): boolean => {
       let parent: Element | null = el.parentElement;
       while (parent && parent !== (svg as Element)) {
         if (parent.getAttribute('data-group-type') === 'group' ||
-            parent.getAttribute('data-graph-type') === 'node') {
+            parent.getAttribute('data-graph-type') === 'node' ||
+            parent.getAttribute('data-graph-type') === 'edge') {
           return true;
         }
         parent = parent.parentElement;
@@ -747,7 +749,7 @@ export class FileManager {
     // Parse line elements (excluding edges and those inside groups)
     const lines = svg.querySelectorAll('line');
     lines.forEach(el => {
-      if (isInsideGroupOrNode(el)) return;
+      if (isInsideGroupOrNodeOrEdge(el)) return;
 
       const className = el.getAttribute('class') || undefined;
       const style = this.parseStyleWithClass(el, className);
@@ -763,7 +765,7 @@ export class FileManager {
     // Parse ellipse elements (excluding those inside nodes or groups)
     const ellipses = svg.querySelectorAll('ellipse');
     ellipses.forEach(el => {
-      if (isInsideGroupOrNode(el)) return;
+      if (isInsideGroupOrNodeOrEdge(el)) return;
 
       const className = el.getAttribute('class') || undefined;
       const style = this.parseStyleWithClass(el, className);
@@ -777,7 +779,7 @@ export class FileManager {
     // Parse circle elements (convert to ellipse, excluding those inside groups)
     const circles = svg.querySelectorAll('circle');
     circles.forEach(el => {
-      if (isInsideGroupOrNode(el)) return;
+      if (isInsideGroupOrNodeOrEdge(el)) return;
 
       const className = el.getAttribute('class') || undefined;
       const style = this.parseStyleWithClass(el, className);
@@ -794,7 +796,7 @@ export class FileManager {
     // Parse rect elements (excluding those inside groups)
     const rects = svg.querySelectorAll('rect');
     rects.forEach(el => {
-      if (isInsideGroupOrNode(el)) return;
+      if (isInsideGroupOrNodeOrEdge(el)) return;
 
       const className = el.getAttribute('class') || undefined;
       const style = this.parseStyleWithClass(el, className);
@@ -808,7 +810,7 @@ export class FileManager {
     // Parse text elements (excluding those inside nodes or groups)
     const texts = svg.querySelectorAll('text');
     texts.forEach(el => {
-      if (isInsideGroupOrNode(el)) return;
+      if (isInsideGroupOrNodeOrEdge(el)) return;
 
       const className = el.getAttribute('class') || undefined;
       const style = this.parseTextStyleWithClass(el, className);
@@ -822,7 +824,7 @@ export class FileManager {
     // Parse polygon elements (excluding those inside groups)
     const polygons = svg.querySelectorAll('polygon');
     polygons.forEach(el => {
-      if (isInsideGroupOrNode(el)) return;
+      if (isInsideGroupOrNodeOrEdge(el)) return;
 
       const className = el.getAttribute('class') || undefined;
       const style = this.parseStyleWithClass(el, className);
@@ -836,7 +838,7 @@ export class FileManager {
     // Parse polyline elements (excluding those inside groups)
     const polylines = svg.querySelectorAll('polyline');
     polylines.forEach(el => {
-      if (isInsideGroupOrNode(el)) return;
+      if (isInsideGroupOrNodeOrEdge(el)) return;
 
       const className = el.getAttribute('class') || undefined;
       const style = this.parseStyleWithClass(el, className);
@@ -850,7 +852,7 @@ export class FileManager {
     // Parse image elements (excluding those inside groups)
     const images = svg.querySelectorAll('image');
     images.forEach(el => {
-      if (isInsideGroupOrNode(el)) return;
+      if (isInsideGroupOrNodeOrEdge(el)) return;
 
       const className = el.getAttribute('class') || undefined;
       const style = this.parseStyleWithClass(el, className);
@@ -864,7 +866,7 @@ export class FileManager {
     // Parse path elements (excluding those inside groups and edges)
     const allPaths = svg.querySelectorAll('path');
     allPaths.forEach(el => {
-      if (isInsideGroupOrNode(el)) return;
+      if (isInsideGroupOrNodeOrEdge(el)) return;
       // Skip if it's an edge
       if (el.getAttribute('data-graph-type') === 'edge') return;
 
