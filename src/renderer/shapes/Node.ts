@@ -35,10 +35,10 @@ export class Node implements Shape {
   static fromCenter(center: Point, label: string, style: ShapeStyle, rx: number = 30, ry: number = 30): Node {
     return new Node(
       generateId(),
-      round3(center.x),
-      round3(center.y),
-      round3(rx),
-      round3(ry),
+      Math.round(center.x),
+      Math.round(center.y),
+      Math.round(rx),
+      Math.round(ry),
       label,
       14,  // default fontSize
       'Arial',  // default fontFamily

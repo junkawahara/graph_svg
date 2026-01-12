@@ -4,7 +4,6 @@ import { Text } from '../shapes/Text';
 import { TextInputDialog } from '../components/TextInputDialog';
 import { editorState } from '../core/EditorState';
 import { eventBus } from '../core/EventBus';
-import { round3 } from '../core/MathUtils';
 
 /**
  * Tool for placing text
@@ -45,8 +44,8 @@ export class TextTool implements Tool {
       // Create text shape with text-specific defaults (black fill, no stroke)
       const text = new Text(
         generateId(),
-        round3(placement.x),
-        round3(placement.y),
+        Math.round(placement.x),
+        Math.round(placement.y),
         result.content,
         result.fontSize,
         result.fontFamily,

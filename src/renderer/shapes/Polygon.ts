@@ -24,7 +24,7 @@ export class Polygon implements Shape {
    * Create polygon from points array
    */
   static fromPoints(points: Point[], style: ShapeStyle): Polygon {
-    return new Polygon(generateId(), points.map(p => ({ x: round3(p.x), y: round3(p.y) })), style);
+    return new Polygon(generateId(), points.map(p => ({ x: Math.round(p.x), y: Math.round(p.y) })), style);
   }
 
   /**

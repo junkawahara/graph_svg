@@ -41,10 +41,10 @@ export class Path implements Shape {
     }
 
     const commands: PathCommand[] = [];
-    commands.push({ type: 'M', x: round3(points[0].x), y: round3(points[0].y) });
+    commands.push({ type: 'M', x: Math.round(points[0].x), y: Math.round(points[0].y) });
 
     for (let i = 1; i < points.length; i++) {
-      commands.push({ type: 'L', x: round3(points[i].x), y: round3(points[i].y) });
+      commands.push({ type: 'L', x: Math.round(points[i].x), y: Math.round(points[i].y) });
     }
 
     if (closed) {

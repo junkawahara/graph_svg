@@ -24,7 +24,7 @@ export class Polyline implements Shape {
    * Create polyline from points array
    */
   static fromPoints(points: Point[], style: ShapeStyle): Polyline {
-    return new Polyline(generateId(), points.map(p => ({ x: round3(p.x), y: round3(p.y) })), style);
+    return new Polyline(generateId(), points.map(p => ({ x: Math.round(p.x), y: Math.round(p.y) })), style);
   }
 
   /**
