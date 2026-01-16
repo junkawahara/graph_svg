@@ -116,21 +116,22 @@ export function createTestText(overrides: {
   style?: ShapeStyle;
   rotation?: number;
 } = {}): Text {
+  // Text constructor: id, x, y, content, fontSize, fontFamily, fontWeight, style, textAnchor, dominantBaseline, fontStyle, textUnderline, textStrikethrough, lineHeight, rotation
   return new Text(
     overrides.id ?? 'test-text-1',
-    overrides.content ?? 'Test Text',
     overrides.x ?? 100,
     overrides.y ?? 100,
+    overrides.content ?? 'Test Text',
     overrides.fontSize ?? 16,
     overrides.fontFamily ?? 'Arial',
     overrides.fontWeight ?? 'normal',
-    overrides.fontStyle ?? 'normal',
+    overrides.style ?? createTestStyle({ fill: '#000000', strokeWidth: 0 }),
     overrides.textAnchor ?? 'start',
-    overrides.dominantBaseline ?? 'auto',
+    (overrides.dominantBaseline ?? 'auto') as any,
+    overrides.fontStyle ?? 'normal',
     overrides.textUnderline ?? false,
     overrides.textStrikethrough ?? false,
     overrides.lineHeight ?? 1.2,
-    overrides.style ?? createTestStyle({ fill: '#000000', strokeWidth: 0 }),
     overrides.rotation ?? 0
   );
 }
