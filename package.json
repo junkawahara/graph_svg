@@ -7,7 +7,9 @@
     "build": "webpack --config webpack.config.js",
     "start": "npm run build && electron . --no-sandbox",
     "dev": "webpack --config webpack.config.js --watch",
-    "generate-icons": "node scripts/generate-icons.mjs"
+    "generate-icons": "node scripts/generate-icons.mjs",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "keywords": [
     "svg",
@@ -20,14 +22,17 @@
   "devDependencies": {
     "@types/cytoscape": "^3.31.0",
     "@types/node": "^20.10.0",
+    "@vitest/coverage-v8": "^4.0.17",
     "css-loader": "^6.8.1",
     "electron": "^39.2.7",
     "html-webpack-plugin": "^5.6.0",
+    "jsdom": "^27.4.0",
     "png-to-ico": "^3.0.1",
     "sharp": "^0.34.5",
     "style-loader": "^3.3.3",
     "ts-loader": "^9.5.1",
     "typescript": "^5.3.0",
+    "vitest": "^4.0.17",
     "webpack": "^5.89.0",
     "webpack-cli": "^5.1.4"
   },

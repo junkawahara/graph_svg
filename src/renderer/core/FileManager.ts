@@ -545,6 +545,39 @@ export class FileManager {
   }
 
   /**
+   * Get arrow marker offset (markerWidth=4, markerUnits="strokeWidth")
+   * Limit offset to maxDistance to prevent path from crossing through small nodes
+   */
+  private static getArrowOffset(edge: Edge, maxDistance: number): number {
+    const baseOffset = edge.style.strokeWidth * 4;
+    // Limit offset to 30% of the available distance
+    return Math.min(baseOffset, maxDistance * 0.3);
+  }
+
+  /**
+   * Offset a point along a direction by a given distance
+   */
+  private static offsetPoint(point: { x: number; y: number }, towardX: number, towardY: number, distance: number): { x: number; y: number } {
+    const dx = towardX - point.x;
+    const dy = towardY - point.y;
+    const len = Math.sqrt(dx * dx + dy * dy);
+    if (len === 0) return point;
+    return {
+      x: point.x + (dx / len) * distance,
+      y: point.y + (dy / len) * distance
+    };
+  }
+
+  /**
+   * Calculate distance between two points
+   */
+  private static distanceBetween(p1: { x: number; y: number }, p2: { x: number; y: number }): number {
+    const dx = p2.x - p1.x;
+    const dy = p2.y - p1.y;
+    return Math.sqrt(dx * dx + dy * dy);
+  }
+
+  /**
    * Calculate edge path data
    */
   private static calculateEdgePath(edge: Edge, sourceNode: Node, targetNode: Node): string {
@@ -552,18 +585,31 @@ export class FileManager {
       return this.calculateSelfLoopPath(edge, sourceNode);
     }
 
-    const start = sourceNode.getConnectionPoint(targetNode.cx, targetNode.cy);
-    const end = targetNode.getConnectionPoint(sourceNode.cx, sourceNode.cy);
+    let start = sourceNode.getConnectionPoint(targetNode.cx, targetNode.cy);
+    let end = targetNode.getConnectionPoint(sourceNode.cx, sourceNode.cy);
+
+    // Calculate distance for offset limiting
+    const distance = this.distanceBetween(start, end);
+
+    // Offset endpoints for arrow markers
+    const arrowOffset = this.getArrowOffset(edge, distance);
+    if (edge.direction === 'backward') {
+      start = this.offsetPoint(start, end.x, end.y, arrowOffset);
+    } else if (edge.direction === 'forward') {
+      end = this.offsetPoint(end, start.x, start.y, arrowOffset);
+    }
 
     if (edge.curveOffset === 0) {
       return `M ${round3(start.x)} ${round3(start.y)} L ${round3(end.x)} ${round3(end.y)}`;
     }
 
-    // Curved path for parallel edges
-    const midX = (start.x + end.x) / 2;
-    const midY = (start.y + end.y) / 2;
-    const dx = end.x - start.x;
-    const dy = end.y - start.y;
+    // Curved path for parallel edges (use original points for control point calculation)
+    const origStart = sourceNode.getConnectionPoint(targetNode.cx, targetNode.cy);
+    const origEnd = targetNode.getConnectionPoint(sourceNode.cx, sourceNode.cy);
+    const midX = (origStart.x + origEnd.x) / 2;
+    const midY = (origStart.y + origEnd.y) / 2;
+    const dx = origEnd.x - origStart.x;
+    const dy = origEnd.y - origStart.y;
     const len = Math.sqrt(dx * dx + dy * dy);
 
     if (len === 0) return `M ${round3(start.x)} ${round3(start.y)} L ${round3(end.x)} ${round3(end.y)}`;
@@ -573,8 +619,19 @@ export class FileManager {
     const ctrlX = round3(midX + perpX * edge.curveOffset);
     const ctrlY = round3(midY + perpY * edge.curveOffset);
 
-    const newStart = sourceNode.getConnectionPoint(ctrlX, ctrlY);
-    const newEnd = targetNode.getConnectionPoint(ctrlX, ctrlY);
+    let newStart = sourceNode.getConnectionPoint(ctrlX, ctrlY);
+    let newEnd = targetNode.getConnectionPoint(ctrlX, ctrlY);
+
+    // Calculate distance for curved path offset limiting
+    const curveDistance = this.distanceBetween(newStart, newEnd);
+    const curveArrowOffset = this.getArrowOffset(edge, curveDistance);
+
+    // Offset for arrow markers on curved paths
+    if (edge.direction === 'backward') {
+      newStart = this.offsetPoint(newStart, ctrlX, ctrlY, curveArrowOffset);
+    } else if (edge.direction === 'forward') {
+      newEnd = this.offsetPoint(newEnd, ctrlX, ctrlY, curveArrowOffset);
+    }
 
     return `M ${round3(newStart.x)} ${round3(newStart.y)} Q ${ctrlX} ${ctrlY} ${round3(newEnd.x)} ${round3(newEnd.y)}`;
   }
@@ -589,17 +646,29 @@ export class FileManager {
     const startAngle = angle - Math.PI / 6;
     const endAngle = angle + Math.PI / 6;
 
-    const startX = round3(node.cx + node.rx * Math.cos(startAngle));
-    const startY = round3(node.cy + node.ry * Math.sin(startAngle));
-    const endX = round3(node.cx + node.rx * Math.cos(endAngle));
-    const endY = round3(node.cy + node.ry * Math.sin(endAngle));
+    let startX = node.cx + node.rx * Math.cos(startAngle);
+    let startY = node.cy + node.ry * Math.sin(startAngle);
+    let endX = node.cx + node.rx * Math.cos(endAngle);
+    let endY = node.cy + node.ry * Math.sin(endAngle);
 
     const ctrl1X = round3(node.cx + (node.rx + loopSize) * Math.cos(startAngle));
     const ctrl1Y = round3(node.cy + (node.ry + loopSize) * Math.sin(startAngle));
     const ctrl2X = round3(node.cx + (node.rx + loopSize) * Math.cos(endAngle));
     const ctrl2Y = round3(node.cy + (node.ry + loopSize) * Math.sin(endAngle));
 
-    return `M ${startX} ${startY} C ${ctrl1X} ${ctrl1Y} ${ctrl2X} ${ctrl2Y} ${endX} ${endY}`;
+    // Offset endpoints for arrow markers (use loopSize as reference distance)
+    const arrowOffset = this.getArrowOffset(edge, loopSize);
+    if (edge.direction === 'backward') {
+      const offset = this.offsetPoint({ x: startX, y: startY }, ctrl1X, ctrl1Y, arrowOffset);
+      startX = offset.x;
+      startY = offset.y;
+    } else if (edge.direction === 'forward') {
+      const offset = this.offsetPoint({ x: endX, y: endY }, ctrl2X, ctrl2Y, arrowOffset);
+      endX = offset.x;
+      endY = offset.y;
+    }
+
+    return `M ${round3(startX)} ${round3(startY)} C ${ctrl1X} ${ctrl1Y} ${ctrl2X} ${ctrl2Y} ${round3(endX)} ${round3(endY)}`;
   }
 
   /**
@@ -732,11 +801,13 @@ export class FileManager {
       }
     });
 
-    // Helper function to check if element is inside a group, node, or edge
+    // Helper function to check if element is inside a defs, group, node, or edge
     const isInsideGroupOrNodeOrEdge = (el: Element): boolean => {
       let parent: Element | null = el.parentElement;
       while (parent && parent !== (svg as Element)) {
-        if (parent.getAttribute('data-group-type') === 'group' ||
+        if (parent.tagName.toLowerCase() === 'defs' ||
+            parent.tagName.toLowerCase() === 'marker' ||
+            parent.getAttribute('data-group-type') === 'group' ||
             parent.getAttribute('data-graph-type') === 'node' ||
             parent.getAttribute('data-graph-type') === 'edge') {
           return true;
