@@ -708,7 +708,7 @@ export class FileManager {
       attrs.push(`fill="${style.fill}"`);
     }
 
-    // Only output stroke attributes if strokeWidth > 0
+    // Output stroke attributes
     if (style.strokeWidth > 0) {
       attrs.push(`stroke="${style.stroke}"`);
       attrs.push(`stroke-width="${style.strokeWidth}"`);
@@ -720,6 +720,9 @@ export class FileManager {
       if (style.strokeLinecap !== 'butt') {
         attrs.push(`stroke-linecap="${style.strokeLinecap}"`);
       }
+    } else {
+      // Output stroke="none" to indicate no stroke (so parser knows strokeWidth=0)
+      attrs.push('stroke="none"');
     }
 
     if (style.opacity !== 1) {
@@ -1292,6 +1295,11 @@ export class FileManager {
     }
     if (el.hasAttribute('stroke')) {
       baseStyle.stroke = inlineStyle.stroke;
+      // When stroke is explicitly set to "none", also set strokeWidth to 0
+      // unless stroke-width is explicitly specified
+      if (inlineStyle.stroke === 'none' && !el.hasAttribute('stroke-width')) {
+        baseStyle.strokeWidth = 0;
+      }
     }
     if (el.hasAttribute('stroke-width')) {
       baseStyle.strokeWidth = inlineStyle.strokeWidth;
@@ -1332,6 +1340,11 @@ export class FileManager {
     }
     if (el.hasAttribute('stroke')) {
       baseStyle.stroke = inlineStyle.stroke;
+      // When stroke is explicitly set to "none", also set strokeWidth to 0
+      // unless stroke-width is explicitly specified
+      if (inlineStyle.stroke === 'none' && !el.hasAttribute('stroke-width')) {
+        baseStyle.strokeWidth = 0;
+      }
     }
     if (el.hasAttribute('stroke-width')) {
       baseStyle.strokeWidth = inlineStyle.strokeWidth;

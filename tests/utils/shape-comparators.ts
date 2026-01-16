@@ -29,8 +29,11 @@ export function expectStyleEqual(actual: ShapeStyle, expected: ShapeStyle): void
   if (!expected.fillNone) {
     expect(actual.fill).toBe(expected.fill);
   }
-  expect(actual.stroke).toBe(expected.stroke);
   expectClose(actual.strokeWidth, expected.strokeWidth);
+  // Only compare stroke color if strokeWidth > 0 (when no stroke, color doesn't matter)
+  if (expected.strokeWidth > 0) {
+    expect(actual.stroke).toBe(expected.stroke);
+  }
   expectClose(actual.opacity, expected.opacity);
   expect(actual.strokeDasharray).toBe(expected.strokeDasharray);
   expect(actual.strokeLinecap).toBe(expected.strokeLinecap);
