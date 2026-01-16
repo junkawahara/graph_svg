@@ -278,6 +278,7 @@ export function createTestEdge(
     style?: ShapeStyle;
   } = {}
 ): Edge {
+  // Edge constructor: id, sourceNodeId, targetNodeId, direction, curveOffset, isSelfLoop, selfLoopAngle, style, label
   return new Edge(
     overrides.id ?? 'test-edge-1',
     sourceNodeId,
@@ -286,8 +287,8 @@ export function createTestEdge(
     overrides.curveOffset ?? 0,
     overrides.isSelfLoop ?? sourceNodeId === targetNodeId,
     overrides.selfLoopAngle ?? 0,
-    overrides.label,
-    overrides.style ?? createTestStyle({ fillNone: true })
+    overrides.style ?? createTestStyle({ fillNone: true }),
+    overrides.label
   );
 }
 
