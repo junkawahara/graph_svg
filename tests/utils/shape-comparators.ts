@@ -24,8 +24,11 @@ export function expectClose(actual: number, expected: number, decimals: number =
  * Compare two ShapeStyle objects
  */
 export function expectStyleEqual(actual: ShapeStyle, expected: ShapeStyle): void {
-  expect(actual.fill).toBe(expected.fill);
   expect(actual.fillNone).toBe(expected.fillNone);
+  // Only compare fill color if fillNone is false
+  if (!expected.fillNone) {
+    expect(actual.fill).toBe(expected.fill);
+  }
   expect(actual.stroke).toBe(expected.stroke);
   expectClose(actual.strokeWidth, expected.strokeWidth);
   expectClose(actual.opacity, expected.opacity);
