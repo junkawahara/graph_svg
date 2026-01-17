@@ -926,7 +926,7 @@ export class Edge implements Shape {
       label: this.label,
       lineType: this.lineType,
       curveAmount: this.curveAmount,
-      pathCommands: this.pathCommands.length > 0 ? [...this.pathCommands] : undefined
+      pathCommands: this.pathCommands.length > 0 ? this.pathCommands.map(cmd => ({ ...cmd })) : undefined
     };
   }
 
@@ -943,7 +943,7 @@ export class Edge implements Shape {
       this.label,
       this.lineType,
       this.curveAmount,
-      this.pathCommands.length > 0 ? [...this.pathCommands] : []
+      this.pathCommands.length > 0 ? this.pathCommands.map(cmd => ({ ...cmd })) : []
     );
     cloned.className = this.className;
     return cloned;

@@ -276,9 +276,12 @@ export function createTestEdge(
     selfLoopAngle?: number;
     label?: string;
     style?: ShapeStyle;
+    lineType?: 'straight' | 'curve' | 'path';
+    curveAmount?: number;
+    pathCommands?: PathCommand[];
   } = {}
 ): Edge {
-  // Edge constructor: id, sourceNodeId, targetNodeId, direction, curveOffset, isSelfLoop, selfLoopAngle, style, label
+  // Edge constructor: id, sourceNodeId, targetNodeId, direction, curveOffset, isSelfLoop, selfLoopAngle, style, label, lineType, curveAmount, pathCommands
   return new Edge(
     overrides.id ?? 'test-edge-1',
     sourceNodeId,
@@ -288,7 +291,10 @@ export function createTestEdge(
     overrides.isSelfLoop ?? sourceNodeId === targetNodeId,
     overrides.selfLoopAngle ?? 0,
     overrides.style ?? createTestStyle({ fillNone: true }),
-    overrides.label
+    overrides.label,
+    overrides.lineType ?? 'straight',
+    overrides.curveAmount ?? 0,
+    overrides.pathCommands ?? []
   );
 }
 

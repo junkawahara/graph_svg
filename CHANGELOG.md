@@ -24,6 +24,25 @@
     - ノード移動時に端点のみノード境界に再接続
     - 中間の制御点は固定位置を維持
 
+- エッジ線種カスタマイズ機能のテスト（85テスト）
+  - EdgeLineTypeChangeCommand テスト（14テスト）
+    - 各線種間の切り替え動作
+    - 自己ループでの straight 制限
+    - Undo/Redo 動作
+  - EdgeCurveAmountChangeCommand テスト（16テスト）
+    - カーブ量の変更
+    - 正/負の値の取り扱い
+    - Undo/Redo 動作
+  - Edge lineType 機能テスト（27テスト）
+    - straight/curve/path 各タイプのレンダリング
+    - pathCommands からのパス生成
+    - ノード移動時の端点再接続
+    - serialize/clone の正確性
+  - EdgeHandles テスト（28テスト）
+    - アンカー/制御点ハンドルの生成
+    - ドラッグ制約（端点はノード境界上）
+    - 制御線の描画
+
 ### 変更
 - 矢印描画をSVG `<marker>` から自前描画パスに変更
   - SVG `<marker>` 要素の描画が不安定なため、自前でパス要素を描画
