@@ -4,6 +4,18 @@
 
 ## [Unreleased]
 
+### 追加
+- エッジ線種カスタマイズ機能
+  - 3種類の線種を選択可能
+    - `straight`: 2頂点間を直線で結ぶ（デフォルト）
+    - `curve`: 2頂点間をカーブで描く（曲率調整可能）
+    - `path`: SVGパスで描く（将来の制御点編集に対応予定）
+  - カーブ量スライダー（-100〜100）で曲率を調整
+  - 自己ループは `straight` 不可（自動的に `curve` または `path` のみ）
+  - 並行辺は自動的に `curve` タイプで作成
+  - Undo/Redo対応（`EdgeLineTypeChangeCommand`, `EdgeCurveAmountChangeCommand`）
+  - SVGファイル保存/読み込み対応（`data-line-type`, `data-curve-amount` 属性）
+
 ### 変更
 - 矢印描画をSVG `<marker>` から自前描画パスに変更
   - SVG `<marker>` 要素の描画が不安定なため、自前でパス要素を描画
