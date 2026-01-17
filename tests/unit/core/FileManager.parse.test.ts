@@ -114,7 +114,7 @@ describe('FileManager.parse', () => {
       expect(line.style.opacity).toBe(0.5);
     });
 
-    it('should parse line with markers', () => {
+    it('should parse line with markers (legacy format with marker-* attributes)', () => {
       const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600">
         <defs>
           <marker id="marker-arrow-medium-000000-end"/>
@@ -127,6 +127,41 @@ describe('FileManager.parse', () => {
       const line = result.shapes[0] as Line;
 
       expect(line.markerEnd).toBe('arrow-medium');
+    });
+
+    it('should parse line with markers (new group format)', () => {
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600">
+        <g id="line-1" data-shape-type="line-with-markers" data-marker-start="triangle-small" data-marker-end="arrow-large">
+          <line data-role="main" x1="10" y1="20" x2="100" y2="200" stroke="#ff0000" stroke-width="2"/>
+        </g>
+      </svg>`;
+
+      const result = FileManager.parse(svg);
+      const line = result.shapes[0] as Line;
+
+      expect(line.type).toBe('line');
+      expect(line.x1).toBe(10);
+      expect(line.y1).toBe(20);
+      expect(line.x2).toBe(100);
+      expect(line.y2).toBe(200);
+      expect(line.markerStart).toBe('triangle-small');
+      expect(line.markerEnd).toBe('arrow-large');
+      expect(line.style.stroke).toBe('#ff0000');
+      expect(line.style.strokeWidth).toBe(2);
+    });
+
+    it('should parse line group with only end marker', () => {
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600">
+        <g id="line-1" data-shape-type="line-with-markers" data-marker-start="none" data-marker-end="circle-medium">
+          <line data-role="main" x1="0" y1="0" x2="50" y2="50" stroke="#000000" stroke-width="1"/>
+        </g>
+      </svg>`;
+
+      const result = FileManager.parse(svg);
+      const line = result.shapes[0] as Line;
+
+      expect(line.markerStart).toBe('none');
+      expect(line.markerEnd).toBe('circle-medium');
     });
   });
 
@@ -323,7 +358,7 @@ describe('FileManager.parse', () => {
       expect(path.commands.some(c => c.type === 'Z')).toBe(true);
     });
 
-    it('should parse path with markers', () => {
+    it('should parse path with markers (legacy format with marker-* attributes)', () => {
       const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600">
         <defs>
           <marker id="marker-triangle-large-ff0000-start"/>
@@ -338,6 +373,38 @@ describe('FileManager.parse', () => {
 
       expect(path.markerStart).toBe('triangle-large');
       expect(path.markerEnd).toBe('arrow-medium');
+    });
+
+    it('should parse path with markers (new group format)', () => {
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600">
+        <g id="path-1" data-shape-type="path-with-markers" data-marker-start="diamond-small" data-marker-end="arrow-medium">
+          <path data-role="main" d="M 10 20 L 50 80 C 60 90 70 100 80 110" fill="none" stroke="#0000ff" stroke-width="3"/>
+        </g>
+      </svg>`;
+
+      const result = FileManager.parse(svg);
+      const path = result.shapes[0] as Path;
+
+      expect(path.type).toBe('path');
+      expect(path.commands.length).toBeGreaterThan(0);
+      expect(path.markerStart).toBe('diamond-small');
+      expect(path.markerEnd).toBe('arrow-medium');
+      expect(path.style.stroke).toBe('#0000ff');
+      expect(path.style.strokeWidth).toBe(3);
+    });
+
+    it('should parse path group with only start marker', () => {
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600">
+        <g id="path-1" data-shape-type="path-with-markers" data-marker-start="circle-large" data-marker-end="none">
+          <path data-role="main" d="M 0 0 L 100 100" fill="none" stroke="#000000" stroke-width="1"/>
+        </g>
+      </svg>`;
+
+      const result = FileManager.parse(svg);
+      const path = result.shapes[0] as Path;
+
+      expect(path.markerStart).toBe('circle-large');
+      expect(path.markerEnd).toBe('none');
     });
 
     it('should skip path elements without d attribute', () => {

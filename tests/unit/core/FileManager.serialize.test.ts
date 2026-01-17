@@ -66,16 +66,18 @@ describe('FileManager.serialize', () => {
       expect(svg).toContain('stroke-width="3"');
     });
 
-    it('should serialize line with markers', () => {
+    it('should serialize line with markers as group', () => {
       const line = createTestLine({
         id: 'line-1',
         markerEnd: 'arrow-medium'
       });
       const svg = FileManager.serialize([line], 800, 600);
 
-      expect(svg).toContain('marker-end="url(#marker-arrow-medium-');
-      expect(svg).toContain('<defs>');
-      expect(svg).toContain('<marker id="marker-arrow-medium-');
+      // Should be serialized as a group with data attributes
+      expect(svg).toContain('<g id="line-1"');
+      expect(svg).toContain('data-shape-type="line-with-markers"');
+      expect(svg).toContain('data-marker-end="arrow-medium"');
+      expect(svg).toContain('data-role="main"');
     });
   });
 
@@ -350,8 +352,8 @@ describe('FileManager.serialize', () => {
     });
   });
 
-  describe('marker definitions', () => {
-    it('should generate marker defs for line with markers', () => {
+  describe('line with markers (group format)', () => {
+    it('should serialize line with markers as group with data attributes', () => {
       const line = createTestLine({
         id: 'line-1',
         markerStart: 'triangle-small',
@@ -360,10 +362,13 @@ describe('FileManager.serialize', () => {
 
       const svg = FileManager.serialize([line], 800, 600);
 
-      expect(svg).toContain('<defs>');
-      expect(svg).toContain('</defs>');
-      expect(svg).toContain('<marker id="marker-triangle-small-');
-      expect(svg).toContain('<marker id="marker-arrow-large-');
+      // Should be a group element
+      expect(svg).toContain('<g id="line-1"');
+      expect(svg).toContain('data-shape-type="line-with-markers"');
+      expect(svg).toContain('data-marker-start="triangle-small"');
+      expect(svg).toContain('data-marker-end="arrow-large"');
+      // Should contain main line element
+      expect(svg).toContain('data-role="main"');
     });
 
     it('should not include defs when no markers used', () => {
@@ -374,24 +379,30 @@ describe('FileManager.serialize', () => {
       expect(svg).not.toContain('<defs>');
     });
 
-    it('should generate color-specific markers', () => {
-      const line1 = createTestLine({
+    it('should serialize line without markers as simple line element', () => {
+      const line = createTestLine({
+        id: 'line-1',
+        markerStart: 'none',
+        markerEnd: 'none'
+      });
+
+      const svg = FileManager.serialize([line], 800, 600);
+
+      // Should be a simple line element, not a group
+      expect(svg).toContain('<line id="line-1"');
+      expect(svg).not.toContain('data-shape-type="line-with-markers"');
+    });
+
+    it('should include stroke color in line group', () => {
+      const line = createTestLine({
         id: 'line-1',
         markerEnd: 'arrow-medium',
         style: createTestStyle({ stroke: '#ff0000' })
       });
 
-      const line2 = createTestLine({
-        id: 'line-2',
-        markerEnd: 'arrow-medium',
-        style: createTestStyle({ stroke: '#0000ff' })
-      });
+      const svg = FileManager.serialize([line], 800, 600);
 
-      const svg = FileManager.serialize([line1, line2], 800, 600);
-
-      // Should have separate markers for each color
-      expect(svg).toContain('marker-arrow-medium-ff0000');
-      expect(svg).toContain('marker-arrow-medium-0000ff');
+      expect(svg).toContain('stroke="#ff0000"');
     });
   });
 

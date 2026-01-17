@@ -55,7 +55,6 @@ import { UngroupShapesCommand } from '../commands/UngroupShapesCommand';
 import { AlignShapesCommand, AlignmentType } from '../commands/AlignShapesCommand';
 import { DistributeShapesCommand, DistributionType } from '../commands/DistributeShapesCommand';
 import { EditSvgCommand } from '../commands/EditSvgCommand';
-import { initMarkerManager } from '../core/MarkerManager';
 import { SvgEditDialog } from './SvgEditDialog';
 import { ContextMenu } from './ContextMenu';
 import { FileManager } from '../core/FileManager';
@@ -102,9 +101,6 @@ export class Canvas {
   constructor(svgElement: SVGSVGElement, containerElement: HTMLElement) {
     this.svg = svgElement;
     this.container = containerElement;
-
-    // Initialize marker manager for arrow heads
-    initMarkerManager(this.svg);
 
     // Initialize grid
     this.initializeGrid();

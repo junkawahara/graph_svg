@@ -2,6 +2,8 @@ import { Point, Bounds, ShapeStyle, EdgeData, EdgeDirection, generateId } from '
 import { Shape, applyStyle } from './Shape';
 import { getGraphManager } from '../core/GraphManager';
 import { Node } from './Node';
+import { calculateArrowGeometry, getMarkerShortenDistance } from '../core/ArrowGeometry';
+import { round3 } from '../core/MathUtils';
 
 /**
  * Graph Edge shape - connects two nodes
@@ -11,6 +13,7 @@ export class Edge implements Shape {
   readonly type = 'edge';
   element: SVGGElement | null = null;  // Changed to group element to contain path and label
   private pathElement: SVGPathElement | null = null;
+  private arrowElement: SVGPathElement | null = null;  // Custom arrow path element
   private labelElement: SVGTextElement | null = null;
   private labelBgElement: SVGRectElement | null = null;
   rotation: number = 0;  // Always 0 - edges don't rotate
@@ -186,6 +189,96 @@ export class Edge implements Shape {
   }
 
   /**
+   * Get arrow position and angle for the edge
+   * Returns the position and direction angle for the arrow based on edge direction
+   */
+  private getArrowPositionAndAngle(sourceNode: Node, targetNode: Node): { x: number; y: number; angle: number } | null {
+    if (this.direction === 'none') return null;
+
+    if (this.isSelfLoop) {
+      return this.getSelfLoopArrowInfo(sourceNode);
+    }
+
+    const start = sourceNode.getConnectionPoint(targetNode.cx, targetNode.cy);
+    const end = targetNode.getConnectionPoint(sourceNode.cx, sourceNode.cy);
+
+    if (this.curveOffset === 0) {
+      // Straight line
+      const angle = Math.atan2(end.y - start.y, end.x - start.x);
+      if (this.direction === 'forward') {
+        return { x: end.x, y: end.y, angle };
+      } else {
+        return { x: start.x, y: start.y, angle: angle + Math.PI };
+      }
+    } else {
+      // Curved line
+      return this.getCurvedArrowInfo(start, end, sourceNode, targetNode);
+    }
+  }
+
+  /**
+   * Get arrow info for curved edges
+   */
+  private getCurvedArrowInfo(start: Point, end: Point, sourceNode: Node, targetNode: Node): { x: number; y: number; angle: number } | null {
+    const midX = (start.x + end.x) / 2;
+    const midY = (start.y + end.y) / 2;
+    const dx = end.x - start.x;
+    const dy = end.y - start.y;
+    const len = Math.sqrt(dx * dx + dy * dy);
+
+    if (len === 0) return null;
+
+    const perpX = -dy / len;
+    const perpY = dx / len;
+    const ctrlX = midX + perpX * this.curveOffset;
+    const ctrlY = midY + perpY * this.curveOffset;
+
+    const newStart = sourceNode.getConnectionPoint(ctrlX, ctrlY);
+    const newEnd = targetNode.getConnectionPoint(ctrlX, ctrlY);
+
+    if (this.direction === 'forward') {
+      // Arrow at end - tangent from control point to end
+      const angle = Math.atan2(newEnd.y - ctrlY, newEnd.x - ctrlX);
+      return { x: newEnd.x, y: newEnd.y, angle };
+    } else {
+      // Arrow at start - tangent from control point to start (reversed)
+      const angle = Math.atan2(newStart.y - ctrlY, newStart.x - ctrlX);
+      return { x: newStart.x, y: newStart.y, angle };
+    }
+  }
+
+  /**
+   * Get arrow info for self-loop edges
+   */
+  private getSelfLoopArrowInfo(node: Node): { x: number; y: number; angle: number } | null {
+    const angle = this.selfLoopAngle;
+    const loopSize = Math.max(node.rx, node.ry) * 1.5;
+
+    const startAngle = angle - Math.PI / 6;
+    const endAngle = angle + Math.PI / 6;
+
+    if (this.direction === 'forward') {
+      // Arrow at end of self-loop
+      const endX = node.cx + node.rx * Math.cos(endAngle);
+      const endY = node.cy + node.ry * Math.sin(endAngle);
+      // Tangent from ctrl2 to end
+      const ctrl2X = node.cx + (node.rx + loopSize) * Math.cos(endAngle);
+      const ctrl2Y = node.cy + (node.ry + loopSize) * Math.sin(endAngle);
+      const arrowAngle = Math.atan2(endY - ctrl2Y, endX - ctrl2X);
+      return { x: endX, y: endY, angle: arrowAngle };
+    } else {
+      // Arrow at start of self-loop
+      const startX = node.cx + node.rx * Math.cos(startAngle);
+      const startY = node.cy + node.ry * Math.sin(startAngle);
+      // Tangent from ctrl1 to start (reversed)
+      const ctrl1X = node.cx + (node.rx + loopSize) * Math.cos(startAngle);
+      const ctrl1Y = node.cy + (node.ry + loopSize) * Math.sin(startAngle);
+      const arrowAngle = Math.atan2(startY - ctrl1Y, startX - ctrl1X);
+      return { x: startX, y: startY, angle: arrowAngle };
+    }
+  }
+
+  /**
    * Render the edge
    */
   render(): SVGGElement {
@@ -230,18 +323,32 @@ export class Edge implements Shape {
       path.setAttribute('stroke-linecap', this.style.strokeLinecap);
     }
 
-    // Add arrow markers based on direction
-    if (this.direction === 'forward' || this.direction === 'backward') {
-      const markerColor = this.style.stroke.replace('#', '');
-      if (this.direction === 'forward') {
-        path.setAttribute('marker-end', `url(#marker-triangle-${markerColor})`);
-      } else {
-        path.setAttribute('marker-start', `url(#marker-triangle-${markerColor})`);
-      }
-    }
-
     group.appendChild(path);
     this.pathElement = path;
+
+    // Add custom arrow based on direction
+    if (this.direction !== 'none' && sourceNode && targetNode) {
+      const arrowInfo = this.getArrowPositionAndAngle(sourceNode, targetNode);
+      if (arrowInfo) {
+        const strokeWidth = this.style.strokeWidth || 1;
+        const position = this.direction === 'forward' ? 'end' : 'start';
+        const arrowGeom = calculateArrowGeometry(
+          arrowInfo.x, arrowInfo.y, arrowInfo.angle,
+          'triangle-medium', strokeWidth, position
+        );
+        if (arrowGeom) {
+          const arrowPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+          arrowPath.setAttribute('data-role', 'arrow');
+          arrowPath.setAttribute('d', arrowGeom.path);
+          arrowPath.setAttribute('fill', this.style.stroke);
+          arrowPath.setAttribute('stroke', 'none');
+          group.appendChild(arrowPath);
+          this.arrowElement = arrowPath;
+        }
+      }
+    } else {
+      this.arrowElement = null;
+    }
 
     // Add label if exists
     if (this.label && sourceNode && targetNode) {
@@ -381,6 +488,33 @@ export class Edge implements Shape {
     }
     if (this.style.strokeLinecap) {
       this.pathElement.setAttribute('stroke-linecap', this.style.strokeLinecap);
+    }
+
+    // Update arrow
+    if (this.direction !== 'none' && sourceNode && targetNode) {
+      const arrowInfo = this.getArrowPositionAndAngle(sourceNode, targetNode);
+      if (arrowInfo) {
+        const strokeWidth = this.style.strokeWidth || 1;
+        const position = this.direction === 'forward' ? 'end' : 'start';
+        const arrowGeom = calculateArrowGeometry(
+          arrowInfo.x, arrowInfo.y, arrowInfo.angle,
+          'triangle-medium', strokeWidth, position
+        );
+        if (arrowGeom) {
+          if (!this.arrowElement) {
+            const arrowPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            arrowPath.setAttribute('data-role', 'arrow');
+            this.element?.appendChild(arrowPath);
+            this.arrowElement = arrowPath;
+          }
+          this.arrowElement.setAttribute('d', arrowGeom.path);
+          this.arrowElement.setAttribute('fill', this.style.stroke);
+          this.arrowElement.setAttribute('stroke', 'none');
+        }
+      }
+    } else if (this.arrowElement) {
+      this.arrowElement.remove();
+      this.arrowElement = null;
     }
 
     // Update data-label attribute

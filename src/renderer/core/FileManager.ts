@@ -1,4 +1,4 @@
-import { ShapeStyle, StyleClass, DEFAULT_STYLE, StrokeLinecap, MarkerType, EdgeDirection, CanvasSize, DEFAULT_CANVAS_SIZE, Point } from '../../shared/types';
+import { ShapeStyle, StyleClass, DEFAULT_STYLE, StrokeLinecap, MarkerType, EdgeDirection, CanvasSize, DEFAULT_CANVAS_SIZE, Point, generateId } from '../../shared/types';
 import { Shape } from '../shapes/Shape';
 import { Line } from '../shapes/Line';
 import { Ellipse } from '../shapes/Ellipse';
@@ -246,15 +246,11 @@ export class FileManager {
     const classAttr = shape.className ? `class="${shape.className}" ` : '';
 
     if (shape instanceof Line) {
-      let markerAttrs = '';
-      const colorHex = shape.style.stroke.replace('#', '').toLowerCase();
-      if (shape.markerStart !== 'none') {
-        markerAttrs += ` marker-start="url(#marker-${shape.markerStart}-${colorHex}-start)"`;
+      // Check if line has markers - if so, output as group
+      if (shape.markerStart !== 'none' || shape.markerEnd !== 'none') {
+        return this.lineWithMarkersToSvgElement(shape);
       }
-      if (shape.markerEnd !== 'none') {
-        markerAttrs += ` marker-end="url(#marker-${shape.markerEnd}-${colorHex}-end)"`;
-      }
-      return `  <line id="${shape.id}" ${classAttr}x1="${shape.x1}" y1="${shape.y1}" x2="${shape.x2}" y2="${shape.y2}" ${style}${markerAttrs}/>`;
+      return `  <line id="${shape.id}" ${classAttr}x1="${shape.x1}" y1="${shape.y1}" x2="${shape.x2}" y2="${shape.y2}" ${style}/>`;
     } else if (shape instanceof Ellipse) {
       return `  <ellipse id="${shape.id}" ${classAttr}cx="${shape.cx}" cy="${shape.cy}" rx="${shape.rx}" ry="${shape.ry}" ${style}/>`;
     } else if (shape instanceof Rectangle) {
@@ -508,18 +504,45 @@ export class FileManager {
    * Convert a Path to SVG element string
    */
   private static pathToSvgElement(path: Path): string {
+    // Check if path has markers - if so, output as group
+    if (path.markerStart !== 'none' || path.markerEnd !== 'none') {
+      return this.pathWithMarkersToSvgElement(path);
+    }
     const style = this.getShapeStyleAttributes(path);
     const classAttr = path.className ? `class="${path.className}" ` : '';
     const pathData = serializePath(path.commands);
-    let markerAttrs = '';
-    const colorHex = path.style.stroke.replace('#', '').toLowerCase();
-    if (path.markerStart !== 'none') {
-      markerAttrs += ` marker-start="url(#marker-${path.markerStart}-${colorHex}-start)"`;
-    }
-    if (path.markerEnd !== 'none') {
-      markerAttrs += ` marker-end="url(#marker-${path.markerEnd}-${colorHex}-end)"`;
-    }
-    return `  <path id="${path.id}" ${classAttr}d="${pathData}" ${style}${markerAttrs}/>`;
+    return `  <path id="${path.id}" ${classAttr}d="${pathData}" ${style}/>`;
+  }
+
+  /**
+   * Convert a Line with markers to SVG group element string
+   */
+  private static lineWithMarkersToSvgElement(line: Line): string {
+    const style = this.getShapeStyleAttributes(line);
+    const classAttr = line.className ? `class="${line.className}" ` : '';
+    const lines: string[] = [];
+
+    lines.push(`  <g id="${line.id}" ${classAttr}data-shape-type="line-with-markers" data-marker-start="${line.markerStart}" data-marker-end="${line.markerEnd}">`);
+    lines.push(`    <line data-role="main" x1="${line.x1}" y1="${line.y1}" x2="${line.x2}" y2="${line.y2}" ${style}/>`);
+    lines.push(`  </g>`);
+
+    return lines.join('\n');
+  }
+
+  /**
+   * Convert a Path with markers to SVG group element string
+   */
+  private static pathWithMarkersToSvgElement(path: Path): string {
+    const style = this.getShapeStyleAttributes(path);
+    const classAttr = path.className ? `class="${path.className}" ` : '';
+    const pathData = serializePath(path.commands);
+    const lines: string[] = [];
+
+    lines.push(`  <g id="${path.id}" ${classAttr}data-shape-type="path-with-markers" data-marker-start="${path.markerStart}" data-marker-end="${path.markerEnd}">`);
+    lines.push(`    <path data-role="main" d="${pathData}" ${style}/>`);
+    lines.push(`  </g>`);
+
+    return lines.join('\n');
   }
 
   /**
@@ -804,7 +827,7 @@ export class FileManager {
       }
     });
 
-    // Helper function to check if element is inside a defs, group, node, or edge
+    // Helper function to check if element is inside a defs, group, node, edge, or marker group
     const isInsideGroupOrNodeOrEdge = (el: Element): boolean => {
       let parent: Element | null = el.parentElement;
       while (parent && parent !== (svg as Element)) {
@@ -812,7 +835,9 @@ export class FileManager {
             parent.tagName.toLowerCase() === 'marker' ||
             parent.getAttribute('data-group-type') === 'group' ||
             parent.getAttribute('data-graph-type') === 'node' ||
-            parent.getAttribute('data-graph-type') === 'edge') {
+            parent.getAttribute('data-graph-type') === 'edge' ||
+            parent.getAttribute('data-shape-type') === 'line-with-markers' ||
+            parent.getAttribute('data-shape-type') === 'path-with-markers') {
           return true;
         }
         parent = parent.parentElement;
@@ -972,6 +997,32 @@ export class FileManager {
       }
     });
 
+    // Parse line-with-markers groups (top-level only)
+    const lineGroups = svg.querySelectorAll('g[data-shape-type="line-with-markers"]');
+    lineGroups.forEach(el => {
+      // Only parse top-level groups (not nested in other groups)
+      if (isInsideGroupOrNodeOrEdge(el)) return;
+
+      const transform = parseTransform(el.getAttribute('transform'));
+      const line = this.parseLineWithMarkersGroup(el as SVGGElement, transform);
+      if (line) {
+        shapes.push(line);
+      }
+    });
+
+    // Parse path-with-markers groups (top-level only)
+    const pathGroups = svg.querySelectorAll('g[data-shape-type="path-with-markers"]');
+    pathGroups.forEach(el => {
+      // Only parse top-level groups (not nested in other groups)
+      if (isInsideGroupOrNodeOrEdge(el)) return;
+
+      const transform = parseTransform(el.getAttribute('transform'));
+      const path = this.parsePathWithMarkersGroup(el as SVGGElement, transform);
+      if (path) {
+        shapes.push(path);
+      }
+    });
+
     return { shapes, canvasSize };
   }
 
@@ -1042,6 +1093,14 @@ export class FileManager {
             return node;
           }
         }
+      }
+      // Handle line-with-markers group
+      if (el.getAttribute('data-shape-type') === 'line-with-markers') {
+        return this.parseLineWithMarkersGroup(el as SVGGElement, combinedTransform);
+      }
+      // Handle path-with-markers group
+      if (el.getAttribute('data-shape-type') === 'path-with-markers') {
+        return this.parsePathWithMarkersGroup(el as SVGGElement, combinedTransform);
       }
       return null;
     }
@@ -1222,6 +1281,64 @@ export class FileManager {
       return markerType;
     }
     return 'none';
+  }
+
+  /**
+   * Parse a line-with-markers group element
+   */
+  private static parseLineWithMarkersGroup(
+    groupEl: SVGGElement,
+    transform: ParsedTransform
+  ): Line | null {
+    const lineEl = groupEl.querySelector('line[data-role="main"]') as SVGLineElement | null;
+    if (!lineEl) return null;
+
+    const className = groupEl.getAttribute('class') || undefined;
+    const style = this.parseStyleWithClass(lineEl, className);
+    const markerStart = (groupEl.getAttribute('data-marker-start') || 'none') as MarkerType;
+    const markerEnd = (groupEl.getAttribute('data-marker-end') || 'none') as MarkerType;
+
+    const line = new Line(
+      groupEl.id || generateId(),
+      parseFloat(lineEl.getAttribute('x1') || '0'),
+      parseFloat(lineEl.getAttribute('y1') || '0'),
+      parseFloat(lineEl.getAttribute('x2') || '0'),
+      parseFloat(lineEl.getAttribute('y2') || '0'),
+      markerStart,
+      markerEnd,
+      style
+    );
+    line.className = className;
+    this.applyTransformToShape(line, transform);
+    return line;
+  }
+
+  /**
+   * Parse a path-with-markers group element
+   */
+  private static parsePathWithMarkersGroup(
+    groupEl: SVGGElement,
+    transform: ParsedTransform
+  ): Path | null {
+    const pathEl = groupEl.querySelector('path[data-role="main"]') as SVGPathElement | null;
+    if (!pathEl) return null;
+
+    const dAttr = pathEl.getAttribute('d');
+    if (!dAttr) return null;
+
+    const className = groupEl.getAttribute('class') || undefined;
+    const style = this.parseStyleWithClass(pathEl, className);
+    const markerStart = (groupEl.getAttribute('data-marker-start') || 'none') as MarkerType;
+    const markerEnd = (groupEl.getAttribute('data-marker-end') || 'none') as MarkerType;
+
+    const path = Path.fromPathData(dAttr, style, markerStart, markerEnd);
+    if (path.commands.length === 0) return null;
+
+    // Override the ID with the group's ID
+    (path as any).id = groupEl.id || path.id;
+    path.className = className;
+    this.applyTransformToShape(path, transform);
+    return path;
   }
 
   /**

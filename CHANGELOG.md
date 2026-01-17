@@ -4,6 +4,18 @@
 
 ## [Unreleased]
 
+### 変更
+- 矢印描画をSVG `<marker>` から自前描画パスに変更
+  - SVG `<marker>` 要素の描画が不安定なため、自前でパス要素を描画
+  - `ArrowGeometry.ts` で矢印の幾何学計算を実装
+  - `MarkerManager.ts` を削除
+  - マーカー付きLine/Pathは `<g>` グループとして保存
+  - 再読み込み時に1つのオブジェクトとして認識
+  - Arrow（>）は元の線+2本の線で描画
+  - Triangle/Circle/Diamond は線を短くして矢印を描画
+  - Circle はベジェ曲線で描画（Arc コマンドの代わり）
+  - 旧形式（marker-start/marker-end属性）のファイルも後方互換で読み込み可能
+
 ### 追加
 - SVGラウンドトリップテスト
   - Vitest + jsdom を使用したテストフレームワーク

@@ -37,13 +37,17 @@ src/
 │   │   ├── EditorState.ts   # 状態管理
 │   │   ├── SelectionManager.ts  # 選択管理
 │   │   ├── HistoryManager.ts    # Undo/Redo履歴管理
-│   │   ├── FileManager.ts       # SVGシリアライズ/パース
+│   │   ├── FileManager.ts       # SVGシリアライズ/パース（グループ形式対応）
 │   │   ├── ClipboardManager.ts  # コピー/ペースト管理
-│   │   ├── MarkerManager.ts     # SVGマーカー定義（矢印）
+│   │   ├── ArrowGeometry.ts     # 矢印の幾何学計算・自前描画
 │   │   ├── GraphManager.ts      # グラフ（ノード-エッジ）関係管理
+│   │   ├── GraphFileParser.ts   # グラフファイル（DIMACS/EdgeList）パーサー
+│   │   ├── LayoutManager.ts     # グラフ自動レイアウト
+│   │   ├── StyleClassManager.ts # スタイルクラス管理
 │   │   ├── BoundsCalculator.ts  # バウンディングボックス計算
 │   │   ├── TransformParser.ts   # SVG transform 属性解析
-│   │   └── PathParser.ts        # SVG path d属性パーサー
+│   │   ├── PathParser.ts        # SVG path d属性パーサー
+│   │   └── MathUtils.ts         # 数学ユーティリティ（round3等）
 │   ├── commands/            # コマンドパターン（Undo/Redo）
 │   │   ├── Command.ts           # インターフェース
 │   │   ├── AddShapeCommand.ts   # 図形追加
@@ -67,16 +71,16 @@ src/
 │   │   └── RotateShapeCommand.ts    # 図形回転
 │   ├── shapes/              # 図形クラス
 │   │   ├── Shape.ts         # インターフェース
-│   │   ├── Line.ts          # 直線
+│   │   ├── Line.ts          # 直線（マーカー付きはグループで描画）
 │   │   ├── Ellipse.ts       # 楕円
 │   │   ├── Rectangle.ts     # 長方形
 │   │   ├── Polygon.ts       # 多角形
 │   │   ├── Polyline.ts      # ポリライン（折れ線）
-│   │   ├── Path.ts          # パス（SVG標準path要素）
+│   │   ├── Path.ts          # パス（マーカー付きはグループで描画）
 │   │   ├── Image.ts         # 画像（SVG image要素）
 │   │   ├── Text.ts          # テキスト
 │   │   ├── Node.ts          # グラフノード（楕円＋ラベル）
-│   │   ├── Edge.ts          # グラフエッジ（直線/曲線/自己ループ）
+│   │   ├── Edge.ts          # グラフエッジ（自前矢印描画）
 │   │   ├── Group.ts         # グループ（複数図形をまとめる）
 │   │   └── ShapeFactory.ts  # 図形生成ファクトリ
 │   ├── tools/               # ツール
@@ -235,9 +239,9 @@ src/
 - Arrow End（終点マーカー）
 
 マーカー形状（4種類）:
-- Arrow（開いた矢印 >）
+- Arrow（開いた矢印 >）- 2本の線で描画
 - Triangle（塗りつぶし三角 ▶）
-- Circle（塗りつぶし丸 ●）
+- Circle（塗りつぶし丸 ●）- ベジェ曲線で描画
 - Diamond（塗りつぶしひし形 ◆）
 
 マーカーサイズ（3サイズ）:
@@ -247,6 +251,39 @@ src/
 
 ※ 合計12種類 + None = 13オプション
 ※ マーカーの色は線の色（Stroke）に連動
+
+### 矢印の描画実装
+
+SVG `<marker>` 要素は描画が不安定なため、自前で描画したパス要素で矢印を描画する。
+
+**描画方法:**
+- `ArrowGeometry.ts` が矢印の形状・位置・回転を計算
+- Triangle/Circle/Diamond は線を短くして矢印を描画（矢印が線の端点を置き換える）
+- Arrow（>）は線を短くせず、端点から2本の線を描画
+
+**SVG保存形式:**
+
+マーカー付きの線は `<g>` グループとして保存され、再読み込み時に1つのオブジェクトとして認識される。
+
+```xml
+<!-- マーカー付きLine -->
+<g id="shape-123" data-shape-type="line-with-markers"
+   data-marker-start="none" data-marker-end="triangle-large">
+  <line data-role="main" x1="100" y1="100" x2="280" y2="180" stroke="#000" stroke-width="2"/>
+  <path data-role="marker-end" d="M..." fill="#000"/>
+</g>
+
+<!-- マーカー付きPath -->
+<g id="shape-456" data-shape-type="path-with-markers"
+   data-marker-start="arrow-medium" data-marker-end="none">
+  <path data-role="main" d="M 100 100 L 200 150 C..." fill="none" stroke="#000"/>
+  <path data-role="marker-start" d="M..." fill="none" stroke="#000"/>
+</g>
+```
+
+**後方互換性:**
+- 旧形式（`marker-start="url(#...)"` 属性）のファイルも読み込み可能
+- 保存時は常に新形式（グループ形式）で出力
 
 ## ズーム・パン
 

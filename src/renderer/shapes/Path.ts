@@ -1,7 +1,12 @@
 import { Point, Bounds, ShapeStyle, PathData, PathCommand, MarkerType, generateId } from '../../shared/types';
 import { Shape, applyStyle, applyRotation, normalizeRotation, rotatePoint, getRotatedBounds } from './Shape';
 import { parsePath, serializePath, getPathPoints, sampleArc } from '../core/PathParser';
-import { getMarkerManager } from '../core/MarkerManager';
+import {
+  calculateArrowGeometry,
+  getPathEndDirection,
+  getShortenedPathCommands,
+  getMarkerShortenDistance
+} from '../core/ArrowGeometry';
 import { round3 } from '../core/MathUtils';
 
 /**
@@ -9,9 +14,14 @@ import { round3 } from '../core/MathUtils';
  */
 export class Path implements Shape {
   readonly type = 'path';
-  element: SVGPathElement | null = null;
+  element: SVGElement | null = null;
   rotation: number = 0;
   className?: string;
+
+  // Sub-elements when rendering as a group with markers
+  private pathElement: SVGPathElement | null = null;
+  private startMarkerElement: SVGPathElement | null = null;
+  private endMarkerElement: SVGPathElement | null = null;
 
   constructor(
     public readonly id: string,
@@ -61,53 +71,256 @@ export class Path implements Shape {
     return serializePath(this.commands);
   }
 
-  render(): SVGPathElement {
+  /**
+   * Check if this path has any markers
+   */
+  private hasMarkers(): boolean {
+    return this.markerStart !== 'none' || this.markerEnd !== 'none';
+  }
+
+  render(): SVGElement {
+    if (this.hasMarkers()) {
+      return this.renderAsGroup();
+    }
+    return this.renderAsPath();
+  }
+
+  /**
+   * Render as a simple path element (when no markers)
+   */
+  private renderAsPath(): SVGPathElement {
     const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     path.id = this.id;
     path.setAttribute('d', this.buildPathData());
     applyStyle(path, this.style);
-    this.applyMarkers(path);
 
     // Apply rotation
     const center = this.getRotationCenter();
     applyRotation(path, this.rotation, center.x, center.y);
 
     this.element = path;
+    this.pathElement = path;
+    this.startMarkerElement = null;
+    this.endMarkerElement = null;
     return path;
   }
 
   /**
-   * Apply marker attributes to path element
+   * Render as a group containing path and arrow markers
    */
-  private applyMarkers(path: SVGPathElement): void {
-    const manager = getMarkerManager();
-    if (!manager) return;
+  private renderAsGroup(): SVGGElement {
+    const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    group.id = this.id;
+    group.setAttribute('data-shape-type', 'path-with-markers');
+    group.setAttribute('data-marker-start', this.markerStart);
+    group.setAttribute('data-marker-end', this.markerEnd);
 
-    const color = this.style.stroke;
+    const strokeWidth = this.style.strokeWidth || 1;
 
-    if (this.markerStart !== 'none') {
-      path.setAttribute('marker-start', manager.getMarkerUrl(this.markerStart, 'start', color));
+    // Get original endpoints for markers
+    const startDir = getPathEndDirection(this.commands, 'start');
+    const endDir = getPathEndDirection(this.commands, 'end');
+
+    // Calculate shortened path
+    const startShortenDist = getMarkerShortenDistance(this.markerStart, strokeWidth);
+    const endShortenDist = getMarkerShortenDistance(this.markerEnd, strokeWidth);
+    const shortenedCommands = getShortenedPathCommands(this.commands, startShortenDist, endShortenDist);
+
+    // Create path element
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('data-role', 'main');
+    path.setAttribute('d', serializePath(shortenedCommands));
+    applyStyle(path, this.style);
+    group.appendChild(path);
+    this.pathElement = path;
+
+    // Create start marker if needed
+    if (this.markerStart !== 'none' && startDir) {
+      const startArrow = calculateArrowGeometry(
+        startDir.x, startDir.y, startDir.angle, this.markerStart, strokeWidth, 'start'
+      );
+      if (startArrow) {
+        const startPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        startPath.setAttribute('data-role', 'marker-start');
+        startPath.setAttribute('d', startArrow.path);
+        if (startArrow.filled) {
+          startPath.setAttribute('fill', this.style.stroke);
+          startPath.setAttribute('stroke', 'none');
+        } else {
+          startPath.setAttribute('fill', 'none');
+          startPath.setAttribute('stroke', this.style.stroke);
+          startPath.setAttribute('stroke-width', String(startArrow.strokeWidth || 1));
+          startPath.setAttribute('stroke-linecap', 'round');
+          startPath.setAttribute('stroke-linejoin', 'round');
+        }
+        group.appendChild(startPath);
+        this.startMarkerElement = startPath;
+      }
     } else {
-      path.removeAttribute('marker-start');
+      this.startMarkerElement = null;
     }
 
-    if (this.markerEnd !== 'none') {
-      path.setAttribute('marker-end', manager.getMarkerUrl(this.markerEnd, 'end', color));
+    // Create end marker if needed
+    if (this.markerEnd !== 'none' && endDir) {
+      const endArrow = calculateArrowGeometry(
+        endDir.x, endDir.y, endDir.angle, this.markerEnd, strokeWidth, 'end'
+      );
+      if (endArrow) {
+        const endPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        endPath.setAttribute('data-role', 'marker-end');
+        endPath.setAttribute('d', endArrow.path);
+        if (endArrow.filled) {
+          endPath.setAttribute('fill', this.style.stroke);
+          endPath.setAttribute('stroke', 'none');
+        } else {
+          endPath.setAttribute('fill', 'none');
+          endPath.setAttribute('stroke', this.style.stroke);
+          endPath.setAttribute('stroke-width', String(endArrow.strokeWidth || 1));
+          endPath.setAttribute('stroke-linecap', 'round');
+          endPath.setAttribute('stroke-linejoin', 'round');
+        }
+        group.appendChild(endPath);
+        this.endMarkerElement = endPath;
+      }
     } else {
-      path.removeAttribute('marker-end');
+      this.endMarkerElement = null;
     }
+
+    // Apply rotation to the entire group
+    const center = this.getRotationCenter();
+    applyRotation(group, this.rotation, center.x, center.y);
+
+    this.element = group;
+    return group;
   }
 
   updateElement(): void {
     if (!this.element) return;
 
-    this.element.setAttribute('d', this.buildPathData());
-    applyStyle(this.element, this.style);
-    this.applyMarkers(this.element);
+    // Check if we need to switch between group and simple path
+    const isGroup = this.element.tagName.toLowerCase() === 'g';
+    const needsGroup = this.hasMarkers();
+
+    if (isGroup !== needsGroup) {
+      // Need to re-render with different structure
+      const parent = this.element.parentNode;
+      const oldElement = this.element;  // Save old element before render() updates this.element
+      if (parent) {
+        const newElement = this.render();
+        parent.replaceChild(newElement, oldElement);
+      }
+      return;
+    }
+
+    if (isGroup) {
+      // Update group structure
+      this.updateGroupElement();
+    } else {
+      // Update simple path
+      this.updatePathElement();
+    }
+  }
+
+  /**
+   * Update a simple path element
+   */
+  private updatePathElement(): void {
+    if (!this.pathElement) return;
+
+    this.pathElement.setAttribute('d', this.buildPathData());
+    applyStyle(this.pathElement, this.style);
 
     // Apply rotation
     const center = this.getRotationCenter();
-    applyRotation(this.element, this.rotation, center.x, center.y);
+    applyRotation(this.pathElement, this.rotation, center.x, center.y);
+  }
+
+  /**
+   * Update a group element with markers
+   */
+  private updateGroupElement(): void {
+    if (!this.element || !this.pathElement) return;
+
+    const group = this.element as SVGGElement;
+    group.setAttribute('data-marker-start', this.markerStart);
+    group.setAttribute('data-marker-end', this.markerEnd);
+
+    const strokeWidth = this.style.strokeWidth || 1;
+
+    // Get original endpoints for markers
+    const startDir = getPathEndDirection(this.commands, 'start');
+    const endDir = getPathEndDirection(this.commands, 'end');
+
+    // Calculate shortened path
+    const startShortenDist = getMarkerShortenDistance(this.markerStart, strokeWidth);
+    const endShortenDist = getMarkerShortenDistance(this.markerEnd, strokeWidth);
+    const shortenedCommands = getShortenedPathCommands(this.commands, startShortenDist, endShortenDist);
+
+    // Update path element
+    this.pathElement.setAttribute('d', serializePath(shortenedCommands));
+    applyStyle(this.pathElement, this.style);
+
+    // Update or create start marker
+    if (this.markerStart !== 'none' && startDir) {
+      const startArrow = calculateArrowGeometry(
+        startDir.x, startDir.y, startDir.angle, this.markerStart, strokeWidth, 'start'
+      );
+      if (startArrow) {
+        if (!this.startMarkerElement) {
+          const startPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+          startPath.setAttribute('data-role', 'marker-start');
+          group.appendChild(startPath);
+          this.startMarkerElement = startPath;
+        }
+        this.startMarkerElement.setAttribute('d', startArrow.path);
+        if (startArrow.filled) {
+          this.startMarkerElement.setAttribute('fill', this.style.stroke);
+          this.startMarkerElement.setAttribute('stroke', 'none');
+        } else {
+          this.startMarkerElement.setAttribute('fill', 'none');
+          this.startMarkerElement.setAttribute('stroke', this.style.stroke);
+          this.startMarkerElement.setAttribute('stroke-width', String(startArrow.strokeWidth || 1));
+          this.startMarkerElement.setAttribute('stroke-linecap', 'round');
+          this.startMarkerElement.setAttribute('stroke-linejoin', 'round');
+        }
+      }
+    } else if (this.startMarkerElement) {
+      this.startMarkerElement.remove();
+      this.startMarkerElement = null;
+    }
+
+    // Update or create end marker
+    if (this.markerEnd !== 'none' && endDir) {
+      const endArrow = calculateArrowGeometry(
+        endDir.x, endDir.y, endDir.angle, this.markerEnd, strokeWidth, 'end'
+      );
+      if (endArrow) {
+        if (!this.endMarkerElement) {
+          const endPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+          endPath.setAttribute('data-role', 'marker-end');
+          group.appendChild(endPath);
+          this.endMarkerElement = endPath;
+        }
+        this.endMarkerElement.setAttribute('d', endArrow.path);
+        if (endArrow.filled) {
+          this.endMarkerElement.setAttribute('fill', this.style.stroke);
+          this.endMarkerElement.setAttribute('stroke', 'none');
+        } else {
+          this.endMarkerElement.setAttribute('fill', 'none');
+          this.endMarkerElement.setAttribute('stroke', this.style.stroke);
+          this.endMarkerElement.setAttribute('stroke-width', String(endArrow.strokeWidth || 1));
+          this.endMarkerElement.setAttribute('stroke-linecap', 'round');
+          this.endMarkerElement.setAttribute('stroke-linejoin', 'round');
+        }
+      }
+    } else if (this.endMarkerElement) {
+      this.endMarkerElement.remove();
+      this.endMarkerElement = null;
+    }
+
+    // Apply rotation to the entire group
+    const center = this.getRotationCenter();
+    applyRotation(group, this.rotation, center.x, center.y);
   }
 
   hitTest(point: Point, tolerance: number = 5): boolean {

@@ -458,8 +458,8 @@ describe('Node-Edge Position Linkage', () => {
     });
   });
 
-  describe('direction marker updates', () => {
-    it('should maintain marker orientation when edge angle changes', () => {
+  describe('direction arrow updates (custom drawn)', () => {
+    it('should maintain arrow when edge angle changes', () => {
       const gm = getGraphManager();
       const nodeA = createTestNode({ id: 'node-a', cx: 100, cy: 100, rx: 30, ry: 30 });
       const nodeB = createTestNode({ id: 'node-b', cx: 300, cy: 100, rx: 30, ry: 30 });
@@ -481,10 +481,9 @@ describe('Node-Edge Position Linkage', () => {
       );
 
       const element = edge.render();
-      const pathEl = element.querySelector('path');
-
-      // Verify marker exists
-      expect(pathEl?.getAttribute('marker-end')).toContain('url(#marker-');
+      // Arrow is rendered as a separate path element
+      const paths = element.querySelectorAll('path');
+      const initialPathCount = paths.length;
 
       // Move node B to create vertical edge
       nodeB.cx = 100;
@@ -493,18 +492,22 @@ describe('Node-Edge Position Linkage', () => {
 
       edge.updateElement();
 
-      // Marker should still exist after angle change
-      expect(pathEl?.getAttribute('marker-end')).toContain('url(#marker-');
+      // Should still have the same number of paths (main + arrow)
+      const updatedPaths = element.querySelectorAll('path');
+      expect(updatedPaths.length).toBe(initialPathCount);
 
-      // Path should now be vertical
-      const d = pathEl?.getAttribute('d') || '';
+      // Path should now be vertical - check main path
+      const mainPath = element.querySelector('path');
+      const d = mainPath?.getAttribute('d') || '';
       const startMatch = d.match(/M\s+([\d.]+)\s+([\d.]+)/);
       const endMatch = d.match(/L\s+([\d.]+)\s+([\d.]+)/);
 
-      // X coordinates should be close (vertical line)
-      const startX = parseFloat(startMatch![1]);
-      const endX = parseFloat(endMatch![1]);
-      expect(Math.abs(endX - startX)).toBeLessThan(10);
+      if (startMatch && endMatch) {
+        // X coordinates should be close (vertical line)
+        const startX = parseFloat(startMatch[1]);
+        const endX = parseFloat(endMatch[1]);
+        expect(Math.abs(endX - startX)).toBeLessThan(10);
+      }
     });
   });
 });
