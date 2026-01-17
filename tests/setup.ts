@@ -29,7 +29,8 @@ global.Node = dom.window.Node as unknown as typeof Node;
   saveFileAs: vi.fn().mockResolvedValue('/path/to/file.svg'),
   openFile: vi.fn().mockResolvedValue(null),
   showConfirmDialog: vi.fn().mockResolvedValue(true),
-  setTitle: vi.fn()
+  setTitle: vi.fn(),
+  setWindowTitle: vi.fn()
 };
 
 // GraphManager cleanup helper
