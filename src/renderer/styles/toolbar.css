@@ -58,6 +58,12 @@
   line-height: 1;
 }
 
+.tool-btn svg.icon {
+  width: 16px;
+  height: 16px;
+  display: block;
+}
+
 .zoom-indicator {
   display: flex;
   align-items: center;

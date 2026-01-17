@@ -51,7 +51,7 @@ export const DEFAULT_STYLE_CLASSES: StyleClass[] = [
  * Default application settings
  */
 export const DEFAULT_SETTINGS: AppSettings = {
-  snapOnStartup: false,
+  snapOnStartup: true,
   gridSize: 10,
   fitToContentMargin: 20,
   autoLayoutPadding: 50,

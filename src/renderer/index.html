@@ -12,16 +12,28 @@
     <div id="toolbar">
       <div class="tool-group">
         <button id="tool-select" class="tool-btn active" title="Select (V)">
-          <span class="icon">&#9654;</span>
+          <svg class="icon" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M2 1L2 13L5.5 9.5L8 15L10 14L7.5 8.5L12 8.5L2 1Z" fill="currentColor"/>
+          </svg>
         </button>
         <button id="tool-pan" class="tool-btn" title="Pan (H)">
-          <span class="icon">&#9995;</span>
+          <svg class="icon" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M6 7V2.5C6 1.67 6.67 1 7.5 1C8.33 1 9 1.67 9 2.5V7M9 5V1.5C9 0.67 9.67 0 10.5 0C11.33 0 12 0.67 12 1.5V7M6 7V5.5C6 4.67 5.33 4 4.5 4C3.67 4 3 4.67 3 5.5V10C3 13 5 15 8 15C11 15 13 13 13 10V7C13 6.17 12.33 5.5 11.5 5.5C10.67 5.5 10 6.17 10 7" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
         </button>
-        <button id="tool-zoom" class="tool-btn" title="Zoom (Z)">
-          <span class="icon">&#128269;</span>
+        <button id="tool-rotate" class="tool-btn" title="Rotate (O)">
+          <span class="icon">&#8634;</span>
+        </button>
+        <button id="tool-zoom" class="tool-btn" title="Zoom (Z)" style="margin-right: 12px;">
+          <svg class="icon" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="6.5" cy="6.5" r="4.5" stroke="currentColor" stroke-width="1.5"/>
+            <line x1="10" y1="10" x2="14.5" y2="14.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
         </button>
         <button id="tool-line" class="tool-btn" title="Line (L)">
-          <span class="icon">&#9135;</span>
+          <svg class="icon" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <line x1="2" y1="14" x2="14" y2="2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
         </button>
         <button id="tool-ellipse" class="tool-btn" title="Ellipse (E)">
           <span class="icon">&#9711;</span>
@@ -33,12 +45,14 @@
           <span class="icon">&#11039;</span>
         </button>
         <button id="tool-polyline" class="tool-btn" title="Polyline (Y)">
-          <span class="icon">&#10138;</span>
+          <svg class="icon" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M2 13L6 5L10 9L14 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
         </button>
         <button id="tool-bezier" class="tool-btn" title="Bezier Path (B)">
           <span class="icon">&#8766;</span>
         </button>
-        <button id="tool-text" class="tool-btn" title="Text (T)">
+        <button id="tool-text" class="tool-btn" title="Text (T)" style="margin-right: 12px;">
           <span class="icon">T</span>
         </button>
         <button id="tool-node" class="tool-btn" title="Node (N)">
@@ -53,57 +67,15 @@
         <button id="tool-delete-edge" class="tool-btn" title="Delete Edge">
           <span class="icon">&#8594;&#10005;</span>
         </button>
-        <button id="tool-rotate" class="tool-btn" title="Rotate (O)">
-          <span class="icon">&#8634;</span>
-        </button>
-      </div>
-      <div class="tool-group">
-        <button id="btn-undo" class="tool-btn" title="Undo (Ctrl+Z)" disabled>
-          <span class="icon">&#8630;</span>
-        </button>
-        <button id="btn-redo" class="tool-btn" title="Redo (Ctrl+Y)" disabled>
-          <span class="icon">&#8631;</span>
-        </button>
-      </div>
-      <div class="tool-group">
-        <button id="btn-delete" class="tool-btn" title="Delete (Del)" disabled>
-          <span class="icon">&#128465;</span>
-        </button>
-      </div>
-      <div class="tool-group">
-        <button id="btn-bring-front" class="tool-btn" title="Bring to Front (Ctrl+Shift+])" disabled>
-          <span class="icon">&#8648;</span>
-        </button>
-        <button id="btn-bring-forward" class="tool-btn" title="Bring Forward (Ctrl+])" disabled>
-          <span class="icon">&#8593;</span>
-        </button>
-        <button id="btn-send-backward" class="tool-btn" title="Send Backward (Ctrl+[)" disabled>
-          <span class="icon">&#8595;</span>
-        </button>
-        <button id="btn-send-back" class="tool-btn" title="Send to Back (Ctrl+Shift+[)" disabled>
-          <span class="icon">&#8650;</span>
-        </button>
-      </div>
-      <div class="tool-group">
-        <button id="btn-snap" class="tool-btn" title="Snap to Grid (G)">
-          <span class="icon">#</span>
-        </button>
         <button id="btn-directed" class="tool-btn" title="Toggle Directed Edge">
-          <span class="icon">―</span>
+          <svg class="icon" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <line x1="2" y1="5" x2="14" y2="5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            <path d="M2 11L11 11L8 8M11 11L8 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
         </button>
         <button id="btn-auto-layout" class="tool-btn" title="Auto Layout">
           <span class="icon">&#9635;</span>
         </button>
-      </div>
-      <div class="tool-group">
-        <span id="zoom-indicator" class="zoom-indicator" title="Current zoom level">100%</span>
-        <button id="btn-zoom-reset" class="tool-btn" title="Reset Zoom (Ctrl+0)">1:1</button>
-      </div>
-      <div class="tool-group right">
-        <button id="btn-new" class="tool-btn" title="New (Ctrl+N)">New</button>
-        <button id="btn-open" class="tool-btn" title="Open (Ctrl+O)">Open</button>
-        <button id="btn-save" class="tool-btn" title="Save (Ctrl+S)">Save</button>
-        <button id="btn-save-as" class="tool-btn" title="Save As (Ctrl+Shift+S)">Save As</button>
       </div>
     </div>
 
@@ -478,6 +450,8 @@
     <!-- Status Bar -->
     <div id="status-bar">
       <span id="status-tool" class="status-item">Select</span>
+      <span class="status-separator">|</span>
+      <span id="status-zoom" class="status-item">100%</span>
       <span class="status-separator">|</span>
       <span id="status-position" class="status-item">X: 0, Y: 0</span>
     </div>

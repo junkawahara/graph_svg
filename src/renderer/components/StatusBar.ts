@@ -24,11 +24,12 @@ const TOOL_NAMES: Record<ToolType, string> = {
 };
 
 /**
- * StatusBar component - displays mouse position and current tool
+ * StatusBar component - displays mouse position, zoom level, and current tool
  */
 export class StatusBar {
   private positionDisplay: HTMLSpanElement | null = null;
   private toolDisplay: HTMLSpanElement | null = null;
+  private zoomDisplay: HTMLSpanElement | null = null;
 
   constructor() {
     this.setupElements();
@@ -42,6 +43,7 @@ export class StatusBar {
   private setupElements(): void {
     this.positionDisplay = document.getElementById('status-position') as HTMLSpanElement;
     this.toolDisplay = document.getElementById('status-tool') as HTMLSpanElement;
+    this.zoomDisplay = document.getElementById('status-zoom') as HTMLSpanElement;
   }
 
   /**
@@ -56,6 +58,12 @@ export class StatusBar {
     // Update position display when mouse moves
     eventBus.on('canvas:mouseMove', (pos: { x: number; y: number }) => {
       this.updatePositionDisplay(pos.x, pos.y);
+    });
+
+    // Update zoom display when zoom changes
+    eventBus.on('canvas:zoomChanged', (data: { scale: number }) => {
+      console.log('StatusBar received zoomChanged:', data.scale);
+      this.updateZoomDisplay(data.scale);
     });
   }
 
@@ -74,6 +82,17 @@ export class StatusBar {
   private updateToolDisplay(tool: ToolType): void {
     if (this.toolDisplay) {
       this.toolDisplay.textContent = TOOL_NAMES[tool] || tool;
+    }
+  }
+
+  /**
+   * Update zoom display
+   */
+  private updateZoomDisplay(scale: number): void {
+    console.log('updateZoomDisplay called, zoomDisplay:', this.zoomDisplay);
+    if (this.zoomDisplay) {
+      const percent = Math.round(scale * 100);
+      this.zoomDisplay.textContent = `${percent}%`;
     }
   }
 }

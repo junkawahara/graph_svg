@@ -101,21 +101,30 @@ export class EditorState {
   }
 
   /**
-   * Snap a value to the grid
+   * Snap a value to the grid (or round to integer if snap disabled)
    */
   snapValue(value: number): number {
-    if (!this._snapEnabled) return value;
-    return Math.round(value / this._gridSize) * this._gridSize;
+    if (this._snapEnabled) {
+      return Math.round(value / this._gridSize) * this._gridSize;
+    }
+    // Always round to integer to avoid decimal coordinates from zoom
+    return Math.round(value);
   }
 
   /**
-   * Snap a point to the grid
+   * Snap a point to the grid (or round to integer if snap disabled)
    */
   snapPoint(point: { x: number; y: number }): { x: number; y: number } {
-    if (!this._snapEnabled) return point;
+    if (this._snapEnabled) {
+      return {
+        x: Math.round(point.x / this._gridSize) * this._gridSize,
+        y: Math.round(point.y / this._gridSize) * this._gridSize
+      };
+    }
+    // Always round to integer to avoid decimal coordinates from zoom
     return {
-      x: Math.round(point.x / this._gridSize) * this._gridSize,
-      y: Math.round(point.y / this._gridSize) * this._gridSize
+      x: Math.round(point.x),
+      y: Math.round(point.y)
     };
   }
 

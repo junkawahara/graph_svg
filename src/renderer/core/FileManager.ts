@@ -16,30 +16,7 @@ import { parseTransform, combineTransforms, ParsedTransform, IDENTITY_TRANSFORM,
 import { serializePath } from './PathParser';
 import { styleClassManager } from './StyleClassManager';
 import { round3 } from './MathUtils';
-
-// Marker shape definitions for SVG export
-interface MarkerShapeDef {
-  viewBox: string;
-  refX: number;
-  refY: number;
-  path: string;
-  filled: boolean;
-  strokeWidth?: number;
-}
-
-const MARKER_SHAPES: Record<string, MarkerShapeDef> = {
-  arrow: { viewBox: '0 0 12 10', refX: 12, refY: 5, path: 'M 0 1 L 8 5 L 0 9', filled: false, strokeWidth: 1.5 },
-  triangle: { viewBox: '0 0 10 10', refX: 9, refY: 5, path: 'M 0 0 L 10 5 L 0 10 Z', filled: true },
-  circle: { viewBox: '0 0 10 10', refX: 5, refY: 5, path: 'M 5 0 A 5 5 0 1 1 5 10 A 5 5 0 1 1 5 0 Z', filled: true },
-  diamond: { viewBox: '0 0 10 10', refX: 5, refY: 5, path: 'M 5 0 L 10 5 L 5 10 L 0 5 Z', filled: true }
-};
-
-// Size multipliers for markers
-const MARKER_SIZES: Record<string, number> = {
-  small: 3,
-  medium: 4,
-  large: 6
-};
+import { calculateArrowGeometry, getLineDirection, getShortenedLineCoords, getPathEndDirection, getShortenedPathCommands, getMarkerShortenDistance } from './ArrowGeometry';
 
 /**
  * Manages file save/load operations for SVG files
@@ -153,88 +130,9 @@ export class FileManager {
    * Markers are color-specific to work correctly in all SVG viewers
    */
   private static generateMarkerDefs(shapes: Shape[]): string | null {
-    // Map: "type-color-position" -> { type, color, position }
-    const usedMarkers = new Map<string, { type: string; color: string; position: string }>();
-    const usedEdgeColors = new Set<string>();
-
-    // Recursively collect markers from shapes
-    const collectMarkers = (shapeList: Shape[]) => {
-      shapeList.forEach(shape => {
-        // Collect markers from Line (with color)
-        if (shape instanceof Line) {
-          const colorHex = shape.style.stroke.replace('#', '').toLowerCase();
-          if (shape.markerStart !== 'none') {
-            const key = `${shape.markerStart}-${colorHex}-start`;
-            usedMarkers.set(key, { type: shape.markerStart, color: colorHex, position: 'start' });
-          }
-          if (shape.markerEnd !== 'none') {
-            const key = `${shape.markerEnd}-${colorHex}-end`;
-            usedMarkers.set(key, { type: shape.markerEnd, color: colorHex, position: 'end' });
-          }
-        }
-        // Collect markers from Path (with color)
-        if (shape instanceof Path) {
-          const colorHex = shape.style.stroke.replace('#', '').toLowerCase();
-          if (shape.markerStart !== 'none') {
-            const key = `${shape.markerStart}-${colorHex}-start`;
-            usedMarkers.set(key, { type: shape.markerStart, color: colorHex, position: 'start' });
-          }
-          if (shape.markerEnd !== 'none') {
-            const key = `${shape.markerEnd}-${colorHex}-end`;
-            usedMarkers.set(key, { type: shape.markerEnd, color: colorHex, position: 'end' });
-          }
-        }
-        // Collect edge arrow colors
-        if (shape instanceof Edge) {
-          if (shape.direction === 'forward' || shape.direction === 'backward') {
-            usedEdgeColors.add(shape.style.stroke.replace('#', '').toLowerCase());
-          }
-        }
-        // Recursively check group children
-        if (shape instanceof Group) {
-          collectMarkers(shape.children);
-        }
-      });
-    };
-
-    collectMarkers(shapes);
-
-    if (usedMarkers.size === 0 && usedEdgeColors.size === 0) return null;
-
-    const defsLines: string[] = ['  <defs>'];
-
-    // Line/Path markers (color-specific)
-    usedMarkers.forEach(({ type, color, position }) => {
-      // Parse type: e.g., 'arrow-small' -> shape='arrow', size='small'
-      const typeDashIndex = type.lastIndexOf('-');
-      const shapeType = type.substring(0, typeDashIndex); // e.g., 'arrow'
-      const sizeStr = type.substring(typeDashIndex + 1); // e.g., 'small'
-
-      const shapeDef = MARKER_SHAPES[shapeType];
-      if (!shapeDef) return;
-
-      const markerSize = MARKER_SIZES[sizeStr] || 4;
-      const orient = position === 'start' ? 'auto-start-reverse' : 'auto';
-      const markerId = `marker-${type}-${color}-${position}`;
-
-      const fillAttr = shapeDef.filled
-        ? `fill="#${color}" stroke="none"`
-        : `fill="none" stroke="#${color}" stroke-width="${shapeDef.strokeWidth || 1}" stroke-linecap="round" stroke-linejoin="round"`;
-
-      defsLines.push(`    <marker id="${markerId}" viewBox="${shapeDef.viewBox}" refX="${shapeDef.refX}" refY="${shapeDef.refY}" markerWidth="${markerSize}" markerHeight="${markerSize}" markerUnits="strokeWidth" orient="${orient}">`);
-      defsLines.push(`      <path d="${shapeDef.path}" ${fillAttr}/>`);
-      defsLines.push(`    </marker>`);
-    });
-
-    // Edge arrow markers (color-specific)
-    usedEdgeColors.forEach(colorHex => {
-      defsLines.push(`    <marker id="marker-triangle-${colorHex}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="4" markerHeight="4" markerUnits="strokeWidth" orient="auto">`);
-      defsLines.push(`      <path d="M 0 0 L 10 5 L 0 10 Z" fill="#${colorHex}" stroke="none"/>`);
-      defsLines.push(`    </marker>`);
-    });
-
-    defsLines.push('  </defs>');
-    return defsLines.join('\n');
+    // Line, Path, and Edge all use custom-drawn arrow paths now
+    // No SVG marker definitions are needed
+    return null;
   }
 
   /**
@@ -414,24 +312,30 @@ export class FileManager {
       pathAttrs.push(`stroke-linecap="${edge.style.strokeLinecap}"`);
     }
 
-    // Build marker attributes
-    let markerAttrs = '';
-    if (edge.direction === 'forward') {
-      const colorHex = edge.style.stroke.replace('#', '');
-      markerAttrs = ` marker-end="url(#marker-triangle-${colorHex})"`;
-    } else if (edge.direction === 'backward') {
-      const colorHex = edge.style.stroke.replace('#', '');
-      markerAttrs = ` marker-start="url(#marker-triangle-${colorHex})"`;
-    }
-
     // Calculate path data
     let pathData = '';
     if (sourceNode && targetNode) {
       pathData = this.calculateEdgePath(edge, sourceNode, targetNode);
     }
 
-    // Build path element
-    const pathElement = `<path d="${pathData}" ${pathAttrs.join(' ')}${markerAttrs}/>`;
+    // Build path element (no marker attributes - we use custom arrow paths)
+    const pathElement = `<path d="${pathData}" ${pathAttrs.join(' ')}/>`;
+
+    // Build arrow element if needed
+    let arrowElement = '';
+    if (edge.direction !== 'none' && sourceNode && targetNode) {
+      const arrowInfo = edge.getArrowPositionAndAngle(sourceNode, targetNode);
+      if (arrowInfo) {
+        const position = edge.direction === 'forward' ? 'end' : 'start';
+        const arrowGeom = calculateArrowGeometry(
+          arrowInfo.x, arrowInfo.y, arrowInfo.angle,
+          'triangle-medium', edge.style.strokeWidth, position
+        );
+        if (arrowGeom) {
+          arrowElement = `\n    <path data-role="arrow" d="${arrowGeom.path}" fill="${edge.style.stroke}" stroke="none"/>`;
+        }
+      }
+    }
 
     // If edge has a label, wrap in group with label elements
     if (edge.label && sourceNode && targetNode) {
@@ -439,7 +343,7 @@ export class FileManager {
       const labelBg = `<rect fill="white" stroke="none" rx="2" ry="2" x="${midpoint.x - 10}" y="${midpoint.y - 8}" width="20" height="16"/>`;
       const labelText = `<text x="${midpoint.x}" y="${midpoint.y}" text-anchor="middle" dominant-baseline="middle" font-size="12" font-family="Arial" fill="${edge.style.stroke}" pointer-events="none">${this.escapeXml(edge.label)}</text>`;
       return `  <g id="${edge.id}" ${groupDataAttrs}>
-    ${pathElement}
+    ${pathElement}${arrowElement}
     ${labelBg}
     ${labelText}
   </g>`;
@@ -447,7 +351,7 @@ export class FileManager {
 
     // No label - return simple group with path
     return `  <g id="${edge.id}" ${groupDataAttrs}>
-    ${pathElement}
+    ${pathElement}${arrowElement}
   </g>`;
   }
 
@@ -520,13 +424,43 @@ export class FileManager {
   private static lineWithMarkersToSvgElement(line: Line): string {
     const style = this.getShapeStyleAttributes(line);
     const classAttr = line.className ? `class="${line.className}" ` : '';
-    const lines: string[] = [];
+    const svgLines: string[] = [];
 
-    lines.push(`  <g id="${line.id}" ${classAttr}data-shape-type="line-with-markers" data-marker-start="${line.markerStart}" data-marker-end="${line.markerEnd}">`);
-    lines.push(`    <line data-role="main" x1="${line.x1}" y1="${line.y1}" x2="${line.x2}" y2="${line.y2}" ${style}/>`);
-    lines.push(`  </g>`);
+    // Calculate shortened line coordinates based on markers
+    const startShortenDist = getMarkerShortenDistance(line.markerStart, line.style.strokeWidth);
+    const endShortenDist = getMarkerShortenDistance(line.markerEnd, line.style.strokeWidth);
+    const shortened = getShortenedLineCoords(line.x1, line.y1, line.x2, line.y2, startShortenDist, endShortenDist);
 
-    return lines.join('\n');
+    svgLines.push(`  <g id="${line.id}" ${classAttr}data-shape-type="line-with-markers" data-marker-start="${line.markerStart}" data-marker-end="${line.markerEnd}">`);
+    svgLines.push(`    <line data-role="main" x1="${shortened.x1}" y1="${shortened.y1}" x2="${shortened.x2}" y2="${shortened.y2}" ${style}/>`);
+
+    // Generate start arrow path
+    if (line.markerStart !== 'none') {
+      const angle = getLineDirection(line.x1, line.y1, line.x2, line.y2, 'start');
+      const arrowGeom = calculateArrowGeometry(line.x1, line.y1, angle, line.markerStart, line.style.strokeWidth, 'start');
+      if (arrowGeom) {
+        const arrowStyle = arrowGeom.filled
+          ? `fill="${line.style.stroke}" stroke="none"`
+          : `fill="none" stroke="${line.style.stroke}" stroke-width="${arrowGeom.strokeWidth}" stroke-linecap="round" stroke-linejoin="round"`;
+        svgLines.push(`    <path data-role="marker-start" d="${arrowGeom.path}" ${arrowStyle}/>`);
+      }
+    }
+
+    // Generate end arrow path
+    if (line.markerEnd !== 'none') {
+      const angle = getLineDirection(line.x1, line.y1, line.x2, line.y2, 'end');
+      const arrowGeom = calculateArrowGeometry(line.x2, line.y2, angle, line.markerEnd, line.style.strokeWidth, 'end');
+      if (arrowGeom) {
+        const arrowStyle = arrowGeom.filled
+          ? `fill="${line.style.stroke}" stroke="none"`
+          : `fill="none" stroke="${line.style.stroke}" stroke-width="${arrowGeom.strokeWidth}" stroke-linecap="round" stroke-linejoin="round"`;
+        svgLines.push(`    <path data-role="marker-end" d="${arrowGeom.path}" ${arrowStyle}/>`);
+      }
+    }
+
+    svgLines.push(`  </g>`);
+
+    return svgLines.join('\n');
   }
 
   /**
@@ -535,14 +469,48 @@ export class FileManager {
   private static pathWithMarkersToSvgElement(path: Path): string {
     const style = this.getShapeStyleAttributes(path);
     const classAttr = path.className ? `class="${path.className}" ` : '';
-    const pathData = serializePath(path.commands);
-    const lines: string[] = [];
+    const svgLines: string[] = [];
 
-    lines.push(`  <g id="${path.id}" ${classAttr}data-shape-type="path-with-markers" data-marker-start="${path.markerStart}" data-marker-end="${path.markerEnd}">`);
-    lines.push(`    <path data-role="main" d="${pathData}" ${style}/>`);
-    lines.push(`  </g>`);
+    // Calculate shortened path based on markers
+    const startShortenDist = getMarkerShortenDistance(path.markerStart, path.style.strokeWidth);
+    const endShortenDist = getMarkerShortenDistance(path.markerEnd, path.style.strokeWidth);
+    const shortenedCommands = getShortenedPathCommands(path.commands, startShortenDist, endShortenDist);
+    const pathData = serializePath(shortenedCommands);
 
-    return lines.join('\n');
+    svgLines.push(`  <g id="${path.id}" ${classAttr}data-shape-type="path-with-markers" data-marker-start="${path.markerStart}" data-marker-end="${path.markerEnd}">`);
+    svgLines.push(`    <path data-role="main" d="${pathData}" ${style}/>`);
+
+    // Generate start arrow path
+    if (path.markerStart !== 'none') {
+      const startDir = getPathEndDirection(path.commands, 'start');
+      if (startDir) {
+        const arrowGeom = calculateArrowGeometry(startDir.x, startDir.y, startDir.angle, path.markerStart, path.style.strokeWidth, 'start');
+        if (arrowGeom) {
+          const arrowStyle = arrowGeom.filled
+            ? `fill="${path.style.stroke}" stroke="none"`
+            : `fill="none" stroke="${path.style.stroke}" stroke-width="${arrowGeom.strokeWidth}" stroke-linecap="round" stroke-linejoin="round"`;
+          svgLines.push(`    <path data-role="marker-start" d="${arrowGeom.path}" ${arrowStyle}/>`);
+        }
+      }
+    }
+
+    // Generate end arrow path
+    if (path.markerEnd !== 'none') {
+      const endDir = getPathEndDirection(path.commands, 'end');
+      if (endDir) {
+        const arrowGeom = calculateArrowGeometry(endDir.x, endDir.y, endDir.angle, path.markerEnd, path.style.strokeWidth, 'end');
+        if (arrowGeom) {
+          const arrowStyle = arrowGeom.filled
+            ? `fill="${path.style.stroke}" stroke="none"`
+            : `fill="none" stroke="${path.style.stroke}" stroke-width="${arrowGeom.strokeWidth}" stroke-linecap="round" stroke-linejoin="round"`;
+          svgLines.push(`    <path data-role="marker-end" d="${arrowGeom.path}" ${arrowStyle}/>`);
+        }
+      }
+    }
+
+    svgLines.push(`  </g>`);
+
+    return svgLines.join('\n');
   }
 
   /**

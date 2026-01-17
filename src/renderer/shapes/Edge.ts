@@ -192,7 +192,7 @@ export class Edge implements Shape {
    * Get arrow position and angle for the edge
    * Returns the position and direction angle for the arrow based on edge direction
    */
-  private getArrowPositionAndAngle(sourceNode: Node, targetNode: Node): { x: number; y: number; angle: number } | null {
+  getArrowPositionAndAngle(sourceNode: Node, targetNode: Node): { x: number; y: number; angle: number } | null {
     if (this.direction === 'none') return null;
 
     if (this.isSelfLoop) {

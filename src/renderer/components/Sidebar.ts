@@ -113,6 +113,9 @@ export class Sidebar {
   private rotationPropertyContainer: HTMLDivElement | null = null;
   private rotationInput: HTMLInputElement | null = null;
 
+  // Currently edited shape reference (for blur handlers)
+  private currentEditingShape: Shape | null = null;
+
   // Style class selector
   private styleClassSection: HTMLDivElement | null = null;
   private styleClassSelect: HTMLSelectElement | null = null;
@@ -254,8 +257,17 @@ export class Sidebar {
       if (this.isUpdatingUI) return;
       this.applyStyleChange({ strokeWidth: parseFloat(this.strokeWidth.value) || 1 });
     });
+    this.strokeWidth.addEventListener('blur', () => {
+      if (this.isUpdatingUI) return;
+      this.applyStyleChange({ strokeWidth: parseFloat(this.strokeWidth.value) || 1 });
+    });
 
     this.opacity.addEventListener('change', () => {
+      if (this.isUpdatingUI) return;
+      const value = parseInt(this.opacity.value) / 100;
+      this.applyStyleChange({ opacity: value });
+    });
+    this.opacity.addEventListener('blur', () => {
       if (this.isUpdatingUI) return;
       const value = parseInt(this.opacity.value) / 100;
       this.applyStyleChange({ opacity: value });
@@ -285,8 +297,16 @@ export class Sidebar {
       if (this.isUpdatingUI) return;
       this.applyTextPropertyChange({ content: this.textContent.value });
     });
+    this.textContent.addEventListener('blur', () => {
+      if (this.isUpdatingUI) return;
+      this.applyTextPropertyChange({ content: this.textContent.value });
+    });
 
     this.fontSize.addEventListener('change', () => {
+      if (this.isUpdatingUI) return;
+      this.applyTextPropertyChange({ fontSize: parseInt(this.fontSize.value, 10) || 24 });
+    });
+    this.fontSize.addEventListener('blur', () => {
       if (this.isUpdatingUI) return;
       this.applyTextPropertyChange({ fontSize: parseInt(this.fontSize.value, 10) || 24 });
     });
@@ -368,10 +388,18 @@ export class Sidebar {
         if (this.isUpdatingUI) return;
         this.applyNodePropertyChange({ label: this.nodeLabel!.value });
       });
+      this.nodeLabel.addEventListener('blur', () => {
+        if (this.isUpdatingUI) return;
+        this.applyNodePropertyChange({ label: this.nodeLabel!.value });
+      });
     }
 
     if (this.nodeFontSize) {
       this.nodeFontSize.addEventListener('change', () => {
+        if (this.isUpdatingUI) return;
+        this.applyNodePropertyChange({ fontSize: parseInt(this.nodeFontSize!.value, 10) || 14 });
+      });
+      this.nodeFontSize.addEventListener('blur', () => {
         if (this.isUpdatingUI) return;
         this.applyNodePropertyChange({ fontSize: parseInt(this.nodeFontSize!.value, 10) || 14 });
       });
@@ -394,6 +422,10 @@ export class Sidebar {
         if (this.isUpdatingUI) return;
         this.applyEdgeLabelChange(this.edgeLabel!.value);
       });
+      this.edgeLabel.addEventListener('blur', () => {
+        if (this.isUpdatingUI) return;
+        this.applyEdgeLabelChange(this.edgeLabel!.value);
+      });
     }
   }
 
@@ -406,11 +438,16 @@ export class Sidebar {
         if (this.isUpdatingUI) return;
         this.applyPathDataChange();
       });
+      this.pathDataInput.addEventListener('blur', () => {
+        if (this.isUpdatingUI) return;
+        this.applyPathDataChange();
+      });
     }
   }
 
   /**
    * Setup position/size input listeners
+   * Uses both 'change' and 'blur' events to ensure changes are applied
    */
   private setupPositionInputListeners(): void {
     // Line position inputs
@@ -418,6 +455,7 @@ export class Sidebar {
     lineInputs.forEach(input => {
       if (input) {
         input.addEventListener('change', () => this.applyLinePositionChange());
+        input.addEventListener('blur', () => this.applyLinePositionChange());
       }
     });
 
@@ -426,6 +464,7 @@ export class Sidebar {
     ellipseInputs.forEach(input => {
       if (input) {
         input.addEventListener('change', () => this.applyEllipsePositionChange());
+        input.addEventListener('blur', () => this.applyEllipsePositionChange());
       }
     });
 
@@ -434,6 +473,7 @@ export class Sidebar {
     rectInputs.forEach(input => {
       if (input) {
         input.addEventListener('change', () => this.applyRectanglePositionChange());
+        input.addEventListener('blur', () => this.applyRectanglePositionChange());
       }
     });
 
@@ -442,6 +482,7 @@ export class Sidebar {
     textInputs.forEach(input => {
       if (input) {
         input.addEventListener('change', () => this.applyTextPositionChange());
+        input.addEventListener('blur', () => this.applyTextPositionChange());
       }
     });
 
@@ -450,6 +491,7 @@ export class Sidebar {
     nodeInputs.forEach(input => {
       if (input) {
         input.addEventListener('change', () => this.applyNodePositionChange());
+        input.addEventListener('blur', () => this.applyNodePositionChange());
       }
     });
   }
@@ -460,9 +502,11 @@ export class Sidebar {
   private setupCanvasSizeInputListeners(): void {
     if (this.canvasWidthInput) {
       this.canvasWidthInput.addEventListener('change', () => this.applyCanvasSizeChange());
+      this.canvasWidthInput.addEventListener('blur', () => this.applyCanvasSizeChange());
     }
     if (this.canvasHeightInput) {
       this.canvasHeightInput.addEventListener('change', () => this.applyCanvasSizeChange());
+      this.canvasHeightInput.addEventListener('blur', () => this.applyCanvasSizeChange());
     }
   }
 
@@ -472,9 +516,11 @@ export class Sidebar {
   private setupDefaultNodeSizeInputListeners(): void {
     if (this.defaultNodeRxInput) {
       this.defaultNodeRxInput.addEventListener('change', () => this.applyDefaultNodeSizeChange());
+      this.defaultNodeRxInput.addEventListener('blur', () => this.applyDefaultNodeSizeChange());
     }
     if (this.defaultNodeRyInput) {
       this.defaultNodeRyInput.addEventListener('change', () => this.applyDefaultNodeSizeChange());
+      this.defaultNodeRyInput.addEventListener('blur', () => this.applyDefaultNodeSizeChange());
     }
   }
 
@@ -495,6 +541,10 @@ export class Sidebar {
   private setupRotationInputListeners(): void {
     if (this.rotationInput) {
       this.rotationInput.addEventListener('change', () => {
+        if (this.isUpdatingUI) return;
+        this.applyRotationChange();
+      });
+      this.rotationInput.addEventListener('blur', () => {
         if (this.isUpdatingUI) return;
         this.applyRotationChange();
       });
@@ -1199,6 +1249,9 @@ export class Sidebar {
   private showPositionProperties(shape: Shape): void {
     this.hideAllPositionProperties();
 
+    // Store reference to the shape being edited (for blur handlers)
+    this.currentEditingShape = shape;
+
     if (shape instanceof Line) {
       this.showLinePositionProperties(shape);
     } else if (shape instanceof Node) {
@@ -1217,6 +1270,7 @@ export class Sidebar {
    * Hide all position property sections
    */
   private hideAllPositionProperties(): void {
+    // Note: Don't clear currentEditingShape here - blur handlers may still need it
     if (this.linePositionContainer) this.linePositionContainer.style.display = 'none';
     if (this.ellipsePositionContainer) this.ellipsePositionContainer.style.display = 'none';
     if (this.rectanglePositionContainer) this.rectanglePositionContainer.style.display = 'none';
@@ -1292,17 +1346,21 @@ export class Sidebar {
   // Apply position changes from inputs
   private applyLinePositionChange(): void {
     if (this.isUpdatingUI) return;
-    const selectedShapes = selectionManager.getSelection();
-    if (selectedShapes.length !== 1 || !(selectedShapes[0] instanceof Line)) return;
 
-    const line = selectedShapes[0] as Line;
+    // Use stored shape reference (selection may have been cleared before blur fires)
+    const line = this.currentEditingShape instanceof Line ? this.currentEditingShape : null;
+    if (!line) return;
+
+    const newX1 = parseFloat(this.lineX1Input?.value || '0');
+    const newY1 = parseFloat(this.lineY1Input?.value || '0');
+    const newX2 = parseFloat(this.lineX2Input?.value || '0');
+    const newY2 = parseFloat(this.lineY2Input?.value || '0');
+
+    // Check if values actually changed
+    if (line.x1 === newX1 && line.y1 === newY1 && line.x2 === newX2 && line.y2 === newY2) return;
+
     const beforeState = ResizeShapeCommand.captureState(line);
-    const afterState = {
-      x1: parseFloat(this.lineX1Input?.value || '0'),
-      y1: parseFloat(this.lineY1Input?.value || '0'),
-      x2: parseFloat(this.lineX2Input?.value || '0'),
-      y2: parseFloat(this.lineY2Input?.value || '0')
-    };
+    const afterState = { x1: newX1, y1: newY1, x2: newX2, y2: newY2 };
 
     const command = new ResizeShapeCommand(line, beforeState, afterState);
     historyManager.execute(command);
@@ -1310,17 +1368,21 @@ export class Sidebar {
 
   private applyEllipsePositionChange(): void {
     if (this.isUpdatingUI) return;
-    const selectedShapes = selectionManager.getSelection();
-    if (selectedShapes.length !== 1 || !(selectedShapes[0] instanceof Ellipse)) return;
 
-    const ellipse = selectedShapes[0] as Ellipse;
+    // Use stored shape reference (selection may have been cleared before blur fires)
+    const ellipse = this.currentEditingShape instanceof Ellipse ? this.currentEditingShape : null;
+    if (!ellipse) return;
+
+    const newCx = parseFloat(this.ellipseCxInput?.value || '0');
+    const newCy = parseFloat(this.ellipseCyInput?.value || '0');
+    const newRx = Math.max(1, parseFloat(this.ellipseRxInput?.value || '1'));
+    const newRy = Math.max(1, parseFloat(this.ellipseRyInput?.value || '1'));
+
+    // Check if values actually changed
+    if (ellipse.cx === newCx && ellipse.cy === newCy && ellipse.rx === newRx && ellipse.ry === newRy) return;
+
     const beforeState = ResizeShapeCommand.captureState(ellipse);
-    const afterState = {
-      cx: parseFloat(this.ellipseCxInput?.value || '0'),
-      cy: parseFloat(this.ellipseCyInput?.value || '0'),
-      rx: Math.max(1, parseFloat(this.ellipseRxInput?.value || '1')),
-      ry: Math.max(1, parseFloat(this.ellipseRyInput?.value || '1'))
-    };
+    const afterState = { cx: newCx, cy: newCy, rx: newRx, ry: newRy };
 
     const command = new ResizeShapeCommand(ellipse, beforeState, afterState);
     historyManager.execute(command);
@@ -1328,17 +1390,21 @@ export class Sidebar {
 
   private applyRectanglePositionChange(): void {
     if (this.isUpdatingUI) return;
-    const selectedShapes = selectionManager.getSelection();
-    if (selectedShapes.length !== 1 || !(selectedShapes[0] instanceof Rectangle)) return;
 
-    const rect = selectedShapes[0] as Rectangle;
+    // Use stored shape reference (selection may have been cleared before blur fires)
+    const rect = this.currentEditingShape instanceof Rectangle ? this.currentEditingShape : null;
+    if (!rect) return;
+
+    const newX = parseFloat(this.rectXInput?.value || '0');
+    const newY = parseFloat(this.rectYInput?.value || '0');
+    const newWidth = Math.max(1, parseFloat(this.rectWidthInput?.value || '1'));
+    const newHeight = Math.max(1, parseFloat(this.rectHeightInput?.value || '1'));
+
+    // Check if values actually changed
+    if (rect.x === newX && rect.y === newY && rect.width === newWidth && rect.height === newHeight) return;
+
     const beforeState = ResizeShapeCommand.captureState(rect);
-    const afterState = {
-      x: parseFloat(this.rectXInput?.value || '0'),
-      y: parseFloat(this.rectYInput?.value || '0'),
-      width: Math.max(1, parseFloat(this.rectWidthInput?.value || '1')),
-      height: Math.max(1, parseFloat(this.rectHeightInput?.value || '1'))
-    };
+    const afterState = { x: newX, y: newY, width: newWidth, height: newHeight };
 
     const command = new ResizeShapeCommand(rect, beforeState, afterState);
     historyManager.execute(command);
@@ -1346,15 +1412,19 @@ export class Sidebar {
 
   private applyTextPositionChange(): void {
     if (this.isUpdatingUI) return;
-    const selectedShapes = selectionManager.getSelection();
-    if (selectedShapes.length !== 1 || !(selectedShapes[0] instanceof Text)) return;
 
-    const text = selectedShapes[0] as Text;
+    // Use stored shape reference (selection may have been cleared before blur fires)
+    const text = this.currentEditingShape instanceof Text ? this.currentEditingShape : null;
+    if (!text) return;
+
+    const newX = parseFloat(this.textXInput?.value || '0');
+    const newY = parseFloat(this.textYInput?.value || '0');
+
+    // Check if values actually changed
+    if (text.x === newX && text.y === newY) return;
+
     const beforeState = ResizeShapeCommand.captureState(text);
-    const afterState = {
-      x: parseFloat(this.textXInput?.value || '0'),
-      y: parseFloat(this.textYInput?.value || '0')
-    };
+    const afterState = { x: newX, y: newY };
 
     const command = new ResizeShapeCommand(text, beforeState, afterState);
     historyManager.execute(command);
@@ -1362,17 +1432,21 @@ export class Sidebar {
 
   private applyNodePositionChange(): void {
     if (this.isUpdatingUI) return;
-    const selectedShapes = selectionManager.getSelection();
-    if (selectedShapes.length !== 1 || !(selectedShapes[0] instanceof Node)) return;
 
-    const node = selectedShapes[0] as Node;
+    // Use stored shape reference (selection may have been cleared before blur fires)
+    const node = this.currentEditingShape instanceof Node ? this.currentEditingShape : null;
+    if (!node) return;
+
+    const newCx = parseFloat(this.nodeCxInput?.value || '0');
+    const newCy = parseFloat(this.nodeCyInput?.value || '0');
+    const newRx = Math.max(1, parseFloat(this.nodeRxInput?.value || '1'));
+    const newRy = Math.max(1, parseFloat(this.nodeRyInput?.value || '1'));
+
+    // Check if values actually changed
+    if (node.cx === newCx && node.cy === newCy && node.rx === newRx && node.ry === newRy) return;
+
     const beforeState = ResizeShapeCommand.captureState(node);
-    const afterState = {
-      cx: parseFloat(this.nodeCxInput?.value || '0'),
-      cy: parseFloat(this.nodeCyInput?.value || '0'),
-      rx: Math.max(1, parseFloat(this.nodeRxInput?.value || '1')),
-      ry: Math.max(1, parseFloat(this.nodeRyInput?.value || '1'))
-    };
+    const afterState = { cx: newCx, cy: newCy, rx: newRx, ry: newRy };
 
     const command = new ResizeShapeCommand(node, beforeState, afterState);
     historyManager.execute(command);
