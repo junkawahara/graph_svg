@@ -1,4 +1,4 @@
-import { ShapeStyle, StyleClass, DEFAULT_STYLE, StrokeLinecap, MarkerType, EdgeDirection, CanvasSize, DEFAULT_CANVAS_SIZE, Point, generateId } from '../../shared/types';
+import { ShapeStyle, StyleClass, DEFAULT_STYLE, StrokeLinecap, MarkerType, EdgeDirection, CanvasSize, DEFAULT_CANVAS_SIZE, Point, generateId, PathCommand } from '../../shared/types';
 import { Shape } from '../shapes/Shape';
 import { Line } from '../shapes/Line';
 import { Ellipse } from '../shapes/Ellipse';
@@ -290,6 +290,16 @@ export class FileManager {
 
     // Build data attributes for group
     let groupDataAttrs = `data-graph-type="edge" data-source-id="${edge.sourceNodeId}" data-target-id="${edge.targetNodeId}" data-direction="${edge.direction}" data-curve-offset="${edge.curveOffset}"`;
+
+    // Add line type attributes
+    groupDataAttrs += ` data-line-type="${edge.lineType}"`;
+    if (edge.lineType === 'curve') {
+      groupDataAttrs += ` data-curve-amount="${edge.curveAmount}"`;
+    }
+    if (edge.lineType === 'path' && edge.pathCommands.length > 0) {
+      groupDataAttrs += ` data-path-data="${this.escapeXml(this.serializePathCommands(edge.pathCommands))}"`;
+    }
+
     if (edge.isSelfLoop) {
       groupDataAttrs += ` data-is-self-loop="true" data-self-loop-angle="${edge.selfLoopAngle}"`;
     }
@@ -371,7 +381,9 @@ export class FileManager {
     const start = sourceNode.getConnectionPoint(targetNode.cx, targetNode.cy);
     const end = targetNode.getConnectionPoint(sourceNode.cx, sourceNode.cy);
 
-    if (edge.curveOffset === 0) {
+    // Straight line type or curve with zero offset
+    const curveOffset = edge.curveAmount !== 0 ? edge.curveAmount : edge.curveOffset;
+    if (edge.lineType === 'straight' || curveOffset === 0) {
       return {
         x: round3((start.x + end.x) / 2),
         y: round3((start.y + end.y) / 2)
@@ -389,8 +401,8 @@ export class FileManager {
 
     const perpX = -dy / len;
     const perpY = dx / len;
-    const ctrlX = midX + perpX * edge.curveOffset;
-    const ctrlY = midY + perpY * edge.curveOffset;
+    const ctrlX = midX + perpX * curveOffset;
+    const ctrlY = midY + perpY * curveOffset;
 
     const newStart = sourceNode.getConnectionPoint(ctrlX, ctrlY);
     const newEnd = targetNode.getConnectionPoint(ctrlX, ctrlY);
@@ -573,7 +585,16 @@ export class FileManager {
    */
   private static calculateEdgePath(edge: Edge, sourceNode: Node, targetNode: Node): string {
     if (edge.isSelfLoop) {
+      // For path type self-loops with custom commands, use them
+      if (edge.lineType === 'path' && edge.pathCommands.length > 0) {
+        return this.serializePathCommands(edge.pathCommands);
+      }
       return this.calculateSelfLoopPath(edge, sourceNode);
+    }
+
+    // Handle path type with custom commands
+    if (edge.lineType === 'path' && edge.pathCommands.length > 0) {
+      return this.serializePathCommands(edge.pathCommands);
     }
 
     let start = sourceNode.getConnectionPoint(targetNode.cx, targetNode.cy);
@@ -590,7 +611,15 @@ export class FileManager {
       end = this.offsetPoint(end, start.x, start.y, arrowOffset);
     }
 
-    if (edge.curveOffset === 0) {
+    // Straight line type
+    if (edge.lineType === 'straight') {
+      return `M ${round3(start.x)} ${round3(start.y)} L ${round3(end.x)} ${round3(end.y)}`;
+    }
+
+    // Curve type: use curveAmount if set, otherwise fall back to curveOffset
+    const curveOffset = edge.curveAmount !== 0 ? edge.curveAmount : edge.curveOffset;
+
+    if (curveOffset === 0) {
       return `M ${round3(start.x)} ${round3(start.y)} L ${round3(end.x)} ${round3(end.y)}`;
     }
 
@@ -607,8 +636,8 @@ export class FileManager {
 
     const perpX = -dy / len;
     const perpY = dx / len;
-    const ctrlX = round3(midX + perpX * edge.curveOffset);
-    const ctrlY = round3(midY + perpY * edge.curveOffset);
+    const ctrlX = round3(midX + perpX * curveOffset);
+    const ctrlY = round3(midY + perpY * curveOffset);
 
     let newStart = sourceNode.getConnectionPoint(ctrlX, ctrlY);
     let newEnd = targetNode.getConnectionPoint(ctrlX, ctrlY);
@@ -1523,5 +1552,37 @@ export class FileManager {
     }
 
     return style;
+  }
+
+  /**
+   * Serialize PathCommand array to SVG path string
+   */
+  private static serializePathCommands(commands: PathCommand[]): string {
+    const parts: string[] = [];
+    for (const cmd of commands) {
+      switch (cmd.type) {
+        case 'M':
+          parts.push(`M ${cmd.x} ${cmd.y}`);
+          break;
+        case 'L':
+          parts.push(`L ${cmd.x} ${cmd.y}`);
+          break;
+        case 'C':
+          parts.push(`C ${cmd.cp1x} ${cmd.cp1y} ${cmd.cp2x} ${cmd.cp2y} ${cmd.x} ${cmd.y}`);
+          break;
+        case 'Q':
+          parts.push(`Q ${cmd.cpx} ${cmd.cpy} ${cmd.x} ${cmd.y}`);
+          break;
+        case 'A':
+          const largeArc = cmd.largeArcFlag ? 1 : 0;
+          const sweep = cmd.sweepFlag ? 1 : 0;
+          parts.push(`A ${cmd.rx} ${cmd.ry} ${cmd.xAxisRotation} ${largeArc} ${sweep} ${cmd.x} ${cmd.y}`);
+          break;
+        case 'Z':
+          parts.push('Z');
+          break;
+      }
+    }
+    return parts.join(' ');
   }
 }
