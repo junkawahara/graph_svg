@@ -300,7 +300,10 @@ describe('Node-Edge Position Linkage', () => {
         50,  // curveOffset for curved edge
         false,
         0,
-        createTestStyle()
+        createTestStyle(),
+        undefined,  // label
+        'curve',    // lineType
+        50          // curveAmount
       );
 
       const element = edge.render();

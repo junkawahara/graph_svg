@@ -158,7 +158,10 @@ describe('Edge.updatePath()', () => {
         50,  // curveOffset > 0 for curved edge
         false,
         0,
-        createTestStyle()
+        createTestStyle(),
+        undefined,  // label
+        'curve',    // lineType
+        50          // curveAmount
       );
 
       const element = edge.render();
@@ -187,7 +190,10 @@ describe('Edge.updatePath()', () => {
         50,
         false,
         0,
-        createTestStyle()
+        createTestStyle(),
+        undefined,  // label
+        'curve',    // lineType
+        50          // curveAmount
       );
 
       const edgeNegative = new Edge(
@@ -198,7 +204,10 @@ describe('Edge.updatePath()', () => {
         -50,
         false,
         0,
-        createTestStyle()
+        createTestStyle(),
+        undefined,  // label
+        'curve',    // lineType
+        -50         // curveAmount
       );
 
       const elementPos = edgePositive.render();
