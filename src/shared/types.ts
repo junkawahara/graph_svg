@@ -15,6 +15,14 @@ export type ShapeType = 'line' | 'ellipse' | 'rectangle' | 'text' | 'node' | 'ed
 export type EdgeDirection = 'none' | 'forward' | 'backward';
 
 /**
+ * Edge line type for graph edges
+ * - straight: Direct line between nodes (default for first edge)
+ * - curve: Curved line with adjustable curve amount (default for parallel edges)
+ * - path: Custom SVG path with editable control points
+ */
+export type EdgeLineType = 'straight' | 'curve' | 'path';
+
+/**
  * Text anchor for horizontal alignment
  */
 export type TextAnchor = 'start' | 'middle' | 'end';
@@ -200,6 +208,9 @@ export interface EdgeData extends BaseShapeData {
   isSelfLoop: boolean;
   selfLoopAngle: number;
   label?: string;
+  lineType: EdgeLineType;        // Line type (straight/curve/path)
+  curveAmount?: number;          // Curve amount for 'curve' type (-100 to 100)
+  pathCommands?: PathCommand[];  // Path commands for 'path' type
 }
 
 /**
@@ -294,6 +305,8 @@ export type EventName =
   | 'node:delete'
   | 'edge:delete'
   | 'edgeDirection:changed'
+  | 'edgeLineType:changed'
+  | 'edgeCurveAmount:changed'
   | 'graph:nodeAdded'
   | 'graph:nodeRemoved'
   | 'graph:edgeAdded'
