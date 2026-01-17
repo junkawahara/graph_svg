@@ -560,6 +560,80 @@ export class Edge implements Shape {
   }
 
   /**
+   * Update path endpoints when nodes move (for path type edges)
+   * Start point reconnects to source node boundary
+   * End point reconnects to target node boundary
+   * Intermediate control points remain fixed
+   */
+  private updatePathEndpoints(sourceNode: Node, targetNode: Node): void {
+    if (this.lineType !== 'path' || this.pathCommands.length < 2) return;
+
+    const firstCmd = this.pathCommands[0];
+    const lastIdx = this.pathCommands.length - 1;
+    const lastCmd = this.pathCommands[lastIdx];
+
+    if (firstCmd.type !== 'M' || lastCmd.type === 'Z') return;
+
+    // Determine direction for start point based on next point
+    let nextPoint: Point;
+    const secondCmd = this.pathCommands[1];
+    if (secondCmd.type === 'C') {
+      // Use first control point as direction hint
+      nextPoint = { x: secondCmd.cp1x, y: secondCmd.cp1y };
+    } else if (secondCmd.type === 'Q') {
+      // Use control point as direction hint
+      nextPoint = { x: secondCmd.cpx, y: secondCmd.cpy };
+    } else if (secondCmd.type !== 'Z') {
+      // Use the endpoint
+      nextPoint = { x: secondCmd.x, y: secondCmd.y };
+    } else {
+      nextPoint = { x: sourceNode.cx, y: sourceNode.cy };
+    }
+
+    // Calculate new start point on source node boundary
+    const newStart = sourceNode.getConnectionPoint(nextPoint.x, nextPoint.y);
+    this.pathCommands[0] = { type: 'M', x: round3(newStart.x), y: round3(newStart.y) };
+
+    // Determine direction for end point based on previous point
+    let prevPoint: Point;
+    if (lastCmd.type === 'C') {
+      // Use second control point as direction hint
+      prevPoint = { x: lastCmd.cp2x, y: lastCmd.cp2y };
+    } else if (lastCmd.type === 'Q') {
+      // Use control point as direction hint
+      prevPoint = { x: lastCmd.cpx, y: lastCmd.cpy };
+    } else {
+      // Use the previous command's endpoint
+      const prevCmd = this.pathCommands[lastIdx - 1];
+      if (prevCmd && prevCmd.type !== 'Z') {
+        prevPoint = { x: prevCmd.x, y: prevCmd.y };
+      } else {
+        prevPoint = { x: targetNode.cx, y: targetNode.cy };
+      }
+    }
+
+    // Calculate new end point on target node boundary
+    const newEnd = targetNode.getConnectionPoint(prevPoint.x, prevPoint.y);
+
+    // Update the last command's endpoint
+    if (lastCmd.type === 'L') {
+      this.pathCommands[lastIdx] = { type: 'L', x: round3(newEnd.x), y: round3(newEnd.y) };
+    } else if (lastCmd.type === 'C') {
+      this.pathCommands[lastIdx] = {
+        ...lastCmd,
+        x: round3(newEnd.x),
+        y: round3(newEnd.y)
+      };
+    } else if (lastCmd.type === 'Q') {
+      this.pathCommands[lastIdx] = {
+        ...lastCmd,
+        x: round3(newEnd.x),
+        y: round3(newEnd.y)
+      };
+    }
+  }
+
+  /**
    * Update the edge element (e.g., when nodes move)
    */
   updateElement(): void {
@@ -573,6 +647,9 @@ export class Edge implements Shape {
     const targetNode = gm.getNodeShape(this.targetNodeId);
 
     if (sourceNode && targetNode) {
+      // Update path endpoints for path type edges
+      this.updatePathEndpoints(sourceNode, targetNode);
+
       this.pathElement.setAttribute('d', this.getPathData(sourceNode, targetNode));
 
       // Update label position
