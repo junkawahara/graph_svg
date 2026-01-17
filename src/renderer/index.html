@@ -361,6 +361,21 @@
             </select>
           </div>
           <div class="property-group">
+            <label>Line Type</label>
+            <select id="prop-edge-line-type">
+              <option value="straight">Straight</option>
+              <option value="curve">Curve</option>
+              <option value="path">Path (editable)</option>
+            </select>
+          </div>
+          <div id="edge-curve-amount-section" class="property-group" style="display: none;">
+            <label>Curve Amount</label>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <input type="range" id="prop-edge-curve-amount" min="-100" max="100" value="0" style="flex: 1;">
+              <span id="edge-curve-amount-value" style="min-width: 32px; text-align: right;">0</span>
+            </div>
+          </div>
+          <div class="property-group">
             <label>Edge Label</label>
             <input type="text" id="prop-edge-label" placeholder="Label">
           </div>

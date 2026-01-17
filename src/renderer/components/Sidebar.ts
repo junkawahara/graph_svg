@@ -65,6 +65,10 @@ export class Sidebar {
   // Edge-specific properties
   private edgePropertiesContainer: HTMLDivElement | null = null;
   private edgeDirection: HTMLSelectElement | null = null;
+  private edgeLineType: HTMLSelectElement | null = null;
+  private edgeCurveAmountSection: HTMLDivElement | null = null;
+  private edgeCurveAmount: HTMLInputElement | null = null;
+  private edgeCurveAmountValue: HTMLSpanElement | null = null;
   private edgeLabel: HTMLInputElement | null = null;
 
   // Path-specific properties
@@ -160,6 +164,10 @@ export class Sidebar {
     // Edge-specific elements
     this.edgePropertiesContainer = document.getElementById('edge-properties') as HTMLDivElement;
     this.edgeDirection = document.getElementById('prop-edge-direction') as HTMLSelectElement;
+    this.edgeLineType = document.getElementById('prop-edge-line-type') as HTMLSelectElement;
+    this.edgeCurveAmountSection = document.getElementById('edge-curve-amount-section') as HTMLDivElement;
+    this.edgeCurveAmount = document.getElementById('prop-edge-curve-amount') as HTMLInputElement;
+    this.edgeCurveAmountValue = document.getElementById('edge-curve-amount-value') as HTMLSpanElement;
     this.edgeLabel = document.getElementById('prop-edge-label') as HTMLInputElement;
 
     // Path-specific elements
@@ -414,6 +422,29 @@ export class Sidebar {
       this.edgeDirection.addEventListener('change', () => {
         if (this.isUpdatingUI) return;
         this.applyEdgeDirectionChange(this.edgeDirection!.value as EdgeDirection);
+      });
+    }
+
+    if (this.edgeLineType) {
+      this.edgeLineType.addEventListener('change', () => {
+        if (this.isUpdatingUI) return;
+        this.applyEdgeLineTypeChange();
+      });
+    }
+
+    if (this.edgeCurveAmount) {
+      // Update display value on input (live preview)
+      this.edgeCurveAmount.addEventListener('input', () => {
+        if (this.edgeCurveAmountValue) {
+          this.edgeCurveAmountValue.textContent = this.edgeCurveAmount!.value;
+        }
+        if (this.isUpdatingUI) return;
+        this.applyEdgeCurveAmountChange();
+      });
+      // Apply on change (when slider released)
+      this.edgeCurveAmount.addEventListener('change', () => {
+        if (this.isUpdatingUI) return;
+        this.applyEdgeCurveAmountChange();
       });
     }
 
@@ -1110,6 +1141,67 @@ export class Sidebar {
   }
 
   /**
+   * Apply edge line type change
+   */
+  private applyEdgeLineTypeChange(): void {
+    if (!this.edgeLineType) return;
+
+    const selectedShapes = selectionManager.getSelection();
+    if (selectedShapes.length !== 1 || !(selectedShapes[0] instanceof Edge)) return;
+
+    const edge = selectedShapes[0] as Edge;
+    const newLineType = this.edgeLineType.value as 'straight' | 'curve' | 'path';
+
+    // Don't allow straight for self-loops
+    if (edge.isSelfLoop && newLineType === 'straight') {
+      this.edgeLineType.value = edge.lineType;
+      return;
+    }
+
+    // Emit event for command handling
+    eventBus.emit('edgeLineType:changed', { edgeId: edge.id, lineType: newLineType });
+
+    // Update curve amount section visibility
+    this.updateCurveAmountVisibility(newLineType);
+  }
+
+  /**
+   * Apply edge curve amount change
+   */
+  private applyEdgeCurveAmountChange(): void {
+    if (!this.edgeCurveAmount) return;
+
+    const selectedShapes = selectionManager.getSelection();
+    if (selectedShapes.length !== 1 || !(selectedShapes[0] instanceof Edge)) return;
+
+    const edge = selectedShapes[0] as Edge;
+    const newCurveAmount = parseInt(this.edgeCurveAmount.value, 10);
+
+    // Emit event for command handling
+    eventBus.emit('edgeCurveAmount:changed', { edgeId: edge.id, curveAmount: newCurveAmount });
+  }
+
+  /**
+   * Update curve amount section visibility based on line type
+   */
+  private updateCurveAmountVisibility(lineType: string): void {
+    if (this.edgeCurveAmountSection) {
+      this.edgeCurveAmountSection.style.display = lineType === 'curve' ? 'block' : 'none';
+    }
+    // Disable straight option for self-loops
+    if (this.edgeLineType) {
+      const straightOption = this.edgeLineType.querySelector('option[value="straight"]') as HTMLOptionElement;
+      if (straightOption) {
+        const selectedShapes = selectionManager.getSelection();
+        if (selectedShapes.length === 1 && selectedShapes[0] instanceof Edge) {
+          const edge = selectedShapes[0] as Edge;
+          straightOption.disabled = edge.isSelfLoop;
+        }
+      }
+    }
+  }
+
+  /**
    * Show node properties and populate with shape values
    */
   private showNodeProperties(node: Node): void {
@@ -1143,6 +1235,24 @@ export class Sidebar {
 
     this.edgePropertiesContainer.style.display = 'block';
     if (this.edgeDirection) this.edgeDirection.value = edge.direction;
+    if (this.edgeLineType) {
+      this.edgeLineType.value = edge.lineType;
+      // Disable straight option for self-loops
+      const straightOption = this.edgeLineType.querySelector('option[value="straight"]') as HTMLOptionElement;
+      if (straightOption) {
+        straightOption.disabled = edge.isSelfLoop;
+      }
+    }
+    if (this.edgeCurveAmount) {
+      this.edgeCurveAmount.value = String(edge.curveAmount);
+    }
+    if (this.edgeCurveAmountValue) {
+      this.edgeCurveAmountValue.textContent = String(edge.curveAmount);
+    }
+    // Show/hide curve amount section based on line type
+    if (this.edgeCurveAmountSection) {
+      this.edgeCurveAmountSection.style.display = edge.lineType === 'curve' ? 'block' : 'none';
+    }
     if (this.edgeLabel) this.edgeLabel.value = edge.label || '';
 
     this.isUpdatingUI = false;
