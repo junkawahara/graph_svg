@@ -11,6 +11,28 @@
   - スタイル属性の完全な保持を検証
   - グラフテストの強化（ノード/エッジスタイル、複雑なグラフ構造、自己ループ、エッジケース）
 
+- Undo/Redo機能の包括的なテスト
+  - HistoryManager単体テスト（27テスト）
+    - execute/undo/redo/canUndo/canRedo/clear機能
+    - 履歴制限（100件）
+    - history:changedイベント発火
+  - コマンド単体テスト
+    - AddShapeCommand（12テスト）
+    - DeleteShapeCommand（10テスト）
+    - MoveShapeCommand（13テスト）
+    - ResizeShapeCommand（17テスト）
+    - StyleChangeCommand（16テスト）
+    - GroupShapesCommand（13テスト）
+  - グラフコマンドテスト
+    - AddNodeCommand（9テスト）
+    - AddEdgeCommand（9テスト）
+    - DeleteNodeCommand（14テスト）- 接続エッジの同時削除/復元を検証
+  - 統合テスト（13テスト）
+    - 複数コマンドの連続実行
+    - undo/redoインターリーブ
+    - redoスタッククリア
+    - 履歴制限（100件超過時の動作）
+
 ### 修正
 - strokeWidth=0 の場合、stroke="none" を出力するように修正
   - これにより、ストローク幅0がラウンドトリップで正しく保持される
