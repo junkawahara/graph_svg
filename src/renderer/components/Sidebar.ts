@@ -1158,8 +1158,13 @@ export class Sidebar {
       return;
     }
 
-    // Emit event for command handling
-    eventBus.emit('edgeLineType:changed', { edgeId: edge.id, lineType: newLineType });
+    // Skip if no change
+    if (edge.lineType === newLineType) return;
+
+    // Execute command
+    const { EdgeLineTypeChangeCommand } = require('../commands/EdgeLineTypeChangeCommand');
+    const command = new EdgeLineTypeChangeCommand(edge, newLineType);
+    historyManager.execute(command);
 
     // Update curve amount section visibility
     this.updateCurveAmountVisibility(newLineType);
@@ -1177,8 +1182,13 @@ export class Sidebar {
     const edge = selectedShapes[0] as Edge;
     const newCurveAmount = parseInt(this.edgeCurveAmount.value, 10);
 
-    // Emit event for command handling
-    eventBus.emit('edgeCurveAmount:changed', { edgeId: edge.id, curveAmount: newCurveAmount });
+    // Skip if no change
+    if (edge.curveAmount === newCurveAmount) return;
+
+    // Execute command
+    const { EdgeCurveAmountChangeCommand } = require('../commands/EdgeCurveAmountChangeCommand');
+    const command = new EdgeCurveAmountChangeCommand(edge, newCurveAmount);
+    historyManager.execute(command);
   }
 
   /**
