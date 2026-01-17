@@ -9,12 +9,17 @@
   - 3種類の線種を選択可能
     - `straight`: 2頂点間を直線で結ぶ（デフォルト）
     - `curve`: 2頂点間をカーブで描く（曲率調整可能）
-    - `path`: SVGパスで描く（将来の制御点編集に対応予定）
+    - `path`: SVGパスで描く（制御点編集可能）
   - カーブ量スライダー（-100〜100）で曲率を調整
   - 自己ループは `straight` 不可（自動的に `curve` または `path` のみ）
   - 並行辺は自動的に `curve` タイプで作成
   - Undo/Redo対応（`EdgeLineTypeChangeCommand`, `EdgeCurveAmountChangeCommand`）
   - SVGファイル保存/読み込み対応（`data-line-type`, `data-curve-amount` 属性）
+  - `path` タイプの制御点編集（EdgeHandles）
+    - アンカーポイント（四角ハンドル）とベジェ制御点（丸ハンドル）
+    - 始点はソースノード境界上、終点はターゲットノード境界上に制約
+    - 中間の制御点は自由に移動可能
+    - 制御線（破線）でアンカーと制御点を接続表示
 
 ### 変更
 - 矢印描画をSVG `<marker>` から自前描画パスに変更

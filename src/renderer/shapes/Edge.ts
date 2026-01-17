@@ -914,6 +914,74 @@ export class Edge implements Shape {
   }
 
   /**
+   * Get anchor points from pathCommands (for handle display)
+   */
+  getAnchorPoints(): Point[] {
+    const anchors: Point[] = [];
+    for (const cmd of this.pathCommands) {
+      if (cmd.type !== 'Z') {
+        anchors.push({ x: cmd.x, y: cmd.y });
+      }
+    }
+    return anchors;
+  }
+
+  /**
+   * Set anchor point at given index
+   */
+  setAnchorPoint(anchorIndex: number, point: Point): void {
+    let currentAnchor = 0;
+    for (let i = 0; i < this.pathCommands.length; i++) {
+      const cmd = this.pathCommands[i];
+      if (cmd.type !== 'Z') {
+        if (currentAnchor === anchorIndex) {
+          this.pathCommands[i] = { ...cmd, x: round3(point.x), y: round3(point.y) };
+          this.updateElement();
+          return;
+        }
+        currentAnchor++;
+      }
+    }
+  }
+
+  /**
+   * Set control point for a command
+   * @param cmdIndex - Command index
+   * @param cpIndex - Control point index (0 = cp1/cpx, 1 = cp2 for cubic)
+   * @param point - New control point position
+   */
+  setControlPoint(cmdIndex: number, cpIndex: 0 | 1, point: Point): void {
+    const cmd = this.pathCommands[cmdIndex];
+    if (!cmd) return;
+
+    if (cmd.type === 'C') {
+      if (cpIndex === 0) {
+        this.pathCommands[cmdIndex] = { ...cmd, cp1x: round3(point.x), cp1y: round3(point.y) };
+      } else {
+        this.pathCommands[cmdIndex] = { ...cmd, cp2x: round3(point.x), cp2y: round3(point.y) };
+      }
+    } else if (cmd.type === 'Q') {
+      this.pathCommands[cmdIndex] = { ...cmd, cpx: round3(point.x), cpy: round3(point.y) };
+    }
+
+    this.updateElement();
+  }
+
+  /**
+   * Get start point for a command (endpoint of previous command)
+   */
+  getCommandStart(cmdIndex: number): Point {
+    if (cmdIndex === 0) {
+      return { x: 0, y: 0 };
+    }
+    const prevCmd = this.pathCommands[cmdIndex - 1];
+    if (prevCmd && prevCmd.type !== 'Z') {
+      return { x: prevCmd.x, y: prevCmd.y };
+    }
+    return { x: 0, y: 0 };
+  }
+
+  /**
    * Initialize path commands from current edge geometry
    * Used when converting from straight/curve to path type
    */

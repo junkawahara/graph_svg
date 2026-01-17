@@ -41,6 +41,7 @@ import { PolygonHandles, PolylineHandles } from '../handles/PolygonHandles';
 import { PathHandles } from '../handles/PathHandles';
 import { ImageHandles } from '../handles/ImageHandles';
 import { GroupHandles } from '../handles/GroupHandles';
+import { EdgeHandles } from '../handles/EdgeHandles';
 import { AddShapeCommand } from '../commands/AddShapeCommand';
 import { AddNodeCommand } from '../commands/AddNodeCommand';
 import { AddEdgeCommand } from '../commands/AddEdgeCommand';
@@ -507,6 +508,11 @@ export class Canvas {
       return new ImageHandles(shape);
     } else if (shape instanceof Group) {
       return new GroupHandles(shape);
+    } else if (shape instanceof Edge) {
+      // Only create handles for path type edges
+      if (shape.lineType === 'path') {
+        return new EdgeHandles(shape);
+      }
     }
     return null;
   }
