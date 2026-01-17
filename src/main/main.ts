@@ -541,6 +541,10 @@ ipcMain.handle('settings:write', (_event, settings: Partial<AppSettings>): AppSe
   return updated;
 });
 
+// Disable hardware acceleration to avoid SVG rendering bugs
+// (stroke-linecap="round" causes lines to split in GPU-accelerated mode)
+app.disableHardwareAcceleration();
+
 app.whenReady().then(() => {
   createMenu();
   createWindow();
