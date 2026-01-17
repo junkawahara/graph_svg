@@ -1,4 +1,4 @@
-import { Point, Bounds, ShapeStyle, EdgeData, EdgeDirection, generateId } from '../../shared/types';
+import { Point, Bounds, ShapeStyle, EdgeData, EdgeDirection, EdgeLineType, PathCommand, generateId } from '../../shared/types';
 import { Shape, applyStyle } from './Shape';
 import { getGraphManager } from '../core/GraphManager';
 import { Node } from './Node';
@@ -28,7 +28,10 @@ export class Edge implements Shape {
     public isSelfLoop: boolean,
     public selfLoopAngle: number,
     public style: ShapeStyle,
-    public label?: string
+    public label?: string,
+    public lineType: EdgeLineType = 'straight',
+    public curveAmount: number = 0,
+    public pathCommands: PathCommand[] = []
   ) {}
 
   /**
@@ -50,6 +53,20 @@ export class Edge implements Shape {
     // Calculate angle for self-loops
     const selfLoopAngle = isSelfLoop ? gm.getNextSelfLoopAngle(sourceNodeId) : 0;
 
+    // Determine default line type:
+    // - Self-loop: 'curve' (straight not allowed)
+    // - First edge between nodes: 'straight'
+    // - Parallel edges (2nd+): 'curve'
+    let lineType: EdgeLineType = 'straight';
+    if (isSelfLoop) {
+      lineType = 'curve';
+    } else if (curveOffset !== 0) {
+      lineType = 'curve';
+    }
+
+    // Default curveAmount based on curveOffset (for backward compatibility)
+    const curveAmount = curveOffset;
+
     return new Edge(
       generateId(),
       sourceNodeId,
@@ -59,7 +76,10 @@ export class Edge implements Shape {
       isSelfLoop,
       selfLoopAngle,
       style,
-      label
+      label,
+      lineType,
+      curveAmount,
+      []  // Empty path commands
     );
   }
 
@@ -98,6 +118,21 @@ export class Edge implements Shape {
       label = el.getAttribute('data-label') || undefined;
     }
 
+    // Parse new line type attributes
+    const lineTypeAttr = el.getAttribute('data-line-type');
+    let lineType: EdgeLineType = 'straight';
+    if (lineTypeAttr === 'curve' || lineTypeAttr === 'path') {
+      lineType = lineTypeAttr;
+    } else if (isSelfLoop || curveOffset !== 0) {
+      // Legacy: infer line type from existing data
+      lineType = 'curve';
+    }
+
+    const curveAmount = parseFloat(el.getAttribute('data-curve-amount') || String(curveOffset));
+
+    // Parse path commands for 'path' type (will be implemented in FileManager)
+    const pathCommands: PathCommand[] = [];
+
     return new Edge(
       el.id || generateId(),
       sourceNodeId,
@@ -107,7 +142,10 @@ export class Edge implements Shape {
       isSelfLoop,
       selfLoopAngle,
       style,
-      label
+      label,
+      lineType,
+      curveAmount,
+      pathCommands
     );
   }
 
@@ -115,27 +153,95 @@ export class Edge implements Shape {
    * Get the path data for the edge
    */
   private getPathData(sourceNode: Node, targetNode: Node): string {
+    // Self-loop handling
     if (this.isSelfLoop) {
+      if (this.lineType === 'path' && this.pathCommands.length > 0) {
+        return this.getPathTypeData(sourceNode, targetNode);
+      }
       return this.getSelfLoopPath(sourceNode);
     }
 
-    // Get connection points on node boundaries
-    const start = sourceNode.getConnectionPoint(targetNode.cx, targetNode.cy);
-    const end = targetNode.getConnectionPoint(sourceNode.cx, sourceNode.cy);
-
-    if (this.curveOffset === 0) {
-      // Straight line
-      return `M ${start.x} ${start.y} L ${end.x} ${end.y}`;
-    } else {
-      // Curved line for parallel edges
-      return this.getCurvedPath(start, end, sourceNode, targetNode);
+    // Branch by line type
+    switch (this.lineType) {
+      case 'straight':
+        return this.getStraightPath(sourceNode, targetNode);
+      case 'curve':
+        return this.getCurvePath(sourceNode, targetNode);
+      case 'path':
+        return this.getPathTypeData(sourceNode, targetNode);
+      default:
+        return this.getStraightPath(sourceNode, targetNode);
     }
   }
 
   /**
-   * Get curved path for parallel edges
+   * Get straight path between nodes
    */
-  private getCurvedPath(start: Point, end: Point, sourceNode: Node, targetNode: Node): string {
+  private getStraightPath(sourceNode: Node, targetNode: Node): string {
+    const start = sourceNode.getConnectionPoint(targetNode.cx, targetNode.cy);
+    const end = targetNode.getConnectionPoint(sourceNode.cx, sourceNode.cy);
+    return `M ${start.x} ${start.y} L ${end.x} ${end.y}`;
+  }
+
+  /**
+   * Get curved path using curveAmount
+   */
+  private getCurvePath(sourceNode: Node, targetNode: Node): string {
+    const start = sourceNode.getConnectionPoint(targetNode.cx, targetNode.cy);
+    const end = targetNode.getConnectionPoint(sourceNode.cx, sourceNode.cy);
+
+    // Use curveAmount if set, otherwise fall back to curveOffset
+    const offset = this.curveAmount !== 0 ? this.curveAmount : this.curveOffset;
+
+    if (offset === 0) {
+      // No curve - draw straight line
+      return `M ${start.x} ${start.y} L ${end.x} ${end.y}`;
+    }
+
+    return this.getCurvedPath(start, end, sourceNode, targetNode, offset);
+  }
+
+  /**
+   * Get path data for 'path' type (custom editable path)
+   */
+  private getPathTypeData(sourceNode: Node, targetNode: Node): string {
+    if (this.pathCommands.length === 0) {
+      // No path commands yet - fall back to curve
+      return this.getCurvePath(sourceNode, targetNode);
+    }
+
+    // Generate SVG path string from commands
+    // Endpoints are connected to node boundaries
+    const parts: string[] = [];
+    for (const cmd of this.pathCommands) {
+      switch (cmd.type) {
+        case 'M':
+          parts.push(`M ${cmd.x} ${cmd.y}`);
+          break;
+        case 'L':
+          parts.push(`L ${cmd.x} ${cmd.y}`);
+          break;
+        case 'C':
+          parts.push(`C ${cmd.cp1x} ${cmd.cp1y} ${cmd.cp2x} ${cmd.cp2y} ${cmd.x} ${cmd.y}`);
+          break;
+        case 'Q':
+          parts.push(`Q ${cmd.cpx} ${cmd.cpy} ${cmd.x} ${cmd.y}`);
+          break;
+        case 'Z':
+          parts.push('Z');
+          break;
+      }
+    }
+    return parts.join(' ');
+  }
+
+  /**
+   * Get curved path for parallel edges
+   * @param offset - Optional curve offset (defaults to this.curveOffset)
+   */
+  private getCurvedPath(start: Point, end: Point, sourceNode: Node, targetNode: Node, offset?: number): string {
+    const curveOffset = offset !== undefined ? offset : this.curveOffset;
+
     // Calculate midpoint
     const midX = (start.x + end.x) / 2;
     const midY = (start.y + end.y) / 2;
@@ -152,8 +258,8 @@ export class Edge implements Shape {
     const perpY = dx / len;
 
     // Control point with offset
-    const ctrlX = midX + perpX * this.curveOffset;
-    const ctrlY = midY + perpY * this.curveOffset;
+    const ctrlX = midX + perpX * curveOffset;
+    const ctrlY = midY + perpY * curveOffset;
 
     // Recalculate start and end points for the curved path
     // to connect to node boundaries at the appropriate angle
@@ -294,6 +400,10 @@ export class Edge implements Shape {
     group.setAttribute('data-target-id', this.targetNodeId);
     group.setAttribute('data-direction', this.direction);
     group.setAttribute('data-curve-offset', String(this.curveOffset));
+    group.setAttribute('data-line-type', this.lineType);
+    if (this.lineType === 'curve') {
+      group.setAttribute('data-curve-amount', String(this.curveAmount));
+    }
     if (this.isSelfLoop) {
       group.setAttribute('data-is-self-loop', 'true');
       group.setAttribute('data-self-loop-angle', String(this.selfLoopAngle));
@@ -736,7 +846,10 @@ export class Edge implements Shape {
       selfLoopAngle: this.selfLoopAngle,
       style: { ...this.style },
       className: this.className,
-      label: this.label
+      label: this.label,
+      lineType: this.lineType,
+      curveAmount: this.curveAmount,
+      pathCommands: this.pathCommands.length > 0 ? [...this.pathCommands] : undefined
     };
   }
 
@@ -750,7 +863,10 @@ export class Edge implements Shape {
       this.isSelfLoop,
       this.selfLoopAngle,
       { ...this.style },
-      this.label
+      this.label,
+      this.lineType,
+      this.curveAmount,
+      this.pathCommands.length > 0 ? [...this.pathCommands] : []
     );
     cloned.className = this.className;
     return cloned;
@@ -762,5 +878,111 @@ export class Edge implements Shape {
   setLabel(label: string | undefined): void {
     this.label = label;
     this.updateElement();
+  }
+
+  /**
+   * Set the line type
+   */
+  setLineType(lineType: EdgeLineType): void {
+    // Self-loops cannot be straight
+    if (this.isSelfLoop && lineType === 'straight') {
+      console.warn('Self-loop edges cannot use straight line type');
+      return;
+    }
+    this.lineType = lineType;
+    this.updateElement();
+  }
+
+  /**
+   * Set the curve amount for 'curve' line type
+   */
+  setCurveAmount(amount: number): void {
+    this.curveAmount = amount;
+    if (this.lineType === 'curve') {
+      this.updateElement();
+    }
+  }
+
+  /**
+   * Set the path commands for 'path' line type
+   */
+  setPathCommands(commands: PathCommand[]): void {
+    this.pathCommands = [...commands];
+    if (this.lineType === 'path') {
+      this.updateElement();
+    }
+  }
+
+  /**
+   * Initialize path commands from current edge geometry
+   * Used when converting from straight/curve to path type
+   */
+  initializePathFromCurrentGeometry(): void {
+    const gm = getGraphManager();
+    const sourceNode = gm.getNodeShape(this.sourceNodeId);
+    const targetNode = gm.getNodeShape(this.targetNodeId);
+
+    if (!sourceNode || !targetNode) return;
+
+    if (this.isSelfLoop) {
+      // Generate path commands from self-loop
+      const angle = this.selfLoopAngle;
+      const loopSize = Math.max(sourceNode.rx, sourceNode.ry) * 1.5;
+      const startAngle = angle - Math.PI / 6;
+      const endAngle = angle + Math.PI / 6;
+
+      const startX = round3(sourceNode.cx + sourceNode.rx * Math.cos(startAngle));
+      const startY = round3(sourceNode.cy + sourceNode.ry * Math.sin(startAngle));
+      const endX = round3(sourceNode.cx + sourceNode.rx * Math.cos(endAngle));
+      const endY = round3(sourceNode.cy + sourceNode.ry * Math.sin(endAngle));
+      const ctrl1X = round3(sourceNode.cx + (sourceNode.rx + loopSize) * Math.cos(startAngle));
+      const ctrl1Y = round3(sourceNode.cy + (sourceNode.ry + loopSize) * Math.sin(startAngle));
+      const ctrl2X = round3(sourceNode.cx + (sourceNode.rx + loopSize) * Math.cos(endAngle));
+      const ctrl2Y = round3(sourceNode.cy + (sourceNode.ry + loopSize) * Math.sin(endAngle));
+
+      this.pathCommands = [
+        { type: 'M', x: startX, y: startY },
+        { type: 'C', cp1x: ctrl1X, cp1y: ctrl1Y, cp2x: ctrl2X, cp2y: ctrl2Y, x: endX, y: endY }
+      ];
+    } else if (this.lineType === 'curve' || this.curveAmount !== 0 || this.curveOffset !== 0) {
+      // Generate path commands from curve
+      const start = sourceNode.getConnectionPoint(targetNode.cx, targetNode.cy);
+      const end = targetNode.getConnectionPoint(sourceNode.cx, sourceNode.cy);
+      const offset = this.curveAmount !== 0 ? this.curveAmount : this.curveOffset;
+
+      const midX = (start.x + end.x) / 2;
+      const midY = (start.y + end.y) / 2;
+      const dx = end.x - start.x;
+      const dy = end.y - start.y;
+      const len = Math.sqrt(dx * dx + dy * dy);
+
+      if (len > 0 && offset !== 0) {
+        const perpX = -dy / len;
+        const perpY = dx / len;
+        const ctrlX = round3(midX + perpX * offset);
+        const ctrlY = round3(midY + perpY * offset);
+        const newStart = sourceNode.getConnectionPoint(ctrlX, ctrlY);
+        const newEnd = targetNode.getConnectionPoint(ctrlX, ctrlY);
+
+        this.pathCommands = [
+          { type: 'M', x: round3(newStart.x), y: round3(newStart.y) },
+          { type: 'Q', cpx: ctrlX, cpy: ctrlY, x: round3(newEnd.x), y: round3(newEnd.y) }
+        ];
+      } else {
+        this.pathCommands = [
+          { type: 'M', x: round3(start.x), y: round3(start.y) },
+          { type: 'L', x: round3(end.x), y: round3(end.y) }
+        ];
+      }
+    } else {
+      // Generate path commands from straight line
+      const start = sourceNode.getConnectionPoint(targetNode.cx, targetNode.cy);
+      const end = targetNode.getConnectionPoint(sourceNode.cx, sourceNode.cy);
+
+      this.pathCommands = [
+        { type: 'M', x: round3(start.x), y: round3(start.y) },
+        { type: 'L', x: round3(end.x), y: round3(end.y) }
+      ];
+    }
   }
 }
