@@ -1,6 +1,6 @@
-import { Point } from '../../shared/types';
+import { Point, Bounds } from '../../shared/types';
 import { Ellipse } from '../shapes/Ellipse';
-import { Handle, HandleSet, HandlePosition, createHandleElement, getCursorForHandle } from './Handle';
+import { Handle, HandleSet, HandlePosition, createHandleElement, getCursorForHandle, constrainAspectRatio } from './Handle';
 import { round3 } from '../core/MathUtils';
 
 /**
@@ -9,6 +9,7 @@ import { round3 } from '../core/MathUtils';
 class EllipseCornerHandle implements Handle {
   type = 'corner' as const;
   private handleElement: SVGCircleElement | null = null;
+  private originalBounds: Bounds | null = null;
 
   constructor(
     public position: HandlePosition,
@@ -38,8 +39,14 @@ class EllipseCornerHandle implements Handle {
     return Math.sqrt(dx * dx + dy * dy) <= tolerance;
   }
 
-  onDrag(point: Point, _event?: MouseEvent): void {
+  onDrag(point: Point, event?: MouseEvent): void {
     const bounds = this.ellipse.getBounds();
+
+    // Store original bounds on first drag for aspect ratio calculation
+    if (!this.originalBounds) {
+      this.originalBounds = { ...bounds };
+    }
+
     let newX = bounds.x;
     let newY = bounds.y;
     let newWidth = bounds.width;
@@ -69,9 +76,26 @@ class EllipseCornerHandle implements Handle {
         break;
     }
 
-    // Ensure minimum size
-    if (newWidth < 6) newWidth = 6;
-    if (newHeight < 6) newHeight = 6;
+    // Apply aspect ratio constraint if Ctrl key is held
+    if (event?.ctrlKey && this.originalBounds) {
+      const constrained = constrainAspectRatio(
+        this.originalBounds,
+        newWidth,
+        newHeight,
+        newX,
+        newY,
+        this.position,
+        6
+      );
+      newX = constrained.x;
+      newY = constrained.y;
+      newWidth = constrained.width;
+      newHeight = constrained.height;
+    } else {
+      // Ensure minimum size
+      if (newWidth < 6) newWidth = 6;
+      if (newHeight < 6) newHeight = 6;
+    }
 
     // Update ellipse properties
     this.ellipse.rx = round3(newWidth / 2);
@@ -80,6 +104,13 @@ class EllipseCornerHandle implements Handle {
     this.ellipse.cy = round3(newY + newHeight / 2);
 
     this.ellipse.updateElement();
+  }
+
+  /**
+   * Reset original bounds when drag ends
+   */
+  resetOriginalBounds(): void {
+    this.originalBounds = null;
   }
 
   setElement(el: SVGCircleElement): void {

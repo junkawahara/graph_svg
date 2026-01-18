@@ -1,6 +1,6 @@
-import { Point } from '../../shared/types';
+import { Point, Bounds } from '../../shared/types';
 import { Node } from '../shapes/Node';
-import { Handle, HandleSet, HandlePosition, createHandleElement, getCursorForHandle } from './Handle';
+import { Handle, HandleSet, HandlePosition, createHandleElement, getCursorForHandle, constrainAspectRatio } from './Handle';
 import { round3 } from '../core/MathUtils';
 
 /**
@@ -9,6 +9,7 @@ import { round3 } from '../core/MathUtils';
 class NodeCornerHandle implements Handle {
   type = 'corner' as const;
   private handleElement: SVGCircleElement | null = null;
+  private originalBounds: Bounds | null = null;
 
   constructor(
     public position: HandlePosition,
@@ -38,8 +39,14 @@ class NodeCornerHandle implements Handle {
     return Math.sqrt(dx * dx + dy * dy) <= tolerance;
   }
 
-  onDrag(point: Point, _event?: MouseEvent): void {
+  onDrag(point: Point, event?: MouseEvent): void {
     const bounds = this.node.getBounds();
+
+    // Store original bounds on first drag for aspect ratio calculation
+    if (!this.originalBounds) {
+      this.originalBounds = { ...bounds };
+    }
+
     let newX = bounds.x;
     let newY = bounds.y;
     let newWidth = bounds.width;
@@ -69,9 +76,26 @@ class NodeCornerHandle implements Handle {
         break;
     }
 
-    // Ensure minimum size
-    if (newWidth < 20) newWidth = 20;
-    if (newHeight < 20) newHeight = 20;
+    // Apply aspect ratio constraint if Ctrl key is held
+    if (event?.ctrlKey && this.originalBounds) {
+      const constrained = constrainAspectRatio(
+        this.originalBounds,
+        newWidth,
+        newHeight,
+        newX,
+        newY,
+        this.position,
+        20
+      );
+      newX = constrained.x;
+      newY = constrained.y;
+      newWidth = constrained.width;
+      newHeight = constrained.height;
+    } else {
+      // Ensure minimum size
+      if (newWidth < 20) newWidth = 20;
+      if (newHeight < 20) newHeight = 20;
+    }
 
     // Update node properties
     this.node.rx = round3(newWidth / 2);
@@ -80,6 +104,13 @@ class NodeCornerHandle implements Handle {
     this.node.cy = round3(newY + newHeight / 2);
 
     this.node.updateElement();
+  }
+
+  /**
+   * Reset original bounds when drag ends
+   */
+  resetOriginalBounds(): void {
+    this.originalBounds = null;
   }
 
   setElement(el: SVGCircleElement): void {

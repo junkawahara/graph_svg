@@ -1,6 +1,6 @@
 import { Point, Bounds } from '../../shared/types';
 import { Group } from '../shapes/Group';
-import { Handle, HandleSet, HandlePosition, createHandleElement, getCursorForHandle } from './Handle';
+import { Handle, HandleSet, HandlePosition, createHandleElement, getCursorForHandle, constrainAspectRatio } from './Handle';
 
 /**
  * Handle for group corner - scales the group
@@ -80,18 +80,35 @@ class GroupCornerHandle implements Handle {
         break;
     }
 
-    // Ensure minimum size
+    // Apply aspect ratio constraint if Ctrl key is held
     const minSize = 10;
-    if (newWidth < minSize) {
-      newWidth = minSize;
-      if (this.position === 'nw' || this.position === 'sw') {
-        newX = bounds.x + bounds.width - minSize;
+    if (event?.ctrlKey) {
+      const constrained = constrainAspectRatio(
+        bounds,
+        newWidth,
+        newHeight,
+        newX,
+        newY,
+        this.position,
+        minSize
+      );
+      newX = constrained.x;
+      newY = constrained.y;
+      newWidth = constrained.width;
+      newHeight = constrained.height;
+    } else {
+      // Ensure minimum size
+      if (newWidth < minSize) {
+        newWidth = minSize;
+        if (this.position === 'nw' || this.position === 'sw') {
+          newX = bounds.x + bounds.width - minSize;
+        }
       }
-    }
-    if (newHeight < minSize) {
-      newHeight = minSize;
-      if (this.position === 'nw' || this.position === 'ne') {
-        newY = bounds.y + bounds.height - minSize;
+      if (newHeight < minSize) {
+        newHeight = minSize;
+        if (this.position === 'nw' || this.position === 'ne') {
+          newY = bounds.y + bounds.height - minSize;
+        }
       }
     }
 

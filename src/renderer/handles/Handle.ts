@@ -152,3 +152,97 @@ export function createRotationGuideLine(x1: number, y1: number, x2: number, y2: 
   line.classList.add('rotation-guide-line');
   return line;
 }
+
+/**
+ * Result of aspect ratio constrained resize calculation
+ */
+export interface ConstrainedResizeResult {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/**
+ * Calculate constrained resize to maintain aspect ratio
+ * @param originalBounds Original bounds before resize
+ * @param newWidth Proposed new width
+ * @param newHeight Proposed new height
+ * @param newX Proposed new X position
+ * @param newY Proposed new Y position
+ * @param position Handle position (nw, ne, se, sw)
+ * @param minSize Minimum allowed size
+ * @returns Constrained bounds that maintain original aspect ratio
+ */
+export function constrainAspectRatio(
+  originalBounds: { x: number; y: number; width: number; height: number },
+  newWidth: number,
+  newHeight: number,
+  newX: number,
+  newY: number,
+  position: HandlePosition,
+  minSize: number = 6
+): ConstrainedResizeResult {
+  const aspectRatio = originalBounds.width / originalBounds.height;
+
+  // Determine which dimension changed more (proportionally)
+  const widthChange = Math.abs(newWidth - originalBounds.width) / originalBounds.width;
+  const heightChange = Math.abs(newHeight - originalBounds.height) / originalBounds.height;
+
+  let constrainedWidth: number;
+  let constrainedHeight: number;
+
+  if (widthChange >= heightChange) {
+    // Width changed more, adjust height to maintain aspect ratio
+    constrainedWidth = Math.max(newWidth, minSize);
+    constrainedHeight = constrainedWidth / aspectRatio;
+  } else {
+    // Height changed more, adjust width to maintain aspect ratio
+    constrainedHeight = Math.max(newHeight, minSize);
+    constrainedWidth = constrainedHeight * aspectRatio;
+  }
+
+  // Ensure minimum size
+  if (constrainedWidth < minSize) {
+    constrainedWidth = minSize;
+    constrainedHeight = constrainedWidth / aspectRatio;
+  }
+  if (constrainedHeight < minSize) {
+    constrainedHeight = minSize;
+    constrainedWidth = constrainedHeight * aspectRatio;
+  }
+
+  // Calculate position based on which corner is anchored (opposite corner)
+  let constrainedX = newX;
+  let constrainedY = newY;
+
+  switch (position) {
+    case 'nw':
+      // SE corner is anchored
+      constrainedX = originalBounds.x + originalBounds.width - constrainedWidth;
+      constrainedY = originalBounds.y + originalBounds.height - constrainedHeight;
+      break;
+    case 'ne':
+      // SW corner is anchored
+      constrainedX = originalBounds.x;
+      constrainedY = originalBounds.y + originalBounds.height - constrainedHeight;
+      break;
+    case 'se':
+      // NW corner is anchored
+      constrainedX = originalBounds.x;
+      constrainedY = originalBounds.y;
+      break;
+    case 'sw':
+      // NE corner is anchored
+      constrainedX = originalBounds.x + originalBounds.width - constrainedWidth;
+      constrainedY = originalBounds.y;
+      break;
+  }
+
+  return {
+    x: constrainedX,
+    y: constrainedY,
+    width: constrainedWidth,
+    height: constrainedHeight
+  };
+}
