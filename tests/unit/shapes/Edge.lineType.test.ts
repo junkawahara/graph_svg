@@ -271,7 +271,8 @@ describe('Edge lineType functionality', () => {
 
       expect(edge.pathCommands.length).toBe(2);
       expect(edge.pathCommands[0].type).toBe('M');
-      expect(edge.pathCommands[1].type).toBe('L');
+      // Straight lines are converted to Q (quadratic bezier) for editability
+      expect(edge.pathCommands[1].type).toBe('Q');
     });
 
     it('should initialize path commands from curved line', () => {

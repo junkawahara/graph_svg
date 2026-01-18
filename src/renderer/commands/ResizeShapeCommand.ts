@@ -8,6 +8,7 @@ import { Node } from '../shapes/Node';
 import { Polygon } from '../shapes/Polygon';
 import { Polyline } from '../shapes/Polyline';
 import { Path } from '../shapes/Path';
+import { Edge } from '../shapes/Edge';
 import { Point, PathCommand } from '../../shared/types';
 
 interface LineState {
@@ -44,7 +45,11 @@ interface PathState {
   commands: PathCommand[];
 }
 
-type ShapeState = LineState | EllipseState | RectangleState | TextState | PolygonState | PathState;
+interface EdgeState {
+  pathCommands: PathCommand[];
+}
+
+type ShapeState = LineState | EllipseState | RectangleState | TextState | PolygonState | PathState | EdgeState;
 
 /**
  * Command for resizing a shape
@@ -108,6 +113,10 @@ export class ResizeShapeCommand implements Command {
       return {
         commands: shape.commands.map(cmd => ({ ...cmd }))
       };
+    } else if (shape instanceof Edge) {
+      return {
+        pathCommands: shape.pathCommands.map(cmd => ({ ...cmd }))
+      };
     }
     throw new Error('Unknown shape type');
   }
@@ -148,6 +157,8 @@ export class ResizeShapeCommand implements Command {
       this.shape.points = state.points.map(p => ({ ...p }));
     } else if (this.shape instanceof Path && 'commands' in state) {
       this.shape.commands = state.commands.map(cmd => ({ ...cmd }));
+    } else if (this.shape instanceof Edge && 'pathCommands' in state) {
+      this.shape.pathCommands = state.pathCommands.map(cmd => ({ ...cmd }));
     }
     this.shape.updateElement();
   }

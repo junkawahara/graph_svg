@@ -305,10 +305,20 @@ export class Edge implements Shape {
       return this.getSelfLoopArrowInfo(sourceNode);
     }
 
+    // Handle path type with pathCommands
+    if (this.lineType === 'path' && this.pathCommands.length >= 2) {
+      return this.getPathArrowInfo();
+    }
+
+    // Use curveAmount if set, otherwise fall back to curveOffset (same logic as getCurvePath)
+    const effectiveOffset = this.lineType === 'curve' && this.curveAmount !== 0
+      ? this.curveAmount
+      : this.curveOffset;
+
     const start = sourceNode.getConnectionPoint(targetNode.cx, targetNode.cy);
     const end = targetNode.getConnectionPoint(sourceNode.cx, sourceNode.cy);
 
-    if (this.curveOffset === 0) {
+    if (effectiveOffset === 0) {
       // Straight line
       const angle = Math.atan2(end.y - start.y, end.x - start.x);
       if (this.direction === 'forward') {
@@ -318,14 +328,65 @@ export class Edge implements Shape {
       }
     } else {
       // Curved line
-      return this.getCurvedArrowInfo(start, end, sourceNode, targetNode);
+      return this.getCurvedArrowInfo(start, end, sourceNode, targetNode, effectiveOffset);
     }
   }
 
   /**
-   * Get arrow info for curved edges
+   * Get arrow info for path type edges
    */
-  private getCurvedArrowInfo(start: Point, end: Point, sourceNode: Node, targetNode: Node): { x: number; y: number; angle: number } | null {
+  private getPathArrowInfo(): { x: number; y: number; angle: number } | null {
+    if (this.pathCommands.length < 2) return null;
+
+    const firstCmd = this.pathCommands[0];
+    if (firstCmd.type !== 'M') return null;
+
+    const lastIdx = this.pathCommands.length - 1;
+    const lastCmd = this.pathCommands[lastIdx];
+
+    if (this.direction === 'forward') {
+      // Arrow at end - calculate tangent at end point
+      if (lastCmd.type === 'L') {
+        const prevCmd = this.pathCommands[lastIdx - 1];
+        const prevX = prevCmd.type !== 'Z' && prevCmd.type !== 'M' ? prevCmd.x : firstCmd.x;
+        const prevY = prevCmd.type !== 'Z' && prevCmd.type !== 'M' ? prevCmd.y : firstCmd.y;
+        const angle = Math.atan2(lastCmd.y - prevY, lastCmd.x - prevX);
+        return { x: lastCmd.x, y: lastCmd.y, angle };
+      } else if (lastCmd.type === 'C') {
+        // Tangent from cp2 to endpoint
+        const angle = Math.atan2(lastCmd.y - lastCmd.cp2y, lastCmd.x - lastCmd.cp2x);
+        return { x: lastCmd.x, y: lastCmd.y, angle };
+      } else if (lastCmd.type === 'Q') {
+        // Tangent from control point to endpoint
+        const angle = Math.atan2(lastCmd.y - lastCmd.cpy, lastCmd.x - lastCmd.cpx);
+        return { x: lastCmd.x, y: lastCmd.y, angle };
+      }
+    } else {
+      // Arrow at start - calculate tangent at start point
+      const secondCmd = this.pathCommands[1];
+
+      if (secondCmd.type === 'L') {
+        const angle = Math.atan2(firstCmd.y - secondCmd.y, firstCmd.x - secondCmd.x);
+        return { x: firstCmd.x, y: firstCmd.y, angle };
+      } else if (secondCmd.type === 'C') {
+        // Tangent from cp1 to start (reversed)
+        const angle = Math.atan2(firstCmd.y - secondCmd.cp1y, firstCmd.x - secondCmd.cp1x);
+        return { x: firstCmd.x, y: firstCmd.y, angle };
+      } else if (secondCmd.type === 'Q') {
+        // Tangent from control point to start (reversed)
+        const angle = Math.atan2(firstCmd.y - secondCmd.cpy, firstCmd.x - secondCmd.cpx);
+        return { x: firstCmd.x, y: firstCmd.y, angle };
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Get arrow info for curved edges
+   * @param offset - The curve offset to use (curveAmount or curveOffset)
+   */
+  private getCurvedArrowInfo(start: Point, end: Point, sourceNode: Node, targetNode: Node, offset: number): { x: number; y: number; angle: number } | null {
     const midX = (start.x + end.x) / 2;
     const midY = (start.y + end.y) / 2;
     const dx = end.x - start.x;
@@ -336,8 +397,8 @@ export class Edge implements Shape {
 
     const perpX = -dy / len;
     const perpY = dx / len;
-    const ctrlX = midX + perpX * this.curveOffset;
-    const ctrlY = midY + perpY * this.curveOffset;
+    const ctrlX = midX + perpX * offset;
+    const ctrlY = midY + perpY * offset;
 
     const newStart = sourceNode.getConnectionPoint(ctrlX, ctrlY);
     const newEnd = targetNode.getConnectionPoint(ctrlX, ctrlY);
@@ -730,16 +791,93 @@ export class Edge implements Shape {
       return this.hitTestSelfLoop(point, sourceNode, tolerance);
     }
 
+    // Handle path type with pathCommands
+    if (this.lineType === 'path' && this.pathCommands.length >= 2) {
+      return this.hitTestPath(point, tolerance);
+    }
+
+    // Use curveAmount if set, otherwise fall back to curveOffset (same logic as getCurvePath)
+    const effectiveOffset = this.lineType === 'curve' && this.curveAmount !== 0
+      ? this.curveAmount
+      : this.curveOffset;
+
     const start = sourceNode.getConnectionPoint(targetNode.cx, targetNode.cy);
     const end = targetNode.getConnectionPoint(sourceNode.cx, sourceNode.cy);
 
-    if (this.curveOffset === 0) {
+    if (effectiveOffset === 0) {
       // Straight line hit test
       return this.distanceToSegment(point, start, end) <= tolerance;
     } else {
       // Curved line hit test (approximate with segments)
-      return this.hitTestCurve(point, start, end, sourceNode, targetNode, tolerance);
+      return this.hitTestCurve(point, start, end, sourceNode, targetNode, tolerance, effectiveOffset);
     }
+  }
+
+  /**
+   * Hit test for path type edges
+   */
+  private hitTestPath(point: Point, tolerance: number): boolean {
+    if (this.pathCommands.length < 2) return false;
+
+    let currentX = 0;
+    let currentY = 0;
+
+    for (let i = 0; i < this.pathCommands.length; i++) {
+      const cmd = this.pathCommands[i];
+
+      if (cmd.type === 'M') {
+        currentX = cmd.x;
+        currentY = cmd.y;
+      } else if (cmd.type === 'L') {
+        // Line segment hit test
+        const start = { x: currentX, y: currentY };
+        const end = { x: cmd.x, y: cmd.y };
+        if (this.distanceToSegment(point, start, end) <= tolerance) {
+          return true;
+        }
+        currentX = cmd.x;
+        currentY = cmd.y;
+      } else if (cmd.type === 'C') {
+        // Cubic bezier hit test (sample along curve)
+        const start = { x: currentX, y: currentY };
+        const ctrl1 = { x: cmd.cp1x, y: cmd.cp1y };
+        const ctrl2 = { x: cmd.cp2x, y: cmd.cp2y };
+        const end = { x: cmd.x, y: cmd.y };
+
+        const steps = 20;
+        for (let j = 0; j < steps; j++) {
+          const t1 = j / steps;
+          const t2 = (j + 1) / steps;
+          const p1 = this.cubicBezierPoint(start, ctrl1, ctrl2, end, t1);
+          const p2 = this.cubicBezierPoint(start, ctrl1, ctrl2, end, t2);
+          if (this.distanceToSegment(point, p1, p2) <= tolerance) {
+            return true;
+          }
+        }
+        currentX = cmd.x;
+        currentY = cmd.y;
+      } else if (cmd.type === 'Q') {
+        // Quadratic bezier hit test (sample along curve)
+        const start = { x: currentX, y: currentY };
+        const ctrl = { x: cmd.cpx, y: cmd.cpy };
+        const end = { x: cmd.x, y: cmd.y };
+
+        const steps = 20;
+        for (let j = 0; j < steps; j++) {
+          const t1 = j / steps;
+          const t2 = (j + 1) / steps;
+          const p1 = this.quadraticBezierPoint(start, ctrl, end, t1);
+          const p2 = this.quadraticBezierPoint(start, ctrl, end, t2);
+          if (this.distanceToSegment(point, p1, p2) <= tolerance) {
+            return true;
+          }
+        }
+        currentX = cmd.x;
+        currentY = cmd.y;
+      }
+    }
+
+    return false;
   }
 
   /**
@@ -765,8 +903,9 @@ export class Edge implements Shape {
 
   /**
    * Hit test for curved edge
+   * @param offset - The curve offset to use (curveAmount or curveOffset)
    */
-  private hitTestCurve(point: Point, start: Point, end: Point, sourceNode: Node, targetNode: Node, tolerance: number): boolean {
+  private hitTestCurve(point: Point, start: Point, end: Point, sourceNode: Node, targetNode: Node, tolerance: number, offset: number): boolean {
     // Sample points along the curve and check distance
     const steps = 20;
 
@@ -781,8 +920,8 @@ export class Edge implements Shape {
 
     const perpX = -dy / len;
     const perpY = dx / len;
-    const ctrlX = midX + perpX * this.curveOffset;
-    const ctrlY = midY + perpY * this.curveOffset;
+    const ctrlX = midX + perpX * offset;
+    const ctrlY = midY + perpY * offset;
 
     const newStart = sourceNode.getConnectionPoint(ctrlX, ctrlY);
     const newEnd = targetNode.getConnectionPoint(ctrlX, ctrlY);
@@ -967,6 +1106,12 @@ export class Edge implements Shape {
       return;
     }
     this.lineType = lineType;
+
+    // Initialize pathCommands when switching to path type
+    if (lineType === 'path' && this.pathCommands.length === 0) {
+      this.initializePathFromCurrentGeometry();
+    }
+
     this.updateElement();
   }
 
@@ -1114,19 +1259,22 @@ export class Edge implements Shape {
           { type: 'Q', cpx: ctrlX, cpy: ctrlY, x: round3(newEnd.x), y: round3(newEnd.y) }
         ];
       } else {
+        // No offset - create Q command with control point at midpoint (for editing)
         this.pathCommands = [
           { type: 'M', x: round3(start.x), y: round3(start.y) },
-          { type: 'L', x: round3(end.x), y: round3(end.y) }
+          { type: 'Q', cpx: round3(midX), cpy: round3(midY), x: round3(end.x), y: round3(end.y) }
         ];
       }
     } else {
-      // Generate path commands from straight line
+      // Generate path commands from straight line as Q command (for editing with control point)
       const start = sourceNode.getConnectionPoint(targetNode.cx, targetNode.cy);
       const end = targetNode.getConnectionPoint(sourceNode.cx, sourceNode.cy);
+      const midX = round3((start.x + end.x) / 2);
+      const midY = round3((start.y + end.y) / 2);
 
       this.pathCommands = [
         { type: 'M', x: round3(start.x), y: round3(start.y) },
-        { type: 'L', x: round3(end.x), y: round3(end.y) }
+        { type: 'Q', cpx: midX, cpy: midY, x: round3(end.x), y: round3(end.y) }
       ];
     }
   }

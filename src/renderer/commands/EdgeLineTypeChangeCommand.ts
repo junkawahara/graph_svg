@@ -2,6 +2,8 @@ import { Command } from './Command';
 import { Edge } from '../shapes/Edge';
 import { EdgeLineType, PathCommand } from '../../shared/types';
 import { getGraphManager } from '../core/GraphManager';
+import { eventBus } from '../core/EventBus';
+import { selectionManager } from '../core/SelectionManager';
 
 /**
  * Command for changing edge line type
@@ -25,12 +27,18 @@ export class EdgeLineTypeChangeCommand implements Command {
     }
 
     this.edge.setLineType(this.newLineType);
+
+    // Trigger selection changed to update handles
+    eventBus.emit('selection:changed', selectionManager.getSelection());
   }
 
   undo(): void {
     this.edge.lineType = this.beforeLineType;
     this.edge.pathCommands = [...this.beforePathCommands];
     this.edge.updateElement();
+
+    // Trigger selection changed to update handles
+    eventBus.emit('selection:changed', selectionManager.getSelection());
   }
 
   getDescription(): string {

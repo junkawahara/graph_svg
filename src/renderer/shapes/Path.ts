@@ -386,8 +386,9 @@ export class Path implements Shape {
       }
     }
 
-    // For closed paths with fill, check if point is inside
-    if (this.isClosed() && !this.style.fillNone) {
+    // For paths with fill, check if point is inside
+    // SVG fills open paths by connecting start and end points
+    if (!this.style.fillNone && this.style.fill !== 'none') {
       if (this.isPointInsidePath(testPoint)) {
         return true;
       }
