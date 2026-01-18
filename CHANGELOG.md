@@ -49,6 +49,11 @@
   - ノード移動時の `path` タイプエッジ端点自動再接続
     - ノード移動時に端点のみノード境界に再接続
     - 中間の制御点は固定位置を維持
+  - **エッジ端点のドラッグ位置調整機能**
+    - lineType='path' のエッジで、始点・終点をドラッグしてノード境界上の接続位置を変更可能
+    - ドラッグした位置は接続角度として保存され、ノード移動時も維持される
+    - SVGファイルに `data-source-connection-angle`, `data-target-connection-angle` 属性として保存
+    - Undo/Redo 対応
 
 - エッジ線種カスタマイズ機能のテスト（85テスト）
   - EdgeLineTypeChangeCommand テスト（14テスト）

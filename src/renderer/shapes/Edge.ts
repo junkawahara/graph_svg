@@ -19,6 +19,11 @@ export class Edge implements Shape {
   rotation: number = 0;  // Always 0 - edges don't rotate
   className?: string;
 
+  // Connection angles for path type edges (null = auto, number = fixed angle in radians)
+  // Allows user to manually position where the edge connects to nodes
+  sourceConnectionAngle: number | null = null;
+  targetConnectionAngle: number | null = null;
+
   constructor(
     public readonly id: string,
     public sourceNodeId: string,
@@ -31,8 +36,13 @@ export class Edge implements Shape {
     public label?: string,
     public lineType: EdgeLineType = 'straight',
     public curveAmount: number = 0,
-    public pathCommands: PathCommand[] = []
-  ) {}
+    public pathCommands: PathCommand[] = [],
+    sourceConnectionAngle: number | null = null,
+    targetConnectionAngle: number | null = null
+  ) {
+    this.sourceConnectionAngle = sourceConnectionAngle;
+    this.targetConnectionAngle = targetConnectionAngle;
+  }
 
   /**
    * Create edge between two nodes
@@ -79,7 +89,9 @@ export class Edge implements Shape {
       label,
       lineType,
       curveAmount,
-      []  // Empty path commands
+      [],  // Empty path commands
+      null,  // Auto source connection angle
+      null   // Auto target connection angle
     );
   }
 
@@ -133,6 +145,12 @@ export class Edge implements Shape {
     // Parse path commands for 'path' type (will be implemented in FileManager)
     const pathCommands: PathCommand[] = [];
 
+    // Parse connection angles (null if not set = auto mode)
+    const sourceAngleAttr = el.getAttribute('data-source-connection-angle');
+    const targetAngleAttr = el.getAttribute('data-target-connection-angle');
+    const sourceConnectionAngle = sourceAngleAttr !== null ? parseFloat(sourceAngleAttr) : null;
+    const targetConnectionAngle = targetAngleAttr !== null ? parseFloat(targetAngleAttr) : null;
+
     return new Edge(
       el.id || generateId(),
       sourceNodeId,
@@ -145,7 +163,9 @@ export class Edge implements Shape {
       label,
       lineType,
       curveAmount,
-      pathCommands
+      pathCommands,
+      sourceConnectionAngle,
+      targetConnectionAngle
     );
   }
 
@@ -469,6 +489,13 @@ export class Edge implements Shape {
       group.setAttribute('data-is-self-loop', 'true');
       group.setAttribute('data-self-loop-angle', String(this.selfLoopAngle));
     }
+    // Save connection angles if manually set
+    if (this.sourceConnectionAngle !== null) {
+      group.setAttribute('data-source-connection-angle', String(this.sourceConnectionAngle));
+    }
+    if (this.targetConnectionAngle !== null) {
+      group.setAttribute('data-target-connection-angle', String(this.targetConnectionAngle));
+    }
     if (this.label) {
       group.setAttribute('data-label', this.label);
     }
@@ -625,6 +652,7 @@ export class Edge implements Shape {
    * Start point reconnects to source node boundary
    * End point reconnects to target node boundary
    * Intermediate control points remain fixed
+   * If connection angles are set, uses those angles for consistent positioning
    */
   private updatePathEndpoints(sourceNode: Node, targetNode: Node): void {
     if (this.lineType !== 'path' || this.pathCommands.length < 2) return;
@@ -635,46 +663,56 @@ export class Edge implements Shape {
 
     if (firstCmd.type !== 'M' || lastCmd.type === 'Z') return;
 
-    // Determine direction for start point based on next point
-    let nextPoint: Point;
-    const secondCmd = this.pathCommands[1];
-    if (secondCmd.type === 'C') {
-      // Use first control point as direction hint
-      nextPoint = { x: secondCmd.cp1x, y: secondCmd.cp1y };
-    } else if (secondCmd.type === 'Q') {
-      // Use control point as direction hint
-      nextPoint = { x: secondCmd.cpx, y: secondCmd.cpy };
-    } else if (secondCmd.type !== 'Z') {
-      // Use the endpoint
-      nextPoint = { x: secondCmd.x, y: secondCmd.y };
-    } else {
-      nextPoint = { x: sourceNode.cx, y: sourceNode.cy };
-    }
-
     // Calculate new start point on source node boundary
-    const newStart = sourceNode.getConnectionPoint(nextPoint.x, nextPoint.y);
+    let newStart: Point;
+    if (this.sourceConnectionAngle !== null) {
+      // Use stored connection angle
+      newStart = {
+        x: sourceNode.cx + sourceNode.rx * Math.cos(this.sourceConnectionAngle),
+        y: sourceNode.cy + sourceNode.ry * Math.sin(this.sourceConnectionAngle)
+      };
+    } else {
+      // Auto mode: determine direction based on next point
+      let nextPoint: Point;
+      const secondCmd = this.pathCommands[1];
+      if (secondCmd.type === 'C') {
+        nextPoint = { x: secondCmd.cp1x, y: secondCmd.cp1y };
+      } else if (secondCmd.type === 'Q') {
+        nextPoint = { x: secondCmd.cpx, y: secondCmd.cpy };
+      } else if (secondCmd.type !== 'Z') {
+        nextPoint = { x: secondCmd.x, y: secondCmd.y };
+      } else {
+        nextPoint = { x: sourceNode.cx, y: sourceNode.cy };
+      }
+      newStart = sourceNode.getConnectionPoint(nextPoint.x, nextPoint.y);
+    }
     this.pathCommands[0] = { type: 'M', x: round3(newStart.x), y: round3(newStart.y) };
 
-    // Determine direction for end point based on previous point
-    let prevPoint: Point;
-    if (lastCmd.type === 'C') {
-      // Use second control point as direction hint
-      prevPoint = { x: lastCmd.cp2x, y: lastCmd.cp2y };
-    } else if (lastCmd.type === 'Q') {
-      // Use control point as direction hint
-      prevPoint = { x: lastCmd.cpx, y: lastCmd.cpy };
-    } else {
-      // Use the previous command's endpoint
-      const prevCmd = this.pathCommands[lastIdx - 1];
-      if (prevCmd && prevCmd.type !== 'Z') {
-        prevPoint = { x: prevCmd.x, y: prevCmd.y };
-      } else {
-        prevPoint = { x: targetNode.cx, y: targetNode.cy };
-      }
-    }
-
     // Calculate new end point on target node boundary
-    const newEnd = targetNode.getConnectionPoint(prevPoint.x, prevPoint.y);
+    let newEnd: Point;
+    if (this.targetConnectionAngle !== null) {
+      // Use stored connection angle
+      newEnd = {
+        x: targetNode.cx + targetNode.rx * Math.cos(this.targetConnectionAngle),
+        y: targetNode.cy + targetNode.ry * Math.sin(this.targetConnectionAngle)
+      };
+    } else {
+      // Auto mode: determine direction based on previous point
+      let prevPoint: Point;
+      if (lastCmd.type === 'C') {
+        prevPoint = { x: lastCmd.cp2x, y: lastCmd.cp2y };
+      } else if (lastCmd.type === 'Q') {
+        prevPoint = { x: lastCmd.cpx, y: lastCmd.cpy };
+      } else {
+        const prevCmd = this.pathCommands[lastIdx - 1];
+        if (prevCmd && prevCmd.type !== 'Z') {
+          prevPoint = { x: prevCmd.x, y: prevCmd.y };
+        } else {
+          prevPoint = { x: targetNode.cx, y: targetNode.cy };
+        }
+      }
+      newEnd = targetNode.getConnectionPoint(prevPoint.x, prevPoint.y);
+    }
 
     // Update the last command's endpoint
     if (lastCmd.type === 'L') {
@@ -1065,7 +1103,9 @@ export class Edge implements Shape {
       label: this.label,
       lineType: this.lineType,
       curveAmount: this.curveAmount,
-      pathCommands: this.pathCommands.length > 0 ? this.pathCommands.map(cmd => ({ ...cmd })) : undefined
+      pathCommands: this.pathCommands.length > 0 ? this.pathCommands.map(cmd => ({ ...cmd })) : undefined,
+      sourceConnectionAngle: this.sourceConnectionAngle,
+      targetConnectionAngle: this.targetConnectionAngle
     };
   }
 
@@ -1082,7 +1122,9 @@ export class Edge implements Shape {
       this.label,
       this.lineType,
       this.curveAmount,
-      this.pathCommands.length > 0 ? this.pathCommands.map(cmd => ({ ...cmd })) : []
+      this.pathCommands.length > 0 ? this.pathCommands.map(cmd => ({ ...cmd })) : [],
+      this.sourceConnectionAngle,
+      this.targetConnectionAngle
     );
     cloned.className = this.className;
     return cloned;
@@ -1164,6 +1206,55 @@ export class Edge implements Shape {
         currentAnchor++;
       }
     }
+  }
+
+  /**
+   * Set endpoint with connection angle (for manual positioning on node boundary)
+   * This stores the angle so it persists when nodes move
+   * @param isStart - true for start endpoint, false for end endpoint
+   * @param point - The point on the node boundary
+   * @param node - The node the endpoint connects to
+   */
+  setEndpointWithAngle(isStart: boolean, point: Point, node: Node): void {
+    // Calculate angle from node center to point
+    const angle = Math.atan2(point.y - node.cy, point.x - node.cx);
+
+    if (isStart) {
+      this.sourceConnectionAngle = angle;
+      // Update the M command (first command)
+      if (this.pathCommands.length > 0 && this.pathCommands[0].type === 'M') {
+        this.pathCommands[0] = { type: 'M', x: round3(point.x), y: round3(point.y) };
+      }
+    } else {
+      this.targetConnectionAngle = angle;
+      // Update the last command's endpoint
+      const lastIdx = this.pathCommands.length - 1;
+      if (lastIdx >= 0) {
+        const lastCmd = this.pathCommands[lastIdx];
+        if (lastCmd.type === 'L') {
+          this.pathCommands[lastIdx] = { type: 'L', x: round3(point.x), y: round3(point.y) };
+        } else if (lastCmd.type === 'C') {
+          this.pathCommands[lastIdx] = { ...lastCmd, x: round3(point.x), y: round3(point.y) };
+        } else if (lastCmd.type === 'Q') {
+          this.pathCommands[lastIdx] = { ...lastCmd, x: round3(point.x), y: round3(point.y) };
+        }
+      }
+    }
+
+    this.updateElement();
+  }
+
+  /**
+   * Reset connection angle to auto mode
+   * @param isStart - true for start endpoint, false for end endpoint
+   */
+  resetConnectionAngle(isStart: boolean): void {
+    if (isStart) {
+      this.sourceConnectionAngle = null;
+    } else {
+      this.targetConnectionAngle = null;
+    }
+    this.updateElement();
   }
 
   /**

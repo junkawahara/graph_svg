@@ -47,6 +47,8 @@ interface PathState {
 
 interface EdgeState {
   pathCommands: PathCommand[];
+  sourceConnectionAngle: number | null;
+  targetConnectionAngle: number | null;
 }
 
 type ShapeState = LineState | EllipseState | RectangleState | TextState | PolygonState | PathState | EdgeState;
@@ -115,7 +117,9 @@ export class ResizeShapeCommand implements Command {
       };
     } else if (shape instanceof Edge) {
       return {
-        pathCommands: shape.pathCommands.map(cmd => ({ ...cmd }))
+        pathCommands: shape.pathCommands.map(cmd => ({ ...cmd })),
+        sourceConnectionAngle: shape.sourceConnectionAngle,
+        targetConnectionAngle: shape.targetConnectionAngle
       };
     }
     throw new Error('Unknown shape type');
@@ -159,6 +163,8 @@ export class ResizeShapeCommand implements Command {
       this.shape.commands = state.commands.map(cmd => ({ ...cmd }));
     } else if (this.shape instanceof Edge && 'pathCommands' in state) {
       this.shape.pathCommands = state.pathCommands.map(cmd => ({ ...cmd }));
+      this.shape.sourceConnectionAngle = state.sourceConnectionAngle;
+      this.shape.targetConnectionAngle = state.targetConnectionAngle;
     }
     this.shape.updateElement();
   }

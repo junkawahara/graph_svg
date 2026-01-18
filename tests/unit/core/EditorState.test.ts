@@ -215,11 +215,13 @@ describe('EditorState', () => {
   });
 
   describe('snap calculations', () => {
-    it('should return original value when snap disabled', () => {
+    it('should return rounded value when snap disabled', () => {
       state.setSnapEnabled(false);
 
+      // Always rounds to integer to avoid decimal coordinates from zoom
       expect(state.snapValue(123)).toBe(123);
-      expect(state.snapValue(45.7)).toBe(45.7);
+      expect(state.snapValue(45.7)).toBe(46);
+      expect(state.snapValue(45.4)).toBe(45);
     });
 
     it('should snap value to grid when enabled', () => {
@@ -239,11 +241,12 @@ describe('EditorState', () => {
       expect(state.snapPoint({ x: 45, y: 54 })).toEqual({ x: 50, y: 50 });
     });
 
-    it('should return original point when snap disabled', () => {
+    it('should return rounded point when snap disabled', () => {
       state.setSnapEnabled(false);
 
+      // Always rounds to integer to avoid decimal coordinates from zoom
       const point = { x: 123.456, y: 789.012 };
-      expect(state.snapPoint(point)).toEqual(point);
+      expect(state.snapPoint(point)).toEqual({ x: 123, y: 789 });
     });
 
     it('should work with different grid sizes', () => {

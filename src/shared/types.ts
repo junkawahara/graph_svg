@@ -212,6 +212,8 @@ export interface EdgeData extends BaseShapeData {
   lineType: EdgeLineType;        // Line type (straight/curve/path)
   curveAmount?: number;          // Curve amount for 'curve' type (-100 to 100)
   pathCommands?: PathCommand[];  // Path commands for 'path' type
+  sourceConnectionAngle?: number | null;  // Manual source connection angle (null = auto)
+  targetConnectionAngle?: number | null;  // Manual target connection angle (null = auto)
 }
 
 /**

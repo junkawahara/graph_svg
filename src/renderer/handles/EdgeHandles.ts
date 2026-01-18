@@ -88,21 +88,23 @@ class EdgeAnchorHandle implements Handle {
     const isEndPoint = this.anchorIndex === this.totalAnchors - 1;
 
     if (isStartPoint) {
-      // Constrain to source node boundary
+      // Constrain to source node boundary and store connection angle
       const sourceNode = gm.getNodeShape(this.shape.sourceNodeId);
       if (sourceNode) {
         // Find closest point on node boundary
         const boundaryPoint = sourceNode.getConnectionPoint(point.x, point.y);
-        this.shape.setAnchorPoint(this.anchorIndex, boundaryPoint);
+        // Use setEndpointWithAngle to store the angle for persistence
+        this.shape.setEndpointWithAngle(true, boundaryPoint, sourceNode);
         return;
       }
     } else if (isEndPoint) {
-      // Constrain to target node boundary
+      // Constrain to target node boundary and store connection angle
       const targetNode = gm.getNodeShape(this.shape.targetNodeId);
       if (targetNode) {
         // Find closest point on node boundary
         const boundaryPoint = targetNode.getConnectionPoint(point.x, point.y);
-        this.shape.setAnchorPoint(this.anchorIndex, boundaryPoint);
+        // Use setEndpointWithAngle to store the angle for persistence
+        this.shape.setEndpointWithAngle(false, boundaryPoint, targetNode);
         return;
       }
     }
