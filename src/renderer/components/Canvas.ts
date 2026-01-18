@@ -19,6 +19,8 @@ import { PolylineTool } from '../tools/PolylineTool';
 import { PathTool } from '../tools/PathTool';
 import { RotateTool } from '../tools/RotateTool';
 import { ZoomTool } from '../tools/ZoomTool';
+import { AddPathPointTool } from '../tools/AddPathPointTool';
+import { DeletePathPointTool } from '../tools/DeletePathPointTool';
 import { Shape } from '../shapes/Shape';
 import { Line } from '../shapes/Line';
 import { Ellipse } from '../shapes/Ellipse';
@@ -414,6 +416,16 @@ export class Canvas {
     this.tools.set('polygon', new PolygonTool(this.svg));
     this.tools.set('polyline', new PolylineTool(this.svg));
     this.tools.set('path', new PathTool(this.svg));
+    this.tools.set('add-path-point', new AddPathPointTool({
+      svg: this.svg,
+      findShapeAt: (point) => this.findShapeAt(point),
+      updateHandles: () => this.updateHandles()
+    }));
+    this.tools.set('delete-path-point', new DeletePathPointTool({
+      svg: this.svg,
+      findShapeAt: (point) => this.findShapeAt(point),
+      updateHandles: () => this.updateHandles()
+    }));
     this.tools.set('rotate', new RotateTool({
       findShapeAt: (point) => this.findShapeAt(point),
       getShapes: () => this.getShapes(),
@@ -1020,7 +1032,7 @@ export class Canvas {
       const shape = this.findShapeAt(point);
 
       if (shape && shape.element) {
-        this.showContextMenu(e.clientX, e.clientY, shape);
+        this.showContextMenu(e.clientX, e.clientY, shape, point);
       }
     });
 
@@ -1084,7 +1096,7 @@ export class Canvas {
   /**
    * Show context menu for a shape
    */
-  private showContextMenu(x: number, y: number, shape: Shape): void {
+  private showContextMenu(x: number, y: number, shape: Shape, clickPoint?: Point): void {
     const menuItems: { label: string; action: () => void; disabled?: boolean }[] = [];
     const selectedShapes = selectionManager.getSelection();
 
@@ -1166,6 +1178,37 @@ export class Canvas {
       });
     }
 
+    // Path-specific options (for Path shapes and Edge shapes with lineType='path')
+    const isPathEditable = shape instanceof Path ||
+      (shape instanceof Edge && shape.lineType === 'path' && shape.pathCommands.length > 0);
+
+    if (isPathEditable && clickPoint) {
+      menuItems.push({
+        label: '─パス編集─',
+        action: () => {},
+        disabled: true
+      });
+      menuItems.push({
+        label: '直線ポイントを追加 (L)',
+        action: () => this.addPathPointAtClick(shape, clickPoint, false)
+      });
+      menuItems.push({
+        label: 'ベジェポイントを追加 (C)',
+        action: () => this.addPathPointAtClick(shape, clickPoint, true)
+      });
+
+      // Check if click is near an anchor point
+      const addPointTool = this.tools.get('add-path-point') as AddPathPointTool | undefined;
+      const deletePointTool = this.tools.get('delete-path-point') as DeletePathPointTool | undefined;
+
+      if (deletePointTool) {
+        menuItems.push({
+          label: 'このポイントを削除',
+          action: () => this.deletePathPointAtClick(shape, clickPoint)
+        });
+      }
+    }
+
     // Always show SVG edit option
     menuItems.push({
       label: 'SVGタグを編集',
@@ -1200,6 +1243,28 @@ export class Canvas {
         selectionManager.clearSelection();
         selectionManager.select(newShape);
       }
+    }
+  }
+
+  /**
+   * Add a point to a path at the clicked location (context menu action)
+   * Works with both Path shapes and Edge shapes with lineType='path'
+   */
+  private addPathPointAtClick(shape: Shape, point: Point, useBezier: boolean): void {
+    const addPointTool = this.tools.get('add-path-point') as AddPathPointTool | undefined;
+    if (addPointTool) {
+      addPointTool.addPointAtLocation(shape, point, useBezier);
+    }
+  }
+
+  /**
+   * Delete a path point at the clicked location (context menu action)
+   * Works with both Path shapes and Edge shapes with lineType='path'
+   */
+  private deletePathPointAtClick(shape: Shape, point: Point): void {
+    const deletePointTool = this.tools.get('delete-path-point') as DeletePathPointTool | undefined;
+    if (deletePointTool) {
+      deletePointTool.deleteAnchorAtLocation(shape, point);
     }
   }
 

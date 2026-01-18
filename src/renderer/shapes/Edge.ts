@@ -1204,6 +1204,69 @@ export class Edge implements Shape {
   }
 
   /**
+   * Insert a new command at the specified index
+   */
+  insertCommand(index: number, command: PathCommand): void {
+    this.pathCommands.splice(index, 0, command);
+    this.updateElement();
+  }
+
+  /**
+   * Replace a command at the specified index
+   */
+  replaceCommand(index: number, command: PathCommand): void {
+    if (index >= 0 && index < this.pathCommands.length) {
+      this.pathCommands[index] = command;
+      this.updateElement();
+    }
+  }
+
+  /**
+   * Remove a command at the specified index
+   * Returns the removed command for undo purposes
+   */
+  removeCommand(index: number): PathCommand | null {
+    if (index >= 0 && index < this.pathCommands.length) {
+      const removed = this.pathCommands.splice(index, 1)[0];
+      this.updateElement();
+      return removed;
+    }
+    return null;
+  }
+
+  /**
+   * Check if removing a command at index would leave the path valid
+   * For Edge, we need at least M + one segment (2 commands minimum)
+   */
+  canRemoveCommand(index: number): boolean {
+    // Cannot remove M command (index 0)
+    if (index === 0) return false;
+
+    // Cannot remove if it would leave less than M + one segment
+    if (this.pathCommands.length <= 2) return false;
+
+    // Cannot remove Z command
+    const cmd = this.pathCommands[index];
+    if (cmd && cmd.type === 'Z') return false;
+
+    return true;
+  }
+
+  /**
+   * Get the number of commands
+   */
+  getCommandCount(): number {
+    return this.pathCommands.length;
+  }
+
+  /**
+   * Get command at index
+   */
+  getCommand(index: number): PathCommand | null {
+    return this.pathCommands[index] || null;
+  }
+
+  /**
    * Initialize path commands from current edge geometry
    * Used when converting from straight/curve to path type
    */

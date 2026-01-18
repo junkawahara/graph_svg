@@ -41,7 +41,7 @@
         <button id="tool-rectangle" class="tool-btn" title="Rectangle (R)">
           <span class="icon">&#9645;</span>
         </button>
-        <button id="tool-polygon" class="tool-btn" title="Polygon (P)">
+        <button id="tool-polygon" class="tool-btn" title="Polygon (5)">
           <span class="icon">&#11039;</span>
         </button>
         <button id="tool-polyline" class="tool-btn" title="Polyline (Y)">
@@ -49,8 +49,24 @@
             <path d="M2 13L6 5L10 9L14 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </button>
-        <button id="tool-bezier" class="tool-btn" title="Bezier Path (B)">
+        <button id="tool-path" class="tool-btn" title="Path (P)">
           <span class="icon">&#8766;</span>
+        </button>
+        <button id="tool-add-path-point" class="tool-btn" title="Add Path Point (+)">
+          <svg class="icon" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M2 12 Q8 4 14 12" stroke="currentColor" stroke-width="1.5" fill="none"/>
+            <circle cx="8" cy="8" r="3" fill="currentColor"/>
+            <line x1="8" y1="5.5" x2="8" y2="10.5" stroke="white" stroke-width="1.5"/>
+            <line x1="5.5" y1="8" x2="10.5" y2="8" stroke="white" stroke-width="1.5"/>
+          </svg>
+        </button>
+        <button id="tool-delete-path-point" class="tool-btn" title="Delete Path Point (-)">
+          <svg class="icon" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M2 12 Q8 4 14 12" stroke="currentColor" stroke-width="1.5" fill="none"/>
+            <circle cx="8" cy="8" r="3.5" fill="#e74c3c"/>
+            <line x1="6" y1="6" x2="10" y2="10" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+            <line x1="10" y1="6" x2="6" y2="10" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
         </button>
         <button id="tool-text" class="tool-btn" title="Text (T)" style="margin-right: 12px;">
           <span class="icon">T</span>
@@ -464,8 +480,9 @@
 
     <!-- Status Bar -->
     <div id="status-bar">
-      <span id="status-tool" class="status-item">Select</span>
+      <span id="status-tool" class="status-item">選択 (V)</span>
       <span class="status-separator">|</span>
+      <span id="status-help" class="status-item status-help"></span>
       <span id="status-zoom" class="status-item">100%</span>
       <span class="status-separator">|</span>
       <span id="status-position" class="status-item">X: 0, Y: 0</span>

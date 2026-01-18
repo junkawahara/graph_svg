@@ -7,6 +7,7 @@ import { clipboardManager } from '../core/ClipboardManager';
 import { Shape } from '../shapes/Shape';
 import { Group } from '../shapes/Group';
 import { ZOrderOperation } from '../commands/ZOrderCommand';
+import { getToolHelp, getToolTooltip, getToolShortHelp } from '../core/ToolHelp';
 
 /**
  * Toolbar component - handles tool selection, undo/redo, and delete
@@ -36,6 +37,10 @@ export class Toolbar {
   // Auto layout button
   private autoLayoutButton: HTMLButtonElement | null = null;
 
+  // Status bar elements
+  private statusToolElement: HTMLSpanElement | null = null;
+  private statusHelpElement: HTMLSpanElement | null = null;
+
   constructor() {
     this.setupToolButtons();
     this.setupUndoRedoButtons();
@@ -46,6 +51,7 @@ export class Toolbar {
     this.setupDirectedEdgeButton();
     this.setupAutoLayoutButton();
     this.setupFileButtons();
+    this.setupStatusBar();
     this.setupEventListeners();
   }
 
@@ -60,7 +66,9 @@ export class Toolbar {
       { id: 'tool-rectangle', type: 'rectangle' },
       { id: 'tool-polygon', type: 'polygon' },
       { id: 'tool-polyline', type: 'polyline' },
-      { id: 'tool-bezier', type: 'path' },
+      { id: 'tool-path', type: 'path' },
+      { id: 'tool-add-path-point', type: 'add-path-point' },
+      { id: 'tool-delete-path-point', type: 'delete-path-point' },
       { id: 'tool-text', type: 'text' },
       { id: 'tool-node', type: 'node' },
       { id: 'tool-edge', type: 'edge' },
@@ -76,6 +84,8 @@ export class Toolbar {
       console.log(`Toolbar: Looking for button #${id}:`, button);
       if (button) {
         this.toolButtons.set(type, button);
+        // Set detailed tooltip
+        button.setAttribute('title', getToolTooltip(type));
         button.addEventListener('click', () => {
           console.log(`Toolbar: Button clicked, setting tool to ${type}`);
           editorState.setTool(type);
@@ -284,6 +294,33 @@ export class Toolbar {
   }
 
   /**
+   * Setup status bar elements
+   */
+  private setupStatusBar(): void {
+    this.statusToolElement = document.getElementById('status-tool') as HTMLSpanElement;
+    this.statusHelpElement = document.getElementById('status-help') as HTMLSpanElement;
+
+    // Initial update
+    this.updateStatusBar('select');
+  }
+
+  /**
+   * Update status bar with tool info
+   */
+  private updateStatusBar(tool: ToolType): void {
+    const help = getToolHelp(tool);
+
+    if (this.statusToolElement) {
+      const shortcut = help.shortcut ? ` (${help.shortcut})` : '';
+      this.statusToolElement.textContent = `${help.name}${shortcut}`;
+    }
+
+    if (this.statusHelpElement) {
+      this.statusHelpElement.textContent = getToolShortHelp(tool);
+    }
+  }
+
+  /**
    * Delete currently selected shapes
    */
   private deleteSelectedShapes(): void {
@@ -301,6 +338,7 @@ export class Toolbar {
     // Update button states when tool changes
     eventBus.on('tool:changed', (tool: ToolType) => {
       this.updateActiveButton(tool);
+      this.updateStatusBar(tool);
     });
 
     // Update undo/redo buttons when history changes
@@ -471,13 +509,13 @@ export class Toolbar {
         case 'r':
           editorState.setTool('rectangle');
           break;
-        case 'p':
+        case '5':
           editorState.setTool('polygon');
           break;
         case 'y':
           editorState.setTool('polyline');
           break;
-        case 'b':
+        case 'p':
           editorState.setTool('path');
           break;
         case 't':

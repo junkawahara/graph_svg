@@ -49,7 +49,16 @@ html, body {
 
 #status-tool {
   font-weight: 500;
-  min-width: 80px;
+  min-width: 100px;
+}
+
+#status-help {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 11px;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 #status-position {

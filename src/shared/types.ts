@@ -2,7 +2,8 @@
  * Tool types available in the editor
  */
 export type ToolType = 'select' | 'line' | 'ellipse' | 'rectangle' | 'text' | 'pan' | 'zoom'
-  | 'node' | 'edge' | 'delete-node' | 'delete-edge' | 'polygon' | 'polyline' | 'path' | 'rotate';
+  | 'node' | 'edge' | 'delete-node' | 'delete-edge' | 'polygon' | 'polyline' | 'path' | 'rotate'
+  | 'add-path-point' | 'delete-path-point';
 
 /**
  * Shape types that can be created

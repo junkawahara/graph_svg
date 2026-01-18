@@ -13,6 +13,8 @@ const TOOL_NAMES: Record<ToolType, string> = {
   'polygon': 'Polygon',
   'polyline': 'Polyline',
   'path': 'Path',
+  'add-path-point': 'Add Path Point',
+  'delete-path-point': 'Delete Path Point',
   'text': 'Text',
   'node': 'Node',
   'edge': 'Edge',
@@ -21,6 +23,13 @@ const TOOL_NAMES: Record<ToolType, string> = {
   'pan': 'Pan',
   'zoom': 'Zoom',
   'rotate': 'Rotate'
+};
+
+/**
+ * Tool help messages for status bar (Japanese)
+ */
+const TOOL_HELP: Partial<Record<ToolType, string>> = {
+  'polyline': 'クリック: 頂点を追加 | ダブルクリック/Enter: 終了 | Esc: キャンセル'
 };
 
 /**
@@ -77,11 +86,13 @@ export class StatusBar {
   }
 
   /**
-   * Update tool display
+   * Update tool display with optional help message
    */
   private updateToolDisplay(tool: ToolType): void {
     if (this.toolDisplay) {
-      this.toolDisplay.textContent = TOOL_NAMES[tool] || tool;
+      const toolName = TOOL_NAMES[tool] || tool;
+      const help = TOOL_HELP[tool];
+      this.toolDisplay.textContent = help ? `${toolName} - ${help}` : toolName;
     }
   }
 

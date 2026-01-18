@@ -857,4 +857,66 @@ export class Path implements Shape {
 
     return { x: 0, y: 0 };
   }
+
+  /**
+   * Insert a new command at the specified index
+   */
+  insertCommand(index: number, command: PathCommand): void {
+    this.commands.splice(index, 0, command);
+    this.updateElement();
+  }
+
+  /**
+   * Replace a command at the specified index
+   */
+  replaceCommand(index: number, command: PathCommand): void {
+    if (index >= 0 && index < this.commands.length) {
+      this.commands[index] = command;
+      this.updateElement();
+    }
+  }
+
+  /**
+   * Remove a command at the specified index
+   * Returns the removed command for undo purposes
+   */
+  removeCommand(index: number): PathCommand | null {
+    if (index >= 0 && index < this.commands.length) {
+      const removed = this.commands.splice(index, 1)[0];
+      this.updateElement();
+      return removed;
+    }
+    return null;
+  }
+
+  /**
+   * Check if removing a command at index would leave the path valid
+   */
+  canRemoveCommand(index: number): boolean {
+    // Cannot remove M command (index 0)
+    if (index === 0) return false;
+
+    // Cannot remove if it would leave less than M + one segment
+    if (this.commands.length <= 2) return false;
+
+    // Cannot remove Z command directly (use different logic for opening paths)
+    const cmd = this.commands[index];
+    if (cmd && cmd.type === 'Z') return false;
+
+    return true;
+  }
+
+  /**
+   * Get the number of commands
+   */
+  getCommandCount(): number {
+    return this.commands.length;
+  }
+
+  /**
+   * Get command at index
+   */
+  getCommand(index: number): PathCommand | null {
+    return this.commands[index] || null;
+  }
 }
