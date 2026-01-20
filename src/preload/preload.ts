@@ -5,7 +5,6 @@ import { AppSettings } from '../shared/settings';
 // the ipcRenderer without exposing the entire object
 contextBridge.exposeInMainWorld('electronAPI', {
   // File operations
-  saveFile: (content: string) => ipcRenderer.invoke('file:save', content),
   saveFileAs: (content: string, defaultPath?: string) => ipcRenderer.invoke('file:saveAs', content, defaultPath),
   saveFileToPath: (filePath: string, content: string) => ipcRenderer.invoke('file:saveToPath', filePath, content),
   openFile: () => ipcRenderer.invoke('file:open'),
@@ -136,7 +135,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
 declare global {
   interface Window {
     electronAPI: {
-      saveFile: (content: string) => Promise<string | null>;
       saveFileAs: (content: string, defaultPath?: string) => Promise<string | null>;
       saveFileToPath: (filePath: string, content: string) => Promise<boolean>;
       openFile: () => Promise<{ path: string; content: string } | null>;
