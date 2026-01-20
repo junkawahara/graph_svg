@@ -109,6 +109,13 @@ function skewYMatrix(angleDeg: number): Matrix2D {
 }
 
 /**
+ * Safe number parsing helper - returns fallback if value is NaN, null, or undefined
+ */
+function safeNumber(value: number | undefined, fallback: number): number {
+  return (value !== undefined && Number.isFinite(value)) ? value : fallback;
+}
+
+/**
  * Decompose a 2D transformation matrix into translate, scale, rotation, and skew.
  * Matrix format: matrix(a, b, c, d, e, f) represents:
  * | a c e |
@@ -266,25 +273,25 @@ export function parseTransform(transformStr: string | null): ParsedTransform {
 
     switch (funcName) {
       case 'translate': {
-        const tx = params[0] || 0;
-        const ty = params[1] ?? 0;
+        const tx = safeNumber(params[0], 0);
+        const ty = safeNumber(params[1], 0);
         matrix = multiplyMatrices(matrix, translateMatrix(tx, ty));
         break;
       }
 
       case 'scale': {
-        const sx = params[0] ?? 1;
-        const sy = params[1] ?? sx;
+        const sx = safeNumber(params[0], 1);
+        const sy = safeNumber(params[1], sx);
         matrix = multiplyMatrices(matrix, scaleMatrix(sx, sy));
         break;
       }
 
       case 'rotate': {
-        const angle = params[0] || 0;
+        const angle = safeNumber(params[0], 0);
         if (params.length >= 3) {
           // rotate(angle, cx, cy) = translate(cx, cy) * rotate(angle) * translate(-cx, -cy)
-          const cx = params[1];
-          const cy = params[2];
+          const cx = safeNumber(params[1], 0);
+          const cy = safeNumber(params[2], 0);
           matrix = multiplyMatrices(matrix, translateMatrix(cx, cy));
           matrix = multiplyMatrices(matrix, rotateMatrix(angle));
           matrix = multiplyMatrices(matrix, translateMatrix(-cx, -cy));
@@ -298,20 +305,25 @@ export function parseTransform(transformStr: string | null): ParsedTransform {
       }
 
       case 'skewx': {
-        const angle = params[0] || 0;
+        const angle = safeNumber(params[0], 0);
         matrix = multiplyMatrices(matrix, skewXMatrix(angle));
         break;
       }
 
       case 'skewy': {
-        const angle = params[0] || 0;
+        const angle = safeNumber(params[0], 0);
         matrix = multiplyMatrices(matrix, skewYMatrix(angle));
         break;
       }
 
       case 'matrix': {
         if (params.length >= 6) {
-          const [a, b, c, d, e, f] = params;
+          const a = safeNumber(params[0], 1);
+          const b = safeNumber(params[1], 0);
+          const c = safeNumber(params[2], 0);
+          const d = safeNumber(params[3], 1);
+          const e = safeNumber(params[4], 0);
+          const f = safeNumber(params[5], 0);
           matrix = multiplyMatrices(matrix, { a, b, c, d, e, f });
         } else {
           console.warn('matrix() transform requires 6 parameters');
@@ -414,15 +426,17 @@ export function applyTransformToPoint(point: Point, transform: ParsedTransform):
 
 /**
  * Check if transform is identity (no change)
+ * Uses small epsilon for floating point comparison
  */
 export function isIdentityTransform(transform: ParsedTransform): boolean {
-  return transform.translateX === 0 &&
-         transform.translateY === 0 &&
-         transform.scaleX === 1 &&
-         transform.scaleY === 1 &&
-         transform.rotation === 0 &&
-         transform.skewX === 0 &&
-         transform.skewY === 0;
+  const epsilon = 1e-9;
+  return Math.abs(transform.translateX) < epsilon &&
+         Math.abs(transform.translateY) < epsilon &&
+         Math.abs(transform.scaleX - 1) < epsilon &&
+         Math.abs(transform.scaleY - 1) < epsilon &&
+         Math.abs(transform.rotation) < epsilon &&
+         Math.abs(transform.skewX) < epsilon &&
+         Math.abs(transform.skewY) < epsilon;
 }
 
 /**
