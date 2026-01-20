@@ -2,6 +2,28 @@ import { Point } from '../../shared/types';
 import { round3 } from './MathUtils';
 
 /**
+ * 2D Transformation Matrix (3x3 homogeneous matrix, stored as 6 values)
+ * | a c e |
+ * | b d f |
+ * | 0 0 1 |
+ */
+export interface Matrix2D {
+  a: number;
+  b: number;
+  c: number;
+  d: number;
+  e: number;
+  f: number;
+}
+
+/**
+ * Identity matrix
+ */
+export const IDENTITY_MATRIX: Matrix2D = {
+  a: 1, b: 0, c: 0, d: 1, e: 0, f: 0
+};
+
+/**
  * Parsed transform result
  */
 export interface ParsedTransform {
@@ -32,16 +54,72 @@ export const IDENTITY_TRANSFORM: ParsedTransform = {
 };
 
 /**
+ * Multiply two 2D matrices: result = m1 * m2
+ * This applies m2 first, then m1.
+ */
+function multiplyMatrices(m1: Matrix2D, m2: Matrix2D): Matrix2D {
+  return {
+    a: m1.a * m2.a + m1.c * m2.b,
+    b: m1.b * m2.a + m1.d * m2.b,
+    c: m1.a * m2.c + m1.c * m2.d,
+    d: m1.b * m2.c + m1.d * m2.d,
+    e: m1.a * m2.e + m1.c * m2.f + m1.e,
+    f: m1.b * m2.e + m1.d * m2.f + m1.f
+  };
+}
+
+/**
+ * Create a translation matrix
+ */
+function translateMatrix(tx: number, ty: number): Matrix2D {
+  return { a: 1, b: 0, c: 0, d: 1, e: tx, f: ty };
+}
+
+/**
+ * Create a scale matrix
+ */
+function scaleMatrix(sx: number, sy: number): Matrix2D {
+  return { a: sx, b: 0, c: 0, d: sy, e: 0, f: 0 };
+}
+
+/**
+ * Create a rotation matrix (angle in degrees)
+ */
+function rotateMatrix(angleDeg: number): Matrix2D {
+  const rad = angleDeg * Math.PI / 180;
+  const cos = Math.cos(rad);
+  const sin = Math.sin(rad);
+  return { a: cos, b: sin, c: -sin, d: cos, e: 0, f: 0 };
+}
+
+/**
+ * Create a skewX matrix (angle in degrees)
+ */
+function skewXMatrix(angleDeg: number): Matrix2D {
+  const tan = Math.tan(angleDeg * Math.PI / 180);
+  return { a: 1, b: 0, c: tan, d: 1, e: 0, f: 0 };
+}
+
+/**
+ * Create a skewY matrix (angle in degrees)
+ */
+function skewYMatrix(angleDeg: number): Matrix2D {
+  const tan = Math.tan(angleDeg * Math.PI / 180);
+  return { a: 1, b: tan, c: 0, d: 1, e: 0, f: 0 };
+}
+
+/**
  * Decompose a 2D transformation matrix into translate, scale, rotation, and skew.
  * Matrix format: matrix(a, b, c, d, e, f) represents:
  * | a c e |
  * | b d f |
  * | 0 0 1 |
  *
- * The decomposition assumes: Translate * Rotate * Skew * Scale
- * Returns: { translateX, translateY, scaleX, scaleY, rotation, skewX, skewY }
+ * The decomposition uses QR decomposition approach:
+ * M = T * R * Skew * S
+ * Where T is translation, R is rotation, Skew is shear, S is scale.
  */
-function decomposeMatrix(a: number, b: number, c: number, d: number, e: number, f: number): {
+function decomposeMatrix(m: Matrix2D): {
   translateX: number;
   translateY: number;
   scaleX: number;
@@ -50,6 +128,8 @@ function decomposeMatrix(a: number, b: number, c: number, d: number, e: number, 
   skewX: number;
   skewY: number;
 } {
+  const { a, b, c, d, e, f } = m;
+
   // Translation is directly from e, f
   const translateX = e;
   const translateY = f;
@@ -76,26 +156,37 @@ function decomposeMatrix(a: number, b: number, c: number, d: number, e: number, 
   const scaleY = scaleX !== 0 ? det / scaleX : Math.sqrt(c * c + d * d);
 
   // Extract skew by removing rotation from the matrix
-  // After removing rotation, skew can be calculated from the shear component
   let skewX = 0;
   let skewY = 0;
 
-  if (scaleX !== 0) {
-    // Calculate the skew angle from the dot product of the two column vectors
-    // divided by the product of their lengths
+  if (Math.abs(scaleX) > 1e-10 && Math.abs(scaleY) > 1e-10) {
     const cosR = Math.cos(-rotation * Math.PI / 180);
     const sinR = Math.sin(-rotation * Math.PI / 180);
 
     // Remove rotation to get the skew+scale matrix
-    const a2 = a * cosR - b * sinR;
-    const b2 = a * sinR + b * cosR;
+    // M_without_rotation = R(-θ) * M_2x2
     const c2 = c * cosR - d * sinR;
     const d2 = c * sinR + d * cosR;
 
-    // After removing rotation: [scaleX, skewX*scaleY; skewY*scaleX, scaleY]
-    // skewX angle from c2/d2 (if scaleY != 0)
-    if (Math.abs(scaleY) > 1e-10) {
-      skewX = Math.atan2(c2, d2) * (180 / Math.PI);
+    // After removing rotation, the matrix is [scaleX, skewX*scaleY; 0, scaleY] (ideally)
+    // skewX = c2 / scaleY
+    skewX = Math.atan2(c2, d2) * (180 / Math.PI);
+
+    // For skewY, we need to check the b component after removing rotation
+    const a2 = a * cosR - b * sinR;
+    const b2 = a * sinR + b * cosR;
+
+    // If there's a skewY component, it would show up in b2
+    // After removing rotation and skewX, b2 should be skewY * scaleX
+    // But since we extracted scaleX from the first column, skewY would be in the residual
+    if (Math.abs(scaleX) > 1e-10) {
+      // Check if there's residual shear in the y direction
+      const expectedB2 = 0; // In pure scale+skewX, b2 should be 0
+      if (Math.abs(b2 - expectedB2) > 1e-10) {
+        // There's a skewY component - but this is complex to extract accurately
+        // For now, we prioritize skewX extraction
+        skewY = Math.atan2(b2 - expectedB2, a2) * (180 / Math.PI);
+      }
     }
   }
 
@@ -103,23 +194,67 @@ function decomposeMatrix(a: number, b: number, c: number, d: number, e: number, 
 }
 
 /**
+ * Convert ParsedTransform to a Matrix2D
+ */
+export function transformToMatrix(t: ParsedTransform): Matrix2D {
+  let m: Matrix2D = { ...IDENTITY_MATRIX };
+
+  // Apply in order: translate, rotate (around center), skew, scale
+  // But we need to handle rotation center specially
+
+  // First, apply translation
+  if (t.translateX !== 0 || t.translateY !== 0) {
+    m = multiplyMatrices(m, translateMatrix(t.translateX, t.translateY));
+  }
+
+  // Handle rotation with center
+  if (t.rotation !== 0) {
+    if (t.rotationCenterX !== 0 || t.rotationCenterY !== 0) {
+      // rotate(angle, cx, cy) = translate(cx, cy) * rotate(angle) * translate(-cx, -cy)
+      m = multiplyMatrices(m, translateMatrix(t.rotationCenterX, t.rotationCenterY));
+      m = multiplyMatrices(m, rotateMatrix(t.rotation));
+      m = multiplyMatrices(m, translateMatrix(-t.rotationCenterX, -t.rotationCenterY));
+    } else {
+      m = multiplyMatrices(m, rotateMatrix(t.rotation));
+    }
+  }
+
+  // Apply skew
+  if (t.skewX !== 0) {
+    m = multiplyMatrices(m, skewXMatrix(t.skewX));
+  }
+  if (t.skewY !== 0) {
+    m = multiplyMatrices(m, skewYMatrix(t.skewY));
+  }
+
+  // Apply scale
+  if (t.scaleX !== 1 || t.scaleY !== 1) {
+    m = multiplyMatrices(m, scaleMatrix(t.scaleX, t.scaleY));
+  }
+
+  return m;
+}
+
+/**
  * Parse SVG transform attribute string
  * Supports: translate(x, y), scale(sx, sy), rotate(angle), skewX(angle), skewY(angle), matrix(a,b,c,d,e,f)
+ *
+ * Uses matrix multiplication to correctly handle transform ordering.
+ * SVG transforms are applied left-to-right in the string, which means
+ * the rightmost transform is applied first to the coordinates.
  */
 export function parseTransform(transformStr: string | null): ParsedTransform {
   if (!transformStr) {
     return { ...IDENTITY_TRANSFORM };
   }
 
-  let translateX = 0;
-  let translateY = 0;
-  let scaleX = 1;
-  let scaleY = 1;
-  let rotation = 0;
-  let rotationCenterX = 0;
-  let rotationCenterY = 0;
-  let skewX = 0;
-  let skewY = 0;
+  // Accumulated matrix - start with identity
+  let matrix: Matrix2D = { ...IDENTITY_MATRIX };
+
+  // Track rotation center from the last rotate(angle, cx, cy) call
+  let lastRotationCenterX = 0;
+  let lastRotationCenterY = 0;
+  let hasRotationCenter = false;
 
   // Match transform functions: name(params)
   const transformRegex = /(\w+)\s*\(([^)]+)\)/g;
@@ -130,114 +265,151 @@ export function parseTransform(transformStr: string | null): ParsedTransform {
     const params = match[2].split(/[\s,]+/).map(s => parseFloat(s.trim()));
 
     switch (funcName) {
-      case 'translate':
-        translateX += params[0] || 0;
-        // translate(x) means translate(x, 0), so Y is 0 if not specified
-        translateY += params[1] ?? 0;
+      case 'translate': {
+        const tx = params[0] || 0;
+        const ty = params[1] ?? 0;
+        matrix = multiplyMatrices(matrix, translateMatrix(tx, ty));
         break;
+      }
 
-      case 'scale':
+      case 'scale': {
         const sx = params[0] ?? 1;
-        const sy = params[1] ?? sx; // If only one param, uniform scale
-        // Scale is multiplicative
-        scaleX *= sx;
-        scaleY *= sy;
-        // Scale also affects translation (scale happens at origin)
-        translateX *= sx;
-        translateY *= sy;
+        const sy = params[1] ?? sx;
+        matrix = multiplyMatrices(matrix, scaleMatrix(sx, sy));
         break;
+      }
 
-      case 'rotate':
-        // rotate(angle) or rotate(angle, cx, cy)
+      case 'rotate': {
         const angle = params[0] || 0;
-        rotation += angle;
         if (params.length >= 3) {
-          // rotate(angle, cx, cy) - rotation around a point
-          rotationCenterX = params[1];
-          rotationCenterY = params[2];
+          // rotate(angle, cx, cy) = translate(cx, cy) * rotate(angle) * translate(-cx, -cy)
+          const cx = params[1];
+          const cy = params[2];
+          matrix = multiplyMatrices(matrix, translateMatrix(cx, cy));
+          matrix = multiplyMatrices(matrix, rotateMatrix(angle));
+          matrix = multiplyMatrices(matrix, translateMatrix(-cx, -cy));
+          lastRotationCenterX = cx;
+          lastRotationCenterY = cy;
+          hasRotationCenter = true;
+        } else {
+          matrix = multiplyMatrices(matrix, rotateMatrix(angle));
         }
         break;
+      }
 
-      case 'skewx':
-        // skewX(angle) - skew along X axis
-        skewX += params[0] || 0;
+      case 'skewx': {
+        const angle = params[0] || 0;
+        matrix = multiplyMatrices(matrix, skewXMatrix(angle));
         break;
+      }
 
-      case 'skewy':
-        // skewY(angle) - skew along Y axis
-        skewY += params[0] || 0;
+      case 'skewy': {
+        const angle = params[0] || 0;
+        matrix = multiplyMatrices(matrix, skewYMatrix(angle));
         break;
+      }
 
-      case 'matrix':
-        // matrix(a, b, c, d, e, f)
+      case 'matrix': {
         if (params.length >= 6) {
-          const [a, b, c, d, me, mf] = params;
-          const decomposed = decomposeMatrix(a, b, c, d, me, mf);
-
-          // Apply the decomposed matrix components
-          // Translation is additive
-          translateX += decomposed.translateX;
-          translateY += decomposed.translateY;
-          // Scale is multiplicative
-          scaleX *= decomposed.scaleX;
-          scaleY *= decomposed.scaleY;
-          // Rotation is additive
-          rotation += decomposed.rotation;
-          // Skew is additive
-          skewX += decomposed.skewX;
-          skewY += decomposed.skewY;
+          const [a, b, c, d, e, f] = params;
+          matrix = multiplyMatrices(matrix, { a, b, c, d, e, f });
         } else {
           console.warn('matrix() transform requires 6 parameters');
         }
         break;
+      }
 
       default:
         console.warn(`Unknown transform function "${funcName}" ignored`);
     }
   }
 
-  return { translateX, translateY, scaleX, scaleY, rotation, rotationCenterX, rotationCenterY, skewX, skewY };
+  // Decompose the final matrix
+  const decomposed = decomposeMatrix(matrix);
+
+  return {
+    translateX: decomposed.translateX,
+    translateY: decomposed.translateY,
+    scaleX: decomposed.scaleX,
+    scaleY: decomposed.scaleY,
+    rotation: decomposed.rotation,
+    rotationCenterX: hasRotationCenter ? lastRotationCenterX : 0,
+    rotationCenterY: hasRotationCenter ? lastRotationCenterY : 0,
+    skewX: decomposed.skewX,
+    skewY: decomposed.skewY
+  };
 }
 
 /**
- * Combine two transforms (apply child transform after parent)
+ * Combine two transforms using matrix multiplication.
  * Result = parent transform followed by child transform
- * Note: Rotation and skew combining is simplified - we add angles, but this may not be
- * perfectly accurate for complex transform combinations with different rotation centers.
+ *
+ * For a point P, the combined transform applies as:
+ * P' = Parent * Child * P
+ * (Child is applied first, then Parent)
  */
 export function combineTransforms(parent: ParsedTransform, child: ParsedTransform): ParsedTransform {
-  // Child scale applies to child translate
-  // Combined: first parent, then child
-  // T_combined = T_parent * T_child
-  // For point P: P' = scale_parent * (scale_child * P + translate_child) + translate_parent
-  //            = scale_parent * scale_child * P + scale_parent * translate_child + translate_parent
+  // Convert both to matrices
+  const parentMatrix = transformToMatrix(parent);
+  const childMatrix = transformToMatrix(child);
 
-  // For rotation and skew, we add angles (simplified approach)
-  // In complex cases with different rotation centers, this may need matrix math
+  // Multiply: parent * child (child applied first)
+  const combined = multiplyMatrices(parentMatrix, childMatrix);
+
+  // Decompose the result
+  const decomposed = decomposeMatrix(combined);
+
+  // Handle rotation center: use child's if explicitly set (non-zero), otherwise parent's
+  // We need to track whether the center was explicitly set vs just being 0
+  const childHasCenter = child.rotationCenterX !== 0 || child.rotationCenterY !== 0;
+  const parentHasCenter = parent.rotationCenterX !== 0 || parent.rotationCenterY !== 0;
+
+  let rotationCenterX = 0;
+  let rotationCenterY = 0;
+
+  if (childHasCenter) {
+    // Transform child's rotation center by parent transform
+    const transformedCenter = applyMatrixToPoint(
+      { x: child.rotationCenterX, y: child.rotationCenterY },
+      parentMatrix
+    );
+    rotationCenterX = transformedCenter.x;
+    rotationCenterY = transformedCenter.y;
+  } else if (parentHasCenter) {
+    rotationCenterX = parent.rotationCenterX;
+    rotationCenterY = parent.rotationCenterY;
+  }
 
   return {
-    scaleX: parent.scaleX * child.scaleX,
-    scaleY: parent.scaleY * child.scaleY,
-    translateX: parent.scaleX * child.translateX + parent.translateX,
-    translateY: parent.scaleY * child.translateY + parent.translateY,
-    rotation: parent.rotation + child.rotation,
-    // Use child's rotation center if specified, otherwise parent's
-    rotationCenterX: child.rotationCenterX || parent.rotationCenterX,
-    rotationCenterY: child.rotationCenterY || parent.rotationCenterY,
-    // Skew is additive (simplified)
-    skewX: parent.skewX + child.skewX,
-    skewY: parent.skewY + child.skewY
+    translateX: decomposed.translateX,
+    translateY: decomposed.translateY,
+    scaleX: decomposed.scaleX,
+    scaleY: decomposed.scaleY,
+    rotation: decomposed.rotation,
+    rotationCenterX,
+    rotationCenterY,
+    skewX: decomposed.skewX,
+    skewY: decomposed.skewY
+  };
+}
+
+/**
+ * Apply a matrix to a point
+ */
+function applyMatrixToPoint(point: Point, m: Matrix2D): Point {
+  return {
+    x: round3(m.a * point.x + m.c * point.y + m.e),
+    y: round3(m.b * point.x + m.d * point.y + m.f)
   };
 }
 
 /**
  * Apply transform to a point
+ * Correctly handles translation, scale, rotation, and skew.
  */
 export function applyTransformToPoint(point: Point, transform: ParsedTransform): Point {
-  return {
-    x: round3(point.x * transform.scaleX + transform.translateX),
-    y: round3(point.y * transform.scaleY + transform.translateY)
-  };
+  const matrix = transformToMatrix(transform);
+  return applyMatrixToPoint(point, matrix);
 }
 
 /**
@@ -265,4 +437,11 @@ export function hasRotation(transform: ParsedTransform): boolean {
  */
 export function hasSkew(transform: ParsedTransform): boolean {
   return transform.skewX !== 0 || transform.skewY !== 0;
+}
+
+/**
+ * Get the transformation matrix from a ParsedTransform
+ */
+export function getTransformMatrix(transform: ParsedTransform): Matrix2D {
+  return transformToMatrix(transform);
 }
