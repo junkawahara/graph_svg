@@ -5,6 +5,14 @@
 ## [Unreleased]
 
 ### 修正
+- PathParser.ts: `vectorAngle()` が退化した弧（長さゼロのベクトル）で NaN を返す問題を修正
+  - `len < 1e-10` の場合は 0 を返すように修正
+- Path.ts: `samplePath()` が Z コマンドを処理しない問題を修正
+  - Z コマンドでサブパス開始点への閉路セグメントを追加
+  - 複数サブパスを別々に追跡する `samplePathSubpaths()` メソッドを追加
+- Path.ts: `isPointInsidePath()` が複数サブパスを正しく処理しない問題を修正
+  - 各サブパスを個別の閉多角形として扱い、even-odd フィルルールで判定
+  - パスに穴がある場合も正しくヒットテストが動作するように改善
 - Edge.ts の複数の問題を修正
   - `getPathTypeData()`: Arc (`A`) コマンドが出力されない問題を修正
   - `hitTestPath()`: Arc (`A`) と Close (`Z`) コマンドのヒットテストを追加

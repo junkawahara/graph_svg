@@ -499,40 +499,61 @@ export class Path implements Shape {
   }
 
   private isPointInsidePath(point: Point): boolean {
-    // Sample the path to create a polygon approximation
-    const polygonPoints = this.samplePath();
+    // Sample the path into separate subpaths for correct hit testing
+    const subpaths = this.samplePathSubpaths();
 
-    // Ray casting algorithm
+    // Use even-odd fill rule (SVG default: "nonzero", but even-odd is simpler
+    // and more predictable for paths with holes)
+    // For even-odd: count total crossings across all subpaths
     let inside = false;
-    const n = polygonPoints.length;
-    for (let i = 0, j = n - 1; i < n; j = i++) {
-      const xi = polygonPoints[i].x, yi = polygonPoints[i].y;
-      const xj = polygonPoints[j].x, yj = polygonPoints[j].y;
 
-      if (((yi > point.y) !== (yj > point.y)) &&
-          (point.x < (xj - xi) * (point.y - yi) / (yj - yi) + xi)) {
-        inside = !inside;
+    for (const polygonPoints of subpaths) {
+      const n = polygonPoints.length;
+      if (n < 3) continue; // Skip degenerate subpaths
+
+      // Ray casting algorithm for this subpath
+      for (let i = 0, j = n - 1; i < n; j = i++) {
+        const xi = polygonPoints[i].x, yi = polygonPoints[i].y;
+        const xj = polygonPoints[j].x, yj = polygonPoints[j].y;
+
+        if (((yi > point.y) !== (yj > point.y)) &&
+            (point.x < (xj - xi) * (point.y - yi) / (yj - yi) + xi)) {
+          inside = !inside;
+        }
       }
     }
 
     return inside;
   }
 
-  private samplePath(): Point[] {
-    const points: Point[] = [];
+  /**
+   * Sample path into polygon points, returning separate subpaths.
+   * Each subpath is a closed polygon for hit testing.
+   */
+  private samplePathSubpaths(): Point[][] {
+    const subpaths: Point[][] = [];
+    let currentSubpath: Point[] = [];
     let prevX = 0;
     let prevY = 0;
+    let subpathStartX = 0;
+    let subpathStartY = 0;
 
     for (const cmd of this.commands) {
       switch (cmd.type) {
         case 'M':
-          points.push({ x: cmd.x, y: cmd.y });
+          // Start new subpath
+          if (currentSubpath.length > 0) {
+            subpaths.push(currentSubpath);
+          }
+          currentSubpath = [{ x: cmd.x, y: cmd.y }];
           prevX = cmd.x;
           prevY = cmd.y;
+          subpathStartX = cmd.x;
+          subpathStartY = cmd.y;
           break;
 
         case 'L':
-          points.push({ x: cmd.x, y: cmd.y });
+          currentSubpath.push({ x: cmd.x, y: cmd.y });
           prevX = cmd.x;
           prevY = cmd.y;
           break;
@@ -546,7 +567,7 @@ export class Path implements Shape {
             const mt3 = mt2 * mt;
             const t2 = t * t;
             const t3 = t2 * t;
-            points.push({
+            currentSubpath.push({
               x: mt3 * prevX + 3 * mt2 * t * cmd.cp1x + 3 * mt * t2 * cmd.cp2x + t3 * cmd.x,
               y: mt3 * prevY + 3 * mt2 * t * cmd.cp1y + 3 * mt * t2 * cmd.cp2y + t3 * cmd.y
             });
@@ -563,7 +584,7 @@ export class Path implements Shape {
             const mt = 1 - t;
             const mt2 = mt * mt;
             const t2 = t * t;
-            points.push({
+            currentSubpath.push({
               x: mt2 * prevX + 2 * mt * t * cmd.cpx + t2 * cmd.x,
               y: mt2 * prevY + 2 * mt * t * cmd.cpy + t2 * cmd.y
             });
@@ -575,14 +596,40 @@ export class Path implements Shape {
 
         case 'A': {
           const arcPoints = sampleArc(prevX, prevY, cmd, 10);
-          points.push(...arcPoints);
+          currentSubpath.push(...arcPoints);
           prevX = cmd.x;
           prevY = cmd.y;
           break;
         }
+
+        case 'Z':
+          // Close the current subpath by adding the closing segment
+          // The ray casting algorithm will handle the edge from last point to start
+          if (prevX !== subpathStartX || prevY !== subpathStartY) {
+            // Only add if not already at start (avoid duplicate point)
+            currentSubpath.push({ x: subpathStartX, y: subpathStartY });
+          }
+          prevX = subpathStartX;
+          prevY = subpathStartY;
+          break;
       }
     }
 
+    // Add the last subpath if it has points
+    if (currentSubpath.length > 0) {
+      subpaths.push(currentSubpath);
+    }
+
+    return subpaths;
+  }
+
+  private samplePath(): Point[] {
+    // Flatten all subpaths into a single array for backwards compatibility
+    const subpaths = this.samplePathSubpaths();
+    const points: Point[] = [];
+    for (const subpath of subpaths) {
+      points.push(...subpath);
+    }
     return points;
   }
 

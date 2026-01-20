@@ -531,6 +531,12 @@ export function arcEndpointToCenter(
 function vectorAngle(ux: number, uy: number, vx: number, vy: number): number {
   const dot = ux * vx + uy * vy;
   const len = Math.sqrt(ux * ux + uy * uy) * Math.sqrt(vx * vx + vy * vy);
+
+  // Handle degenerate case where one or both vectors have zero length
+  if (len < 1e-10) {
+    return 0;
+  }
+
   let angle = Math.acos(Math.max(-1, Math.min(1, dot / len)));
 
   // Determine sign
