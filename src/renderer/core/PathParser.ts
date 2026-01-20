@@ -13,6 +13,12 @@ export function parsePath(d: string): PathCommand[] {
   let currentY = 0;
   let startX = 0;  // Start of current subpath (for Z command)
   let startY = 0;
+  // Track last control points for smooth curve commands (S and T)
+  let lastCubicCp2X = 0;  // Last cp2 of C/S command
+  let lastCubicCp2Y = 0;
+  let lastQuadCpX = 0;    // Last cp of Q/T command
+  let lastQuadCpY = 0;
+  let lastCmdType = '';   // Track last command type for reflection logic
 
   let i = 0;
   while (i < tokens.length) {
@@ -48,9 +54,11 @@ export function parsePath(d: string): PathCommand[] {
             startX = x;
             startY = y;
             first = false;
+            lastCmdType = 'M';
           } else {
             // Subsequent coordinates are implicit LineTo
             commands.push({ type: 'L', x, y });
+            lastCmdType = 'L';
           }
 
           currentX = x;
@@ -72,6 +80,7 @@ export function parsePath(d: string): PathCommand[] {
           }
 
           commands.push({ type: 'L', x, y });
+          lastCmdType = 'L';
           currentX = x;
           currentY = y;
         }
@@ -89,6 +98,7 @@ export function parsePath(d: string): PathCommand[] {
           }
 
           commands.push({ type: 'L', x, y: currentY });
+          lastCmdType = 'L';
           currentX = x;
         }
         break;
@@ -105,6 +115,7 @@ export function parsePath(d: string): PathCommand[] {
           }
 
           commands.push({ type: 'L', x: currentX, y });
+          lastCmdType = 'L';
           currentY = y;
         }
         break;
@@ -131,6 +142,9 @@ export function parsePath(d: string): PathCommand[] {
           }
 
           commands.push({ type: 'C', cp1x, cp1y, cp2x, cp2y, x, y });
+          lastCubicCp2X = cp2x;
+          lastCubicCp2Y = cp2y;
+          lastCmdType = 'C';
           currentX = x;
           currentY = y;
         }
@@ -153,16 +167,18 @@ export function parsePath(d: string): PathCommand[] {
             y += currentY;
           }
 
-          // Reflect previous control point
+          // Reflect previous control point (if prev was C or S)
           let cp1x = currentX;
           let cp1y = currentY;
-          const prevCmd = commands[commands.length - 1];
-          if (prevCmd && prevCmd.type === 'C') {
-            cp1x = 2 * currentX - prevCmd.cp2x;
-            cp1y = 2 * currentY - prevCmd.cp2y;
+          if (lastCmdType === 'C' || lastCmdType === 'S') {
+            cp1x = 2 * currentX - lastCubicCp2X;
+            cp1y = 2 * currentY - lastCubicCp2Y;
           }
 
           commands.push({ type: 'C', cp1x, cp1y, cp2x, cp2y, x, y });
+          lastCubicCp2X = cp2x;
+          lastCubicCp2Y = cp2y;
+          lastCmdType = 'S';
           currentX = x;
           currentY = y;
         }
@@ -186,6 +202,9 @@ export function parsePath(d: string): PathCommand[] {
           }
 
           commands.push({ type: 'Q', cpx, cpy, x, y });
+          lastQuadCpX = cpx;
+          lastQuadCpY = cpy;
+          lastCmdType = 'Q';
           currentX = x;
           currentY = y;
         }
@@ -204,16 +223,18 @@ export function parsePath(d: string): PathCommand[] {
             y += currentY;
           }
 
-          // Reflect previous control point
+          // Reflect previous control point (if prev was Q or T)
           let cpx = currentX;
           let cpy = currentY;
-          const prevCmd = commands[commands.length - 1];
-          if (prevCmd && prevCmd.type === 'Q') {
-            cpx = 2 * currentX - prevCmd.cpx;
-            cpy = 2 * currentY - prevCmd.cpy;
+          if (lastCmdType === 'Q' || lastCmdType === 'T') {
+            cpx = 2 * currentX - lastQuadCpX;
+            cpy = 2 * currentY - lastQuadCpY;
           }
 
           commands.push({ type: 'Q', cpx, cpy, x, y });
+          lastQuadCpX = cpx;
+          lastQuadCpY = cpy;
+          lastCmdType = 'T';
           currentX = x;
           currentY = y;
         }
@@ -240,6 +261,7 @@ export function parsePath(d: string): PathCommand[] {
           // If radii are 0, treat as line
           if (rx === 0 || ry === 0) {
             commands.push({ type: 'L', x, y });
+            lastCmdType = 'L';
           } else {
             commands.push({
               type: 'A',
@@ -251,6 +273,7 @@ export function parsePath(d: string): PathCommand[] {
               x,
               y
             });
+            lastCmdType = 'A';
           }
           currentX = x;
           currentY = y;
@@ -260,6 +283,7 @@ export function parsePath(d: string): PathCommand[] {
 
       case 'Z': {
         commands.push({ type: 'Z' });
+        lastCmdType = 'Z';
         currentX = startX;
         currentY = startY;
         break;

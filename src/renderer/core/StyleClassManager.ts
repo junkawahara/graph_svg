@@ -260,15 +260,6 @@ class StyleClassManager {
     }
     // Note: Do not save to settings - temporary classes are session only
   }
-
-  /**
-   * Clear temporary classes (e.g., when creating new file)
-   */
-  clearTemporaryClasses(): void {
-    // Remove all non-builtin, non-custom classes (temporary ones)
-    // For simplicity, reload from settings to reset to saved state
-    this.loadFromSettings();
-  }
 }
 
 // Singleton instance

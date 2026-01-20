@@ -791,9 +791,25 @@ export class FileManager {
     const shapes: Shape[] = [];
     const gm = getGraphManager();
 
+    // Helper function to check if element is inside a group
+    const isInsideGroup = (el: Element): boolean => {
+      let parent: Element | null = el.parentElement;
+      while (parent && parent !== (svg as Element)) {
+        if (parent.getAttribute('data-group-type') === 'group') {
+          return true;
+        }
+        parent = parent.parentElement;
+      }
+      return false;
+    };
+
     // First, parse nodes to register them with GraphManager
+    // Only parse top-level nodes (nodes inside groups are parsed when the group is parsed)
     const nodeElements = svg.querySelectorAll('g[data-graph-type="node"]');
     nodeElements.forEach(el => {
+      // Skip nodes inside groups
+      if (isInsideGroup(el)) return;
+
       const ellipse = el.querySelector('ellipse');
       if (ellipse) {
         const className = el.getAttribute('class') || undefined;
@@ -813,8 +829,12 @@ export class FileManager {
 
     // Parse edge elements (after nodes are registered)
     // Support both legacy path format and new group format (for edges with labels)
+    // Only parse top-level edges (edges inside groups are parsed when the group is parsed)
     const edgeElements = svg.querySelectorAll('path[data-graph-type="edge"], g[data-graph-type="edge"]');
     edgeElements.forEach(el => {
+      // Skip edges inside groups
+      if (isInsideGroup(el)) return;
+
       const style = this.parseEdgeStyleFromElement(el as SVGElement);
       const edge = Edge.fromElement(el as SVGElement, style);
       if (edge) {
@@ -1390,8 +1410,19 @@ export class FileManager {
    * Merges class style with inline attributes (inline takes precedence)
    */
   private static parseStyleWithClass(el: SVGElement, className: string | undefined): ShapeStyle {
-    // Get base style from class if available
-    let baseStyle = { ...DEFAULT_STYLE };
+    // Start with SVG spec defaults (black fill, no stroke)
+    // Then override with class style, then inline attributes
+    let baseStyle: ShapeStyle = {
+      fill: '#000000',         // SVG default
+      fillNone: false,
+      stroke: 'none',          // SVG default (no stroke)
+      strokeWidth: 1,          // SVG default
+      opacity: 1,
+      strokeDasharray: '',
+      strokeLinecap: 'butt'
+    };
+
+    // Override with class style if available
     if (className) {
       const styleClass = styleClassManager.getClass(className);
       if (styleClass) {

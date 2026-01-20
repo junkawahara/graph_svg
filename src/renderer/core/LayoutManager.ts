@@ -22,21 +22,27 @@ export class LayoutManager {
     // No nodes to layout
     if (nodeIds.length === 0) return;
 
-    // Build cytoscape elements
-    const cyNodes = nodeIds.map(id => {
-      const node = gm.getNodeShape(id)!;
-      return {
-        data: { id, width: node.rx * 2, height: node.ry * 2 },
-        position: { x: node.cx, y: node.cy }
-      };
-    });
+    // Build cytoscape elements (filter out any with missing shapes)
+    const cyNodes = nodeIds
+      .map(id => {
+        const node = gm.getNodeShape(id);
+        if (!node) return null;
+        return {
+          data: { id, width: node.rx * 2, height: node.ry * 2 },
+          position: { x: node.cx, y: node.cy }
+        };
+      })
+      .filter((n): n is NonNullable<typeof n> => n !== null);
 
-    const cyEdges = edgeIds.map(id => {
-      const conn = gm.getEdgeConnection(id)!;
-      return {
-        data: { id, source: conn.sourceId, target: conn.targetId }
-      };
-    });
+    const cyEdges = edgeIds
+      .map(id => {
+        const conn = gm.getEdgeConnection(id);
+        if (!conn) return null;
+        return {
+          data: { id, source: conn.sourceId, target: conn.targetId }
+        };
+      })
+      .filter((e): e is NonNullable<typeof e> => e !== null);
 
     // Create headless cytoscape instance
     const cy = cytoscape({

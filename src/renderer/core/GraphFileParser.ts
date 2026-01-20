@@ -37,8 +37,8 @@ export class GraphFileParser {
       if (trimmed === '' || trimmed.startsWith('#')) continue;
       if (trimmed.startsWith('c ')) continue; // DIMACS comment
 
-      // DIMACS starts with 'p n m' or 'e src dst'
-      if (/^p\s+\d+\s+\d+/.test(trimmed)) return 'dimacs';
+      // DIMACS starts with 'p n m', 'p edge n m', or 'e src dst'
+      if (/^p\s+(\w+\s+)?\d+\s+\d+/.test(trimmed)) return 'dimacs';
       if (/^e\s+\S+\s+\S+/.test(trimmed)) return 'dimacs';
 
       // Otherwise, assume edge list
@@ -111,8 +111,8 @@ export class GraphFileParser {
       const trimmed = line.trim();
       if (trimmed === '' || trimmed.startsWith('c ')) continue;
 
-      // Problem line: p n m
-      const pMatch = trimmed.match(/^p\s+(\d+)\s+(\d+)/);
+      // Problem line: p n m or p edge n m (standard DIMACS format)
+      const pMatch = trimmed.match(/^p\s+(?:\w+\s+)?(\d+)\s+(\d+)/);
       if (pMatch) {
         vertexCount = parseInt(pMatch[1], 10);
         edgeCount = parseInt(pMatch[2], 10);
