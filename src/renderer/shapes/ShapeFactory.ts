@@ -113,7 +113,13 @@ export function createShapeFromData(data: ShapeData, offsetX: number = 0, offset
         data.curveOffset,
         data.isSelfLoop,
         data.selfLoopAngle,
-        { ...data.style }
+        { ...data.style },
+        data.label,
+        data.lineType || 'straight',
+        data.curveAmount || 0,
+        data.pathCommands || [],
+        data.sourceConnectionAngle ?? null,
+        data.targetConnectionAngle ?? null
       );
       edge.className = data.className;
       return edge;

@@ -24,7 +24,7 @@ export class Polygon implements Shape {
    * Create polygon from points array
    */
   static fromPoints(points: Point[], style: ShapeStyle): Polygon {
-    return new Polygon(generateId(), points.map(p => ({ x: Math.round(p.x), y: Math.round(p.y) })), style);
+    return new Polygon(generateId(), points.map(p => ({ x: round3(p.x), y: round3(p.y) })), style);
   }
 
   /**
@@ -99,8 +99,10 @@ export class Polygon implements Shape {
       testPoint = rotatePoint(point, center, -this.rotation);
     }
 
-    // Check if point is inside polygon using ray casting algorithm
-    if (this.isPointInside(testPoint)) return true;
+    // Check if point is inside polygon (only if filled)
+    if (!this.style.fillNone && this.style.fill !== 'none') {
+      if (this.isPointInside(testPoint)) return true;
+    }
 
     // Check if point is near any edge
     for (let i = 0; i < this.points.length; i++) {

@@ -27,10 +27,10 @@ export class Rectangle implements Shape {
    * Create rectangle from bounding box (two corner points)
    */
   static fromBoundingBox(topLeft: Point, bottomRight: Point, style: ShapeStyle): Rectangle {
-    const x = Math.round(Math.min(topLeft.x, bottomRight.x));
-    const y = Math.round(Math.min(topLeft.y, bottomRight.y));
-    const width = Math.round(Math.abs(bottomRight.x - topLeft.x));
-    const height = Math.round(Math.abs(bottomRight.y - topLeft.y));
+    const x = round3(Math.min(topLeft.x, bottomRight.x));
+    const y = round3(Math.min(topLeft.y, bottomRight.y));
+    const width = round3(Math.abs(bottomRight.x - topLeft.x));
+    const height = round3(Math.abs(bottomRight.y - topLeft.y));
     return new Rectangle(generateId(), x, y, width, height, style);
   }
 

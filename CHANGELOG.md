@@ -4,6 +4,21 @@
 
 ## [Unreleased]
 
+### 修正
+- Edge復元時の情報欠落を修正（ShapeFactory.ts）
+  - コピー/ペースト時に `label`, `lineType`, `curveAmount`, `pathCommands`, `sourceConnectionAngle`, `targetConnectionAngle` が失われる問題を修正
+- Line.ts の `applySkew()` で計算順序の誤りを修正
+  - 元の座標を保存してからスキュー変換を適用するように修正
+- Polygon.ts の `hitTest()` で塗りなし時に内部点がヒットする問題を修正
+  - `fillNone` または `fill='none'` の場合は辺上のみをヒット対象に
+- Path.ts の `getCommandStart()` が Arc コマンドを考慮していない問題を修正
+  - `A` コマンドの終点座標を正しく取得するように修正
+- Path.ts の `hitTest()` で Z 閉路判定が常に最初の M に戻る問題を修正
+  - 複数サブパスを含む場合、直前の M コマンドに戻るように修正
+- 各図形の座標丸め方式を `round3()` に統一
+  - `Math.round()` を使用していた箇所を小数第3位丸めの `round3()` に変更
+  - 対象: Path, Rectangle, Ellipse, Line, Polygon, Polyline, Node
+
 ### 追加
 - パスのポイント追加・削除機能
   - ポイント追加ツール（+ボタン）

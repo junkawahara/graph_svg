@@ -51,10 +51,10 @@ export class Path implements Shape {
     }
 
     const commands: PathCommand[] = [];
-    commands.push({ type: 'M', x: Math.round(points[0].x), y: Math.round(points[0].y) });
+    commands.push({ type: 'M', x: round3(points[0].x), y: round3(points[0].y) });
 
     for (let i = 1; i < points.length; i++) {
-      commands.push({ type: 'L', x: Math.round(points[i].x), y: Math.round(points[i].y) });
+      commands.push({ type: 'L', x: round3(points[i].x), y: round3(points[i].y) });
     }
 
     if (closed) {
@@ -334,12 +334,18 @@ export class Path implements Shape {
     // Check if point is near any segment of the path
     let prevX = 0;
     let prevY = 0;
+    // Track current subpath start for Z command (handles multiple subpaths)
+    let subpathStartX = 0;
+    let subpathStartY = 0;
 
     for (const cmd of this.commands) {
       switch (cmd.type) {
         case 'M':
           prevX = cmd.x;
           prevY = cmd.y;
+          // Update subpath start when we see a new M command
+          subpathStartX = cmd.x;
+          subpathStartY = cmd.y;
           break;
 
         case 'L':
@@ -375,13 +381,13 @@ export class Path implements Shape {
           break;
 
         case 'Z':
-          // Check line back to start
-          const startCmd = this.commands.find(c => c.type === 'M');
-          if (startCmd && startCmd.type === 'M') {
-            if (this.isPointNearLine(testPoint, prevX, prevY, startCmd.x, startCmd.y, tolerance)) {
-              return true;
-            }
+          // Check line back to current subpath start (not the first M)
+          if (this.isPointNearLine(testPoint, prevX, prevY, subpathStartX, subpathStartY, tolerance)) {
+            return true;
           }
+          // After Z, position returns to subpath start
+          prevX = subpathStartX;
+          prevY = subpathStartY;
           break;
       }
     }
@@ -850,7 +856,7 @@ export class Path implements Shape {
     // Find the previous command with coordinates
     for (let i = cmdIndex - 1; i >= 0; i--) {
       const cmd = this.commands[i];
-      if (cmd.type === 'M' || cmd.type === 'L' || cmd.type === 'C' || cmd.type === 'Q') {
+      if (cmd.type === 'M' || cmd.type === 'L' || cmd.type === 'C' || cmd.type === 'Q' || cmd.type === 'A') {
         return { x: cmd.x, y: cmd.y };
       }
     }

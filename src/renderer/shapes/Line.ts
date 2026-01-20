@@ -40,7 +40,7 @@ export class Line implements Shape {
    * Create line from two points
    */
   static fromPoints(start: Point, end: Point, style: ShapeStyle): Line {
-    return new Line(generateId(), Math.round(start.x), Math.round(start.y), Math.round(end.x), Math.round(end.y), 'none', 'none', style);
+    return new Line(generateId(), round3(start.x), round3(start.y), round3(end.x), round3(end.y), 'none', 'none', style);
   }
 
   /**
@@ -436,11 +436,15 @@ export class Line implements Shape {
     const tanX = Math.tan(skewX * Math.PI / 180);
     const tanY = Math.tan(skewY * Math.PI / 180);
 
+    // Store original values before applying skew
+    const origX1 = this.x1;
+    const origX2 = this.x2;
+
     // Apply skew: skewX shifts x by y*tan(angle), skewY shifts y by x*tan(angle)
     this.x1 = round3(this.x1 + this.y1 * tanX);
-    this.y1 = round3(this.y1 + this.x1 * tanY);
+    this.y1 = round3(this.y1 + origX1 * tanY);
     this.x2 = round3(this.x2 + this.y2 * tanX);
-    this.y2 = round3(this.y2 + this.x2 * tanY);
+    this.y2 = round3(this.y2 + origX2 * tanY);
     this.updateElement();
   }
 }
