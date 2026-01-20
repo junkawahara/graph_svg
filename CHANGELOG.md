@@ -5,6 +5,11 @@
 ## [Unreleased]
 
 ### 修正
+- Edge.ts の複数の問題を修正
+  - `getPathTypeData()`: Arc (`A`) コマンドが出力されない問題を修正
+  - `hitTestPath()`: Arc (`A`) と Close (`Z`) コマンドのヒットテストを追加
+  - `getCommandStart()`: `Z` コマンド後にサブパス開始点を正しく返すように修正
+  - `getBounds()`: 曲線エッジ、自己ループ、パス型エッジのバウンディングボックスを正確に計算するように改善
 - Z-order（描画順）がUndo時に復元されない問題を修正
   - DeleteShapeCommand: 削除した図形をUndoで復元する際、元の描画順を維持
   - DeleteNodeCommand: ノードと接続エッジの削除をUndoする際、元の描画順を維持

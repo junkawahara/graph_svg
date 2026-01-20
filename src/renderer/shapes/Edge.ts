@@ -247,6 +247,9 @@ export class Edge implements Shape {
         case 'Q':
           parts.push(`Q ${cmd.cpx} ${cmd.cpy} ${cmd.x} ${cmd.y}`);
           break;
+        case 'A':
+          parts.push(`A ${cmd.rx} ${cmd.ry} ${cmd.xAxisRotation} ${cmd.largeArcFlag ? 1 : 0} ${cmd.sweepFlag ? 1 : 0} ${cmd.x} ${cmd.y}`);
+          break;
         case 'Z':
           parts.push('Z');
           break;
@@ -859,6 +862,8 @@ export class Edge implements Shape {
 
     let currentX = 0;
     let currentY = 0;
+    let subpathStartX = 0;
+    let subpathStartY = 0;
 
     for (let i = 0; i < this.pathCommands.length; i++) {
       const cmd = this.pathCommands[i];
@@ -866,6 +871,8 @@ export class Edge implements Shape {
       if (cmd.type === 'M') {
         currentX = cmd.x;
         currentY = cmd.y;
+        subpathStartX = cmd.x;
+        subpathStartY = cmd.y;
       } else if (cmd.type === 'L') {
         // Line segment hit test
         const start = { x: currentX, y: currentY };
@@ -912,6 +919,24 @@ export class Edge implements Shape {
         }
         currentX = cmd.x;
         currentY = cmd.y;
+      } else if (cmd.type === 'A') {
+        // Arc hit test (approximate with line segment for simplicity)
+        const start = { x: currentX, y: currentY };
+        const end = { x: cmd.x, y: cmd.y };
+        if (this.distanceToSegment(point, start, end) <= tolerance) {
+          return true;
+        }
+        currentX = cmd.x;
+        currentY = cmd.y;
+      } else if (cmd.type === 'Z') {
+        // Close path - line from current to subpath start
+        const start = { x: currentX, y: currentY };
+        const end = { x: subpathStartX, y: subpathStartY };
+        if (this.distanceToSegment(point, start, end) <= tolerance) {
+          return true;
+        }
+        currentX = subpathStartX;
+        currentY = subpathStartY;
       }
     }
 
@@ -1054,20 +1079,101 @@ export class Edge implements Shape {
       return { x: 0, y: 0, width: 0, height: 0 };
     }
 
+    // Path type: calculate bounds from all path commands
+    if (this.lineType === 'path' && this.pathCommands.length > 0) {
+      return this.getPathBounds();
+    }
+
+    // Self-loop: include control points
+    if (this.isSelfLoop) {
+      return this.getSelfLoopBounds(sourceNode);
+    }
+
+    // Curved edge: include control point
+    const effectiveOffset = this.lineType === 'curve' && this.curveAmount !== 0
+      ? this.curveAmount : this.curveOffset;
+    if (effectiveOffset !== 0) {
+      return this.getCurveBounds(sourceNode, targetNode, effectiveOffset);
+    }
+
+    // Straight edge: just start and end points
     const start = sourceNode.getConnectionPoint(targetNode.cx, targetNode.cy);
     const end = targetNode.getConnectionPoint(sourceNode.cx, sourceNode.cy);
+    return this.pointsToBounds([start, end]);
+  }
 
-    const minX = Math.min(start.x, end.x);
-    const minY = Math.min(start.y, end.y);
-    const maxX = Math.max(start.x, end.x);
-    const maxY = Math.max(start.y, end.y);
+  /**
+   * Calculate bounds for path type edges
+   */
+  private getPathBounds(): Bounds {
+    const points: Point[] = [];
+    for (const cmd of this.pathCommands) {
+      if (cmd.type === 'M' || cmd.type === 'L') {
+        points.push({ x: cmd.x, y: cmd.y });
+      } else if (cmd.type === 'C') {
+        points.push({ x: cmd.cp1x, y: cmd.cp1y });
+        points.push({ x: cmd.cp2x, y: cmd.cp2y });
+        points.push({ x: cmd.x, y: cmd.y });
+      } else if (cmd.type === 'Q') {
+        points.push({ x: cmd.cpx, y: cmd.cpy });
+        points.push({ x: cmd.x, y: cmd.y });
+      } else if (cmd.type === 'A') {
+        points.push({ x: cmd.x, y: cmd.y });
+      }
+    }
+    return this.pointsToBounds(points);
+  }
 
-    return {
-      x: minX,
-      y: minY,
-      width: maxX - minX,
-      height: maxY - minY
-    };
+  /**
+   * Calculate bounds for self-loop edges
+   */
+  private getSelfLoopBounds(node: Node): Bounds {
+    const angle = this.selfLoopAngle;
+    const loopSize = Math.max(node.rx, node.ry) * 1.5;
+    const startAngle = angle - Math.PI / 6;
+    const endAngle = angle + Math.PI / 6;
+
+    const points: Point[] = [
+      { x: node.cx + node.rx * Math.cos(startAngle), y: node.cy + node.ry * Math.sin(startAngle) },
+      { x: node.cx + node.rx * Math.cos(endAngle), y: node.cy + node.ry * Math.sin(endAngle) },
+      { x: node.cx + (node.rx + loopSize) * Math.cos(startAngle), y: node.cy + (node.ry + loopSize) * Math.sin(startAngle) },
+      { x: node.cx + (node.rx + loopSize) * Math.cos(endAngle), y: node.cy + (node.ry + loopSize) * Math.sin(endAngle) }
+    ];
+    return this.pointsToBounds(points);
+  }
+
+  /**
+   * Calculate bounds for curved edges
+   */
+  private getCurveBounds(sourceNode: Node, targetNode: Node, offset: number): Bounds {
+    const start = sourceNode.getConnectionPoint(targetNode.cx, targetNode.cy);
+    const end = targetNode.getConnectionPoint(sourceNode.cx, sourceNode.cy);
+    const midX = (start.x + end.x) / 2;
+    const midY = (start.y + end.y) / 2;
+    const dx = end.x - start.x;
+    const dy = end.y - start.y;
+    const len = Math.sqrt(dx * dx + dy * dy);
+    if (len === 0) return this.pointsToBounds([start, end]);
+
+    const perpX = -dy / len;
+    const perpY = dx / len;
+    const ctrl = { x: midX + perpX * offset, y: midY + perpY * offset };
+    return this.pointsToBounds([start, end, ctrl]);
+  }
+
+  /**
+   * Convert an array of points to a bounding box
+   */
+  private pointsToBounds(points: Point[]): Bounds {
+    if (points.length === 0) return { x: 0, y: 0, width: 0, height: 0 };
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const p of points) {
+      minX = Math.min(minX, p.x);
+      minY = Math.min(minY, p.y);
+      maxX = Math.max(maxX, p.x);
+      maxY = Math.max(maxY, p.y);
+    }
+    return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
   }
 
   getRotationCenter(): Point {
@@ -1288,7 +1394,18 @@ export class Edge implements Shape {
       return { x: 0, y: 0 };
     }
     const prevCmd = this.pathCommands[cmdIndex - 1];
-    if (prevCmd && prevCmd.type !== 'Z') {
+    if (prevCmd) {
+      if (prevCmd.type === 'Z') {
+        // After Z, find the most recent M (subpath start)
+        for (let i = cmdIndex - 2; i >= 0; i--) {
+          const cmd = this.pathCommands[i];
+          if (cmd.type === 'M') {
+            return { x: cmd.x, y: cmd.y };
+          }
+        }
+        return { x: 0, y: 0 };
+      }
+      // For all other commands (M, L, C, Q, A), return their endpoint
       return { x: prevCmd.x, y: prevCmd.y };
     }
     return { x: 0, y: 0 };
