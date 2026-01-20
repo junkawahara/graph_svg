@@ -205,7 +205,7 @@ export interface EdgeData extends BaseShapeData {
   sourceNodeId: string;
   targetNodeId: string;
   direction: EdgeDirection;
-  curveOffset: number;
+  curveOffset: number;           // Auto-calculated offset for parallel edges between same nodes
   isSelfLoop: boolean;
   selfLoopAngle: number;
   label?: string;
