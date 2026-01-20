@@ -222,28 +222,35 @@ export class AddPathPointCommand implements Command {
 
   private splitClosingSegment(editable: PathPointEditable, start: Point): void {
     // For Z command, insert a new L or C command before Z
-    if (this.useBezier) {
-      // Get start point for control point calculation
-      const endPoint = editable.getCommand(0); // M command
-      if (endPoint && endPoint.type === 'M') {
-        const controlPoints = generateSmoothControlPoints(
-          start,
-          this.insertPoint,
-          { x: endPoint.x, y: endPoint.y }
-        );
-        const newC: PathCommand = {
-          type: 'C',
-          cp1x: controlPoints.first.cp1.x,
-          cp1y: controlPoints.first.cp1.y,
-          cp2x: controlPoints.first.cp2.x,
-          cp2y: controlPoints.first.cp2.y,
-          x: round3(this.insertPoint.x),
-          y: round3(this.insertPoint.y)
-        };
-        // Insert before Z
-        editable.insertCommand(this.commandIndex, newC);
-        this.insertedCommandCount = 1;
+    // Find the most recent M command (subpath start) - not always getCommand(0)
+    // because a path can have multiple subpaths
+    let subpathStart: Point = { x: 0, y: 0 };
+    for (let i = this.commandIndex - 1; i >= 0; i--) {
+      const cmd = editable.getCommand(i);
+      if (cmd && cmd.type === 'M') {
+        subpathStart = { x: cmd.x, y: cmd.y };
+        break;
       }
+    }
+
+    if (this.useBezier) {
+      const controlPoints = generateSmoothControlPoints(
+        start,
+        this.insertPoint,
+        subpathStart
+      );
+      const newC: PathCommand = {
+        type: 'C',
+        cp1x: controlPoints.first.cp1.x,
+        cp1y: controlPoints.first.cp1.y,
+        cp2x: controlPoints.first.cp2.x,
+        cp2y: controlPoints.first.cp2.y,
+        x: round3(this.insertPoint.x),
+        y: round3(this.insertPoint.y)
+      };
+      // Insert before Z
+      editable.insertCommand(this.commandIndex, newC);
+      this.insertedCommandCount = 1;
     } else {
       const newL: PathCommand = {
         type: 'L',

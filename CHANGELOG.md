@@ -5,6 +5,12 @@
 ## [Unreleased]
 
 ### 修正
+- Z-order（描画順）がUndo時に復元されない問題を修正
+  - DeleteShapeCommand: 削除した図形をUndoで復元する際、元の描画順を維持
+  - DeleteNodeCommand: ノードと接続エッジの削除をUndoする際、元の描画順を維持
+  - EditSvgCommand: SVG編集時に図形の描画順が最前面に移動する問題を修正
+  - UngroupShapesCommand: グループ解除時に子要素が最前面に移動する問題を修正
+- AddPathPointCommand: 複数サブパスを持つパスでZセグメントを分割する際、最初のMコマンドではなく直近のMコマンド（サブパス開始点）を参照するように修正
 - Edge復元時の情報欠落を修正（ShapeFactory.ts）
   - コピー/ペースト時に `label`, `lineType`, `curveAmount`, `pathCommands`, `sourceConnectionAngle`, `targetConnectionAngle` が失われる問題を修正
 - Line.ts の `applySkew()` で計算順序の誤りを修正

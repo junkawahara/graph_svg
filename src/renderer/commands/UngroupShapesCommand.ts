@@ -39,6 +39,24 @@ export class UngroupShapesCommand implements Command {
       this.container.addShape(child);
     }
 
+    // Restore z-order: place children where the group was
+    if (this.container.reorderShapes && this.groupIndex >= 0) {
+      const allShapes = [...this.container.getShapes()];
+
+      // Remove children from end (they were just added)
+      this.children.forEach(child => {
+        const idx = allShapes.indexOf(child);
+        if (idx !== -1) {
+          allShapes.splice(idx, 1);
+        }
+      });
+
+      // Insert children at group's original position
+      const insertIdx = Math.min(this.groupIndex, allShapes.length);
+      allShapes.splice(insertIdx, 0, ...this.children);
+      this.container.reorderShapes(allShapes);
+    }
+
     // Notify selection change via callback
     this.onSelectionChange?.(this.children);
   }
