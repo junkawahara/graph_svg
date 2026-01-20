@@ -1,6 +1,7 @@
 import { Point, Bounds, ShapeStyle, ImageData, generateId } from '../../shared/types';
 import { Shape, applyRotation, normalizeRotation, rotatePoint, getRotatedBounds } from './Shape';
 import { round3 } from '../core/MathUtils';
+import { Matrix2D, decomposeMatrix } from '../core/TransformParser';
 
 /**
  * Image shape implementation
@@ -178,6 +179,30 @@ export class Image implements Shape {
     if (scaleY < 0) {
       this.y = round3(this.y - this.height);
     }
+    this.updateElement();
+  }
+
+  applyMatrix(matrix: Matrix2D): void {
+    const decomposed = decomposeMatrix(matrix);
+
+    // Apply translate and scale
+    this.applyTransform(
+      decomposed.translateX,
+      decomposed.translateY,
+      decomposed.scaleX,
+      decomposed.scaleY
+    );
+
+    // Apply rotation
+    if (Math.abs(decomposed.rotation) > 1e-9) {
+      this.rotation = normalizeRotation(this.rotation + decomposed.rotation);
+    }
+
+    // Warn about skew (image doesn't support skew)
+    if (Math.abs(decomposed.skewX) > 1e-9 || Math.abs(decomposed.skewY) > 1e-9) {
+      console.warn(`Image "${this.id}" does not support skew transform, skew will be ignored`);
+    }
+
     this.updateElement();
   }
 

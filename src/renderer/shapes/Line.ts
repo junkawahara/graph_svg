@@ -7,6 +7,7 @@ import {
   getMarkerShortenDistance
 } from '../core/ArrowGeometry';
 import { round3 } from '../core/MathUtils';
+import { Matrix2D, applyMatrixToPoint } from '../core/TransformParser';
 
 /**
  * Line shape implementation
@@ -445,6 +446,16 @@ export class Line implements Shape {
     this.y1 = round3(this.y1 + origX1 * tanY);
     this.x2 = round3(this.x2 + this.y2 * tanX);
     this.y2 = round3(this.y2 + origX2 * tanY);
+    this.updateElement();
+  }
+
+  applyMatrix(matrix: Matrix2D): void {
+    const p1 = applyMatrixToPoint({ x: this.x1, y: this.y1 }, matrix);
+    const p2 = applyMatrixToPoint({ x: this.x2, y: this.y2 }, matrix);
+    this.x1 = p1.x;
+    this.y1 = p1.y;
+    this.x2 = p2.x;
+    this.y2 = p2.y;
     this.updateElement();
   }
 }

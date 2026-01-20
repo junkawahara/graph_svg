@@ -12,7 +12,7 @@ import { Path } from '../shapes/Path';
 import { Image } from '../shapes/Image';
 import { Group } from '../shapes/Group';
 import { getGraphManager } from './GraphManager';
-import { parseTransform, combineTransforms, ParsedTransform, IDENTITY_TRANSFORM, isIdentityTransform, hasRotation, hasSkew } from './TransformParser';
+import { parseTransform, combineTransforms, ParsedTransform, IDENTITY_TRANSFORM, isIdentityTransform, hasRotation, hasSkew, transformToMatrix } from './TransformParser';
 import { serializePath } from './PathParser';
 import { styleClassManager } from './StyleClassManager';
 import { round3 } from './MathUtils';
@@ -1371,12 +1371,20 @@ export class FileManager {
   }
 
   /**
-   * Apply transform to a shape if it has applyTransform method
+   * Apply transform to a shape using matrix-based transformation.
+   * This correctly handles all transform orderings including rotation with center.
    */
   private static applyTransformToShape(shape: Shape, transform: ParsedTransform): void {
     if (isIdentityTransform(transform)) return;
 
-    // Apply translate and scale transforms
+    // Prefer applyMatrix if available (correct matrix-based transformation)
+    if (shape.applyMatrix) {
+      const matrix = transformToMatrix(transform);
+      shape.applyMatrix(matrix);
+      return;
+    }
+
+    // Fallback: Apply translate and scale transforms (legacy method)
     if (shape.applyTransform) {
       shape.applyTransform(
         transform.translateX,
@@ -1396,9 +1404,6 @@ export class FileManager {
     }
 
     // Apply rotation transform
-    // Note: For rotate(angle, cx, cy), this is a simplification that adds the rotation
-    // to the shape's own rotation property. The rotation center may differ from the
-    // shape's center, which could cause slight positioning differences.
     if (hasRotation(transform)) {
       const currentRotation = shape.rotation || 0;
       shape.setRotation(currentRotation + transform.rotation);

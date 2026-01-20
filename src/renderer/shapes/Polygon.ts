@@ -1,6 +1,7 @@
 import { Point, Bounds, ShapeStyle, PolygonData, generateId } from '../../shared/types';
 import { Shape, applyStyle, applyRotation, normalizeRotation, rotatePoint, getRotatedBounds } from './Shape';
 import { round3 } from '../core/MathUtils';
+import { Matrix2D, applyMatrixToPoint } from '../core/TransformParser';
 
 /**
  * Polygon shape implementation - closed shape with multiple vertices
@@ -246,6 +247,15 @@ export class Polygon implements Shape {
       const newY = point.y + point.x * tanY;
       point.x = round3(newX);
       point.y = round3(newY);
+    }
+    this.updateElement();
+  }
+
+  applyMatrix(matrix: Matrix2D): void {
+    for (const point of this.points) {
+      const transformed = applyMatrixToPoint(point, matrix);
+      point.x = transformed.x;
+      point.y = transformed.y;
     }
     this.updateElement();
   }

@@ -126,7 +126,7 @@ function safeNumber(value: number | undefined, fallback: number): number {
  * M = T * R * Skew * S
  * Where T is translation, R is rotation, Skew is shear, S is scale.
  */
-function decomposeMatrix(m: Matrix2D): {
+export function decomposeMatrix(m: Matrix2D): {
   translateX: number;
   translateY: number;
   scaleX: number;
@@ -408,7 +408,7 @@ export function combineTransforms(parent: ParsedTransform, child: ParsedTransfor
 /**
  * Apply a matrix to a point
  */
-function applyMatrixToPoint(point: Point, m: Matrix2D): Point {
+export function applyMatrixToPoint(point: Point, m: Matrix2D): Point {
   return {
     x: round3(m.a * point.x + m.c * point.y + m.e),
     y: round3(m.b * point.x + m.d * point.y + m.f)

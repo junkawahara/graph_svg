@@ -2,6 +2,7 @@ import { Point, Bounds, ShapeStyle, NodeData, generateId } from '../../shared/ty
 import { Shape, applyStyle, applyRotation, normalizeRotation, rotatePoint, getRotatedBounds } from './Shape';
 import { getGraphManager } from '../core/GraphManager';
 import { round3 } from '../core/MathUtils';
+import { Matrix2D, decomposeMatrix } from '../core/TransformParser';
 
 /**
  * Graph Node shape - a composite shape with ellipse and label
@@ -227,6 +228,30 @@ export class Node implements Shape {
     // Scale font size by average scale factor
     const avgScale = (Math.abs(scaleX) + Math.abs(scaleY)) / 2;
     this.fontSize = round3(this.fontSize * avgScale);
+    this.updateElement();
+  }
+
+  applyMatrix(matrix: Matrix2D): void {
+    const decomposed = decomposeMatrix(matrix);
+
+    // Apply translate and scale
+    this.applyTransform(
+      decomposed.translateX,
+      decomposed.translateY,
+      decomposed.scaleX,
+      decomposed.scaleY
+    );
+
+    // Apply rotation
+    if (Math.abs(decomposed.rotation) > 1e-9) {
+      this.rotation = normalizeRotation(this.rotation + decomposed.rotation);
+    }
+
+    // Warn about skew (node doesn't support skew)
+    if (Math.abs(decomposed.skewX) > 1e-9 || Math.abs(decomposed.skewY) > 1e-9) {
+      console.warn(`Node "${this.id}" does not support skew transform, skew will be ignored`);
+    }
+
     this.updateElement();
   }
 

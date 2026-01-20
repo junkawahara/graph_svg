@@ -1,6 +1,7 @@
 import { Point, Bounds, ShapeStyle, GroupData, ShapeData, generateId, DEFAULT_STYLE } from '../../shared/types';
 import { Shape, applyRotation, normalizeRotation, rotatePoint, getRotatedBounds } from './Shape';
 import { round3 } from '../core/MathUtils';
+import { Matrix2D } from '../core/TransformParser';
 
 /**
  * Group shape implementation - contains multiple shapes as children
@@ -254,6 +255,16 @@ export class Group implements Shape {
     for (const child of this.children) {
       if (child.applySkew) {
         child.applySkew(skewX, skewY);
+      }
+    }
+    this.updateElement();
+  }
+
+  applyMatrix(matrix: Matrix2D): void {
+    // Recursively apply matrix to all children
+    for (const child of this.children) {
+      if (child.applyMatrix) {
+        child.applyMatrix(matrix);
       }
     }
     this.updateElement();

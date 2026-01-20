@@ -8,6 +8,7 @@ import {
   getMarkerShortenDistance
 } from '../core/ArrowGeometry';
 import { round3 } from '../core/MathUtils';
+import { Matrix2D, applyMatrixToPoint } from '../core/TransformParser';
 
 /**
  * Path shape implementation - standard SVG path with multiple command types
@@ -773,6 +774,64 @@ export class Path implements Shape {
           if (skewX !== 0) {
             cmd.xAxisRotation += skewX;
           }
+          break;
+        }
+      }
+    }
+    this.updateElement();
+  }
+
+  applyMatrix(matrix: Matrix2D): void {
+    // Helper to apply matrix to a point
+    const transformPoint = (x: number, y: number): { x: number; y: number } => {
+      return applyMatrixToPoint({ x, y }, matrix);
+    };
+
+    for (const cmd of this.commands) {
+      switch (cmd.type) {
+        case 'M':
+        case 'L': {
+          const transformed = transformPoint(cmd.x, cmd.y);
+          cmd.x = transformed.x;
+          cmd.y = transformed.y;
+          break;
+        }
+        case 'C': {
+          const cp1 = transformPoint(cmd.cp1x, cmd.cp1y);
+          const cp2 = transformPoint(cmd.cp2x, cmd.cp2y);
+          const end = transformPoint(cmd.x, cmd.y);
+          cmd.cp1x = cp1.x;
+          cmd.cp1y = cp1.y;
+          cmd.cp2x = cp2.x;
+          cmd.cp2y = cp2.y;
+          cmd.x = end.x;
+          cmd.y = end.y;
+          break;
+        }
+        case 'Q': {
+          const cp = transformPoint(cmd.cpx, cmd.cpy);
+          const end = transformPoint(cmd.x, cmd.y);
+          cmd.cpx = cp.x;
+          cmd.cpy = cp.y;
+          cmd.x = end.x;
+          cmd.y = end.y;
+          break;
+        }
+        case 'A': {
+          // For arcs, we apply the matrix to the endpoint
+          // Note: This is an approximation - true matrix transform of an arc
+          // would require converting it to Bezier curves for non-uniform transforms
+          const end = transformPoint(cmd.x, cmd.y);
+          cmd.x = end.x;
+          cmd.y = end.y;
+          // Scale radii by the average scale factor (approximation)
+          const scaleX = Math.sqrt(matrix.a * matrix.a + matrix.b * matrix.b);
+          const scaleY = Math.sqrt(matrix.c * matrix.c + matrix.d * matrix.d);
+          cmd.rx = round3(cmd.rx * scaleX);
+          cmd.ry = round3(cmd.ry * scaleY);
+          // Adjust rotation by the matrix rotation
+          const rotation = Math.atan2(matrix.b, matrix.a) * (180 / Math.PI);
+          cmd.xAxisRotation = round3(cmd.xAxisRotation + rotation);
           break;
         }
       }

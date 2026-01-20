@@ -1,6 +1,7 @@
 import { Point, Bounds, ShapeStyle, PolylineData, generateId } from '../../shared/types';
 import { Shape, applyStyle, applyRotation, normalizeRotation, rotatePoint, getRotatedBounds } from './Shape';
 import { round3 } from '../core/MathUtils';
+import { Matrix2D, applyMatrixToPoint } from '../core/TransformParser';
 
 /**
  * Polyline shape implementation - open shape with multiple vertices
@@ -224,6 +225,15 @@ export class Polyline implements Shape {
       const newY = point.y + point.x * tanY;
       point.x = round3(newX);
       point.y = round3(newY);
+    }
+    this.updateElement();
+  }
+
+  applyMatrix(matrix: Matrix2D): void {
+    for (const point of this.points) {
+      const transformed = applyMatrixToPoint(point, matrix);
+      point.x = transformed.x;
+      point.y = transformed.y;
     }
     this.updateElement();
   }

@@ -1,4 +1,5 @@
 import { Point, Bounds, ShapeStyle, ShapeData } from '../../shared/types';
+import { Matrix2D } from '../core/TransformParser';
 
 /**
  * Base interface for all shapes
@@ -73,6 +74,14 @@ export interface Shape {
    * @param skewY Skew angle along Y axis in degrees
    */
   applySkew?(skewX: number, skewY: number): void;
+
+  /**
+   * Apply a transformation matrix to shape coordinates.
+   * This applies the full matrix (including rotation, skew, scale, translate)
+   * directly to the shape's coordinates.
+   * @param matrix The 2D transformation matrix to apply
+   */
+  applyMatrix?(matrix: Matrix2D): void;
 
   /**
    * Get the rotation center point of the shape
