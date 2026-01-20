@@ -1,6 +1,7 @@
 import { Point, ToolType, CanvasSize } from '../../shared/types';
 import { eventBus } from '../core/EventBus';
 import { editorState } from '../core/EditorState';
+import { getPlatformAdapter } from '../platform';
 import { selectionManager } from '../core/SelectionManager';
 import { historyManager } from '../core/HistoryManager';
 import { Command } from '../commands/Command';
@@ -1127,7 +1128,7 @@ export class Canvas {
     const canvasSize = editorState.canvasSize;
 
     // Read settings for padding
-    const settings = await window.electronAPI.readSettings();
+    const settings = await getPlatformAdapter().readSettings();
     const padding = settings.autoLayoutPadding ?? 50;
 
     // Create and execute the layout command

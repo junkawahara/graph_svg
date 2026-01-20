@@ -1,5 +1,6 @@
 import { StyleClass, ShapeStyle, DEFAULT_STYLE } from '../../shared/types';
 import { DEFAULT_STYLE_CLASSES } from '../../shared/settings';
+import { getPlatformAdapter } from '../platform';
 
 /**
  * Manages style classes for CSS-based styling
@@ -13,7 +14,7 @@ class StyleClassManager {
    */
   async loadFromSettings(): Promise<void> {
     try {
-      const settings = await window.electronAPI.readSettings();
+      const settings = await getPlatformAdapter().readSettings();
       this.classes.clear();
 
       // Add built-in classes first (ensure they're always available)
@@ -49,7 +50,7 @@ class StyleClassManager {
   async saveToSettings(): Promise<void> {
     try {
       const allClasses = this.getAllClasses();
-      await window.electronAPI.writeSettings({ styleClasses: allClasses });
+      await getPlatformAdapter().writeSettings({ styleClasses: allClasses });
     } catch (error) {
       console.error('Failed to save style classes to settings:', error);
     }

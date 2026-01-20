@@ -3,6 +3,7 @@ import './styles/toolbar.css';
 import './styles/sidebar.css';
 import './styles/canvas.css';
 import './styles/dialog.css';
+import './styles/menubar.css';
 
 import { Canvas } from './components/Canvas';
 import { Toolbar } from './components/Toolbar';
@@ -10,6 +11,7 @@ import { Sidebar } from './components/Sidebar';
 import { StatusBar } from './components/StatusBar';
 import { SettingsDialog } from './components/SettingsDialog';
 import { ConfirmDialog } from './components/ConfirmDialog';
+import { WebMenuBar } from './components/WebMenuBar';
 import { eventBus } from './core/EventBus';
 import { historyManager } from './core/HistoryManager';
 import { FileManager } from './core/FileManager';
@@ -27,6 +29,7 @@ import { Group } from './shapes/Group';
 import { ToolType } from '../shared/types';
 import { ZOrderOperation } from './commands/ZOrderCommand';
 import { calculateFitToContent, calculateContentBounds } from './core/BoundsCalculator';
+import { getPlatformAdapter } from './platform';
 
 document.addEventListener('DOMContentLoaded', () => {
   console.log('DrawSVG initialized');
@@ -70,17 +73,18 @@ document.addEventListener('DOMContentLoaded', () => {
       const svgContent = FileManager.serialize(shapes, canvasSize.width, canvasSize.height);
 
       const currentPath = editorState.currentFilePath;
+      const adapter = getPlatformAdapter();
       if (currentPath) {
-        const success = await window.electronAPI.saveFileToPath(currentPath, svgContent);
+        const success = await adapter.saveFileToPath(currentPath, svgContent);
         if (!success) {
           return false;
         }
       } else {
-        const filePath = await window.electronAPI.saveFileAs(svgContent);
-        if (!filePath) {
+        const saveResult = await adapter.saveFileAs(svgContent);
+        if (!saveResult) {
           return false;
         }
-        editorState.setCurrentFilePath(filePath);
+        editorState.setCurrentFilePath(saveResult.path);
       }
       editorState.markClean();
     }
@@ -107,21 +111,22 @@ document.addEventListener('DOMContentLoaded', () => {
     const svgContent = FileManager.serialize(shapes, canvasSize.width, canvasSize.height);
 
     const currentPath = editorState.currentFilePath;
+    const adapter = getPlatformAdapter();
 
     if (currentPath) {
       // Save to existing path
-      const success = await window.electronAPI.saveFileToPath(currentPath, svgContent);
+      const success = await adapter.saveFileToPath(currentPath, svgContent);
       if (success) {
         editorState.markClean();
         console.log('File saved:', currentPath);
       }
     } else {
       // No existing path, show save dialog
-      const filePath = await window.electronAPI.saveFileAs(svgContent);
-      if (filePath) {
-        editorState.setCurrentFilePath(filePath);
+      const saveResult = await adapter.saveFileAs(svgContent);
+      if (saveResult) {
+        editorState.setCurrentFilePath(saveResult.path);
         editorState.markClean();
-        console.log('File saved:', filePath);
+        console.log('File saved:', saveResult.path);
       }
     }
   });
@@ -133,11 +138,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const svgContent = FileManager.serialize(shapes, canvasSize.width, canvasSize.height);
 
     const currentPath = editorState.currentFilePath;
-    const filePath = await window.electronAPI.saveFileAs(svgContent, currentPath || undefined);
-    if (filePath) {
-      editorState.setCurrentFilePath(filePath);
+    const adapter = getPlatformAdapter();
+    const saveResult = await adapter.saveFileAs(svgContent, currentPath || undefined);
+    if (saveResult) {
+      editorState.setCurrentFilePath(saveResult.path);
       editorState.markClean();
-      console.log('File saved as:', filePath);
+      console.log('File saved as:', saveResult.path);
     }
   });
 
@@ -146,7 +152,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const canProceed = await checkUnsavedChanges();
     if (!canProceed) return;
 
-    const result = await window.electronAPI.openFile();
+    const adapter = getPlatformAdapter();
+    const result = await adapter.openFile();
     if (result) {
       const { shapes, canvasSize } = FileManager.parse(result.content);
       // Set canvas size before loading shapes
@@ -162,9 +169,10 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // Import graph file handler
-  window.electronAPI.onMenuImportGraph(async () => {
+  async function handleImportGraph(): Promise<void> {
     // Open graph file
-    const result = await window.electronAPI.openGraphFile();
+    const adapter = getPlatformAdapter();
+    const result = await adapter.openGraphFile();
     if (!result) return;
 
     // Parse the file
@@ -212,7 +220,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     console.log(`Imported graph: ${parsed.nodeLabels.length} nodes, ${parsed.edges.length} edges`);
-  });
+  }
+
+  // Register import graph menu event
+  getPlatformAdapter().onMenuEvent('importGraph', handleImportGraph);
 
   // Mark as dirty when history changes (undo/redo stack modified)
   eventBus.on('history:changed', () => {
@@ -267,7 +278,7 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    const settings = await window.electronAPI.readSettings();
+    const settings = await getPlatformAdapter().readSettings();
     const margin = settings.fitToContentMargin ?? 20; // Default to 20 if not set
     const fitResult = calculateFitToContent(shapes, margin);
 
@@ -304,7 +315,8 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    const settings = await window.electronAPI.readSettings();
+    const adapter = getPlatformAdapter();
+    const settings = await adapter.readSettings();
     const margin = settings.fitToContentMargin ?? 20; // Default to 20 if not set
     const bounds = calculateContentBounds(shapes);
 
@@ -335,9 +347,9 @@ document.addEventListener('DOMContentLoaded', () => {
       ? currentPath.replace(/\.svg$/i, '-fitted.svg')
       : 'drawing-fitted.svg';
 
-    const filePath = await window.electronAPI.saveFileAs(svgContent, defaultPath);
-    if (filePath) {
-      console.log('Exported fit to content:', filePath, `(${fittedWidth}x${fittedHeight})`);
+    const saveResult = await adapter.saveFileAs(svgContent, defaultPath);
+    if (saveResult) {
+      console.log('Exported fit to content:', saveResult.path, `(${fittedWidth}x${fittedHeight})`);
     }
   });
 
@@ -351,6 +363,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Setup menu event listeners
   setupMenuListeners(canvas);
+
+  // Setup Web-specific features
+  setupWebFeatures(canvas, checkUnsavedChanges);
 });
 
 /**
@@ -358,7 +373,7 @@ document.addEventListener('DOMContentLoaded', () => {
  */
 async function initializeSettings(): Promise<void> {
   try {
-    const settings = await window.electronAPI.readSettings();
+    const settings = await getPlatformAdapter().readSettings();
     if (settings.snapOnStartup) {
       editorState.setSnapEnabled(true);
     }
@@ -375,14 +390,16 @@ async function initializeSettings(): Promise<void> {
  * Setup menu event listeners
  */
 function setupMenuListeners(canvas: Canvas): void {
+  const adapter = getPlatformAdapter();
+
   // Settings dialog
-  window.electronAPI.onOpenSettings(async () => {
-    const currentSettings = await window.electronAPI.readSettings();
+  adapter.onMenuEvent('openSettings', async () => {
+    const currentSettings = await adapter.readSettings();
     const settingsDialog = new SettingsDialog();
     const result = await settingsDialog.show(currentSettings);
 
     if (result) {
-      await window.electronAPI.writeSettings(result);
+      await adapter.writeSettings(result);
       // Apply grid size immediately
       editorState.setGridSize(result.gridSize);
       console.log('Settings saved:', result);
@@ -390,50 +407,50 @@ function setupMenuListeners(canvas: Canvas): void {
   });
 
   // Menu: New
-  window.electronAPI.onMenuNew(() => {
+  adapter.onMenuEvent('new', () => {
     eventBus.emit('file:new', null);
   });
 
   // Menu: Open
-  window.electronAPI.onMenuOpen(() => {
+  adapter.onMenuEvent('open', () => {
     eventBus.emit('file:open', null);
   });
 
   // Menu: Save
-  window.electronAPI.onMenuSave(() => {
+  adapter.onMenuEvent('save', () => {
     eventBus.emit('file:save', null);
   });
 
   // Menu: Save As
-  window.electronAPI.onMenuSaveAs(() => {
+  adapter.onMenuEvent('saveAs', () => {
     eventBus.emit('file:saveAs', null);
   });
 
   // Menu: Undo
-  window.electronAPI.onMenuUndo(() => {
+  adapter.onMenuEvent('undo', () => {
     historyManager.undo();
   });
 
   // Menu: Redo
-  window.electronAPI.onMenuRedo(() => {
+  adapter.onMenuEvent('redo', () => {
     historyManager.redo();
   });
 
   // Menu: Export Fit to Content
-  window.electronAPI.onMenuExportFitToContent(() => {
+  adapter.onMenuEvent('exportFitToContent', () => {
     eventBus.emit('file:exportFitToContent', null);
   });
 
   // Menu: Fit Canvas to Content
-  window.electronAPI.onMenuFitCanvasToContent(() => {
+  adapter.onMenuEvent('fitCanvasToContent', () => {
     eventBus.emit('canvas:fitToContent', null);
   });
 
   // App: Before Close
-  window.electronAPI.onBeforeClose(async () => {
+  adapter.onBeforeClose(async () => {
     if (!editorState.isDirty) {
       // No unsaved changes, allow close
-      await window.electronAPI.allowClose();
+      adapter.allowClose();
       return;
     }
 
@@ -459,24 +476,24 @@ function setupMenuListeners(canvas: Canvas): void {
 
       const currentPath = editorState.currentFilePath;
       if (currentPath) {
-        const success = await window.electronAPI.saveFileToPath(currentPath, svgContent);
+        const success = await adapter.saveFileToPath(currentPath, svgContent);
         if (!success) {
           return;
         }
       } else {
-        const filePath = await window.electronAPI.saveFileAs(svgContent);
-        if (!filePath) {
+        const saveResult = await adapter.saveFileAs(svgContent);
+        if (!saveResult) {
           return;
         }
       }
     }
 
     // Allow close (either saved or discarded)
-    await window.electronAPI.allowClose();
+    adapter.allowClose();
   });
 
   // Menu: Delete
-  window.electronAPI.onMenuDelete(() => {
+  adapter.onMenuEvent('delete', () => {
     const selected = selectionManager.getSelection();
     if (selected.length > 0) {
       eventBus.emit('shapes:delete', selected);
@@ -484,7 +501,7 @@ function setupMenuListeners(canvas: Canvas): void {
   });
 
   // Menu: Group
-  window.electronAPI.onMenuGroup(() => {
+  adapter.onMenuEvent('group', () => {
     const selected = selectionManager.getSelection();
     if (selected.length >= 2) {
       eventBus.emit('shapes:group', selected);
@@ -492,7 +509,7 @@ function setupMenuListeners(canvas: Canvas): void {
   });
 
   // Menu: Ungroup
-  window.electronAPI.onMenuUngroup(() => {
+  adapter.onMenuEvent('ungroup', () => {
     const selected = selectionManager.getSelection();
     selected.forEach(shape => {
       if (shape instanceof Group) {
@@ -502,22 +519,22 @@ function setupMenuListeners(canvas: Canvas): void {
   });
 
   // Menu: Zoom Reset
-  window.electronAPI.onMenuZoomReset(() => {
+  adapter.onMenuEvent('zoomReset', () => {
     eventBus.emit('canvas:zoomReset', null);
   });
 
   // Menu: Toggle Snap
-  window.electronAPI.onMenuToggleSnap(() => {
+  adapter.onMenuEvent('toggleSnap', () => {
     editorState.setSnapEnabled(!editorState.snapEnabled);
   });
 
   // Menu: Tool selection
-  window.electronAPI.onMenuTool((tool: string) => {
+  adapter.onMenuEventWithArg('tool', (tool: string) => {
     eventBus.emit('tool:changed', tool as ToolType);
   });
 
   // Menu: Z-order
-  window.electronAPI.onMenuZorder((operation: string) => {
+  adapter.onMenuEventWithArg('zorder', (operation: string) => {
     const selected = selectionManager.getSelection();
     if (selected.length > 0) {
       eventBus.emit('shapes:zorder', { shapes: selected, operation: operation as ZOrderOperation });
@@ -525,12 +542,12 @@ function setupMenuListeners(canvas: Canvas): void {
   });
 
   // Menu: Auto Layout
-  window.electronAPI.onMenuAutoLayout(() => {
+  adapter.onMenuEvent('autoLayout', () => {
     eventBus.emit('graph:autoLayout', null);
   });
 
   // Menu: Toggle Directed Edge
-  window.electronAPI.onMenuToggleDirectedEdge(() => {
+  adapter.onMenuEvent('toggleDirectedEdge', () => {
     const currentDirection = editorState.edgeDirection;
     const newDirection = currentDirection === 'forward' ? 'none' : 'forward';
     editorState.setEdgeDirection(newDirection);
@@ -538,7 +555,7 @@ function setupMenuListeners(canvas: Canvas): void {
   });
 
   // Menu: Align
-  window.electronAPI.onMenuAlign((alignment: string) => {
+  adapter.onMenuEventWithArg('align', (alignment: string) => {
     const selected = selectionManager.getSelection();
     if (selected.length >= 2) {
       eventBus.emit('shapes:align', { shapes: selected, alignment });
@@ -546,10 +563,96 @@ function setupMenuListeners(canvas: Canvas): void {
   });
 
   // Menu: Distribute
-  window.electronAPI.onMenuDistribute((distribution: string) => {
+  adapter.onMenuEventWithArg('distribute', (distribution: string) => {
     const selected = selectionManager.getSelection();
     if (selected.length >= 3) {
       eventBus.emit('shapes:distribute', { shapes: selected, distribution });
     }
   });
+}
+
+/**
+ * Setup Web-specific features (menu bar, drag & drop)
+ */
+function setupWebFeatures(canvas: Canvas, checkUnsavedChanges: () => Promise<boolean>): void {
+  const adapter = getPlatformAdapter();
+
+  // Only setup for Web environment
+  if (!adapter.isWeb) {
+    return;
+  }
+
+  // Add Web menu bar
+  const menuBar = new WebMenuBar();
+  menuBar.mount(document.body);
+
+  // Setup drag & drop
+  adapter.setupDragDrop({
+    // Handle SVG file drop
+    onSvgDrop: async (content: string, filename: string) => {
+      const canProceed = await checkUnsavedChanges();
+      if (!canProceed) return;
+
+      try {
+        const { shapes, canvasSize } = FileManager.parse(content);
+        editorState.setCanvasSize(canvasSize.width, canvasSize.height);
+        canvas.loadShapes(shapes);
+        historyManager.clear();
+        editorState.setCurrentFilePath(filename);
+        editorState.markClean();
+        console.log('File loaded via drag & drop:', filename, `(${shapes.length} shapes)`);
+      } catch (error) {
+        console.error('Failed to load SVG file:', error);
+        alert('Failed to load SVG file. The file may be invalid.');
+      }
+    },
+
+    // Handle graph file drop
+    onGraphDrop: async (content: string, filename: string) => {
+      try {
+        const parsed = GraphFileParser.parse(content, filename);
+        const formatName = parsed.format === 'dimacs' ? 'DIMACS' : 'Edge List';
+
+        const importDialog = new GraphImportDialog();
+        const options = await importDialog.show(formatName, parsed.nodeLabels.length, parsed.edges.length);
+        if (!options) return;
+
+        if (options.clearCanvas) {
+          const canProceed = await checkUnsavedChanges();
+          if (!canProceed) return;
+        }
+
+        const currentStyle = editorState.currentStyle;
+        const canvasSz = editorState.canvasSize;
+        const nodeSize = editorState.defaultNodeSize;
+
+        const command = new ImportGraphCommand(
+          canvas,
+          {
+            nodeLabels: parsed.nodeLabels,
+            edges: parsed.edges,
+            direction: options.directed ? 'forward' : 'none',
+            canvasWidth: canvasSz.width,
+            canvasHeight: canvasSz.height
+          },
+          currentStyle,
+          nodeSize,
+          options.clearCanvas
+        );
+        historyManager.execute(command);
+        selectionManager.clearSelection();
+
+        if (!options.clearCanvas) {
+          editorState.markDirty();
+        }
+
+        console.log(`Imported graph via drag & drop: ${parsed.nodeLabels.length} nodes, ${parsed.edges.length} edges`);
+      } catch (error) {
+        console.error('Failed to import graph file:', error);
+        alert('Failed to import graph file. The file format may be invalid.');
+      }
+    }
+  });
+
+  console.log('Web features initialized');
 }

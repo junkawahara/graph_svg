@@ -1,5 +1,7 @@
 node_modules/
 dist/
+dist-web/
 localdata/
 *.log
 .DS_Store
+AGENTS.md

@@ -5,8 +5,11 @@
   "main": "dist/main/main.js",
   "scripts": {
     "build": "webpack --config webpack.config.js",
+    "build:web": "webpack --config webpack.web.config.js",
     "start": "npm run build && electron . --no-sandbox",
+    "start:web": "npm run build:web && npx serve dist-web",
     "dev": "webpack --config webpack.config.js --watch",
+    "dev:web": "webpack --config webpack.web.config.js --watch",
     "generate-icons": "node scripts/generate-icons.mjs",
     "test": "vitest run",
     "test:watch": "vitest"

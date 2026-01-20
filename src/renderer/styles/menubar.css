@@ -1,0 +1,111 @@
+/* Web Menu Bar Styles */
+
+.web-menu-bar {
+  display: flex;
+  background: #f0f0f0;
+  border-bottom: 1px solid #ccc;
+  padding: 0;
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+  font-size: 13px;
+  user-select: none;
+  z-index: 1000;
+}
+
+.web-menu-button {
+  position: relative;
+  padding: 6px 12px;
+  cursor: pointer;
+  color: #333;
+}
+
+.web-menu-button:hover {
+  background: #e0e0e0;
+}
+
+.web-menu-dropdown {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  min-width: 200px;
+  background: white;
+  border: 1px solid #ccc;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  z-index: 1001;
+}
+
+.web-menu-dropdown.open {
+  display: block;
+}
+
+.web-menu-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 16px;
+  cursor: pointer;
+  color: #333;
+}
+
+.web-menu-item:hover {
+  background: #0078d4;
+  color: white;
+}
+
+.web-menu-item-label {
+  flex: 1;
+}
+
+.web-menu-item-shortcut {
+  margin-left: 24px;
+  color: #666;
+  font-size: 12px;
+}
+
+.web-menu-item:hover .web-menu-item-shortcut {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.web-menu-separator {
+  height: 1px;
+  background: #ddd;
+  margin: 4px 8px;
+}
+
+/* Drop overlay for drag & drop */
+.drop-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 100, 200, 0.2);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  pointer-events: none;
+}
+
+.drop-overlay.visible {
+  display: flex;
+}
+
+.drop-overlay-content {
+  background: white;
+  padding: 40px 60px;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  text-align: center;
+}
+
+.drop-overlay-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+}
+
+.drop-overlay-text {
+  font-size: 18px;
+  color: #333;
+}

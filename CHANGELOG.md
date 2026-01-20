@@ -4,6 +4,25 @@
 
 ## [Unreleased]
 
+### 追加
+- Electron と Web ブラウザの両方で動作するハイブリッドアプリ化
+  - Platform Adapter パターンによるプラットフォーム抽象化
+    - `PlatformAdapter` インターフェース（ファイル操作、設定、メニューイベント）
+    - `ElectronAdapter`: Electron 環境用実装
+    - `WebAdapter`: Web ブラウザ環境用実装
+  - Web 専用機能
+    - Web メニューバー（File, Edit, View, Tools, Arrange）
+    - ドラッグ&ドロップによるファイル読み込み（SVG, グラフファイル）
+    - File System Access API 対応（Chrome/Edge で完全対応）
+    - フォールバック: `<input type="file">` + ダウンロードリンク（Firefox, Safari）
+    - localStorage による設定保存
+    - beforeunload による未保存警告
+  - Web ビルド設定
+    - `npm run build:web` - Web 用ビルド
+    - `npm run start:web` - Web 版起動（serve）
+    - `npm run dev:web` - Web 用ウォッチモード
+    - 出力先: `dist-web/`
+
 ### 修正
 - PathParser.ts: `vectorAngle()` が退化した弧（長さゼロのベクトル）で NaN を返す問題を修正
   - `len < 1e-10` の場合は 0 を返すように修正

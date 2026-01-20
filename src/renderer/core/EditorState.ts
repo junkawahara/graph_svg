@@ -1,5 +1,6 @@
 import { ToolType, ShapeStyle, EdgeDirection, CanvasSize, DEFAULT_STYLE, DEFAULT_CANVAS_SIZE } from '../../shared/types';
 import { eventBus } from './EventBus';
+import { getPlatformAdapter } from '../platform';
 
 /**
  * Central state management for the editor
@@ -251,7 +252,7 @@ export class EditorState {
       title = `Untitled - ${appName}`;
     }
 
-    window.electronAPI.setWindowTitle(title);
+    getPlatformAdapter().setWindowTitle(title);
   }
 
   /**
