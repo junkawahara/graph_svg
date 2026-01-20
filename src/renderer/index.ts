@@ -9,7 +9,7 @@ import { Toolbar } from './components/Toolbar';
 import { Sidebar } from './components/Sidebar';
 import { StatusBar } from './components/StatusBar';
 import { SettingsDialog } from './components/SettingsDialog';
-import { ConfirmDialog, ConfirmResult } from './components/ConfirmDialog';
+import { ConfirmDialog } from './components/ConfirmDialog';
 import { eventBus } from './core/EventBus';
 import { historyManager } from './core/HistoryManager';
 import { FileManager } from './core/FileManager';
@@ -217,8 +217,11 @@ document.addEventListener('DOMContentLoaded', () => {
   // Mark as dirty when history changes (undo/redo stack modified)
   eventBus.on('history:changed', () => {
     // If there's any history (can undo), mark as dirty
+    // If all changes are undone, mark as clean
     if (historyManager.canUndo()) {
       editorState.markDirty();
+    } else {
+      editorState.markClean();
     }
   });
 
