@@ -1,5 +1,4 @@
 import { Point } from '../../shared/types';
-import { Shape } from '../shapes/Shape';
 import { Node } from '../shapes/Node';
 
 /**
@@ -21,18 +20,8 @@ export class GraphManager {
   // Maps nodeId -> Node shape reference
   private nodeShapes: Map<string, Node> = new Map();
 
-  // Callback to get all shapes from canvas
-  private getShapes: (() => Shape[]) | null = null;
-
   // Callback to update edge shapes
   private updateEdgeCallback: ((edgeId: string) => void) | null = null;
-
-  /**
-   * Initialize with shape getter callback
-   */
-  initialize(getShapes: () => Shape[]): void {
-    this.getShapes = getShapes;
-  }
 
   /**
    * Set callback for updating edge shapes
@@ -352,13 +341,4 @@ export function getGraphManager(): GraphManager {
     graphManagerInstance = new GraphManager();
   }
   return graphManagerInstance;
-}
-
-/**
- * Initialize the GraphManager with a shape getter
- */
-export function initGraphManager(getShapes: () => Shape[]): GraphManager {
-  const manager = getGraphManager();
-  manager.initialize(getShapes);
-  return manager;
 }

@@ -480,14 +480,11 @@ export function generateSmoothControlPoints(
   mid: Point,
   end: Point
 ): { first: { cp1: Point; cp2: Point }; second: { cp1: Point; cp2: Point } } {
-  // Calculate tangent direction at midpoint (average of directions from both ends)
+  // Calculate direction vectors from start to mid and mid to end
   const dx1 = mid.x - start.x;
   const dy1 = mid.y - start.y;
   const dx2 = end.x - mid.x;
   const dy2 = end.y - mid.y;
-
-  const len1 = Math.sqrt(dx1 * dx1 + dy1 * dy1);
-  const len2 = Math.sqrt(dx2 * dx2 + dy2 * dy2);
 
   // Control point distance as fraction of segment length
   const factor = 0.33;
