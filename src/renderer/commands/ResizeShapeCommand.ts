@@ -10,6 +10,7 @@ import { Polyline } from '../shapes/Polyline';
 import { Path } from '../shapes/Path';
 import { Edge } from '../shapes/Edge';
 import { Point, PathCommand } from '../../shared/types';
+import { getGraphManager } from '../core/GraphManager';
 
 interface LineState {
   x1: number;
@@ -167,6 +168,11 @@ export class ResizeShapeCommand implements Command {
       this.shape.targetConnectionAngle = state.targetConnectionAngle;
     }
     this.shape.updateElement();
+
+    // Update connected edges if resizing a graph node
+    if (this.shape instanceof Node) {
+      getGraphManager().updateEdgesForNode(this.shape.id);
+    }
   }
 
   getDescription(): string {

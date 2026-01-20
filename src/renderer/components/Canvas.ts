@@ -3,6 +3,7 @@ import { eventBus } from '../core/EventBus';
 import { editorState } from '../core/EditorState';
 import { selectionManager } from '../core/SelectionManager';
 import { historyManager } from '../core/HistoryManager';
+import { Command } from '../commands/Command';
 import { CanvasResizeCommand } from '../commands/CanvasResizeCommand';
 import { Tool } from '../tools/Tool';
 import { SelectTool } from '../tools/SelectTool';
@@ -58,6 +59,7 @@ import { UngroupShapesCommand } from '../commands/UngroupShapesCommand';
 import { AlignShapesCommand, AlignmentType } from '../commands/AlignShapesCommand';
 import { DistributeShapesCommand, DistributionType } from '../commands/DistributeShapesCommand';
 import { EditSvgCommand } from '../commands/EditSvgCommand';
+import { CompositeCommand } from '../commands/CompositeCommand';
 import { SvgEditDialog } from './SvgEditDialog';
 import { ContextMenu } from './ContextMenu';
 import { FileManager } from '../core/FileManager';
@@ -164,8 +166,43 @@ export class Canvas {
 
     // Listen for delete requests
     eventBus.on('shapes:delete', (shapes: Shape[]) => {
-      const command = new DeleteShapeCommand(this, [...shapes]);
-      historyManager.execute(command);
+      const gm = getGraphManager();
+      const commands: Command[] = [];
+
+      // Separate shapes by type
+      const nodes = shapes.filter((s): s is Node => s instanceof Node);
+      const edges = shapes.filter((s): s is Edge => s instanceof Edge);
+      const otherShapes = shapes.filter(s => !(s instanceof Node) && !(s instanceof Edge));
+
+      // Delete nodes with their connected edges
+      nodes.forEach(node => {
+        commands.push(new DeleteNodeCommand(this, node));
+      });
+
+      // Delete edges that aren't already deleted by DeleteNodeCommand
+      const deletedEdgeIds = new Set<string>();
+      nodes.forEach(node => {
+        gm.getEdgeIdsForNode(node.id).forEach(id => deletedEdgeIds.add(id));
+      });
+      edges
+        .filter(edge => !deletedEdgeIds.has(edge.id))
+        .forEach(edge => {
+          commands.push(new DeleteEdgeCommand(this, edge));
+        });
+
+      // Delete other shapes
+      if (otherShapes.length > 0) {
+        commands.push(new DeleteShapeCommand(this, otherShapes));
+      }
+
+      // Execute as single composite command if multiple, otherwise single command
+      if (commands.length === 1) {
+        historyManager.execute(commands[0]);
+      } else if (commands.length > 1) {
+        const total = shapes.length;
+        const desc = total === 1 ? `Delete ${shapes[0].type}` : `Delete ${total} shapes`;
+        historyManager.execute(new CompositeCommand(commands, desc));
+      }
     });
 
     // Listen for z-order requests

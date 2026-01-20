@@ -16,7 +16,7 @@ export class EdgeLineTypeChangeCommand implements Command {
     private newLineType: EdgeLineType
   ) {
     this.beforeLineType = edge.lineType;
-    this.beforePathCommands = [...edge.pathCommands];
+    this.beforePathCommands = edge.pathCommands.map(cmd => ({ ...cmd }));
   }
 
   execute(): void {
@@ -33,7 +33,7 @@ export class EdgeLineTypeChangeCommand implements Command {
 
   undo(): void {
     this.edge.lineType = this.beforeLineType;
-    this.edge.pathCommands = [...this.beforePathCommands];
+    this.edge.pathCommands = this.beforePathCommands.map(cmd => ({ ...cmd }));
     this.edge.updateElement();
 
     // Trigger handle refresh
