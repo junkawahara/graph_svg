@@ -441,16 +441,20 @@ export function isIdentityTransform(transform: ParsedTransform): boolean {
 
 /**
  * Check if transform has rotation
+ * Uses small epsilon for floating point comparison
  */
 export function hasRotation(transform: ParsedTransform): boolean {
-  return transform.rotation !== 0;
+  const epsilon = 1e-9;
+  return Math.abs(transform.rotation) >= epsilon;
 }
 
 /**
  * Check if transform has skew
+ * Uses small epsilon for floating point comparison
  */
 export function hasSkew(transform: ParsedTransform): boolean {
-  return transform.skewX !== 0 || transform.skewY !== 0;
+  const epsilon = 1e-9;
+  return Math.abs(transform.skewX) >= epsilon || Math.abs(transform.skewY) >= epsilon;
 }
 
 /**
