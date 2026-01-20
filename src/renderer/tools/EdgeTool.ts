@@ -71,22 +71,9 @@ export class EdgeTool implements Tool {
 
     const targetNode = this.findNodeAt(point);
 
+    // Create edge if dragging from source node to target node
     if (this.isDragging && this.sourceNode && targetNode) {
-      // Create edge between source and target
       this.createEdge(this.sourceNode, targetNode);
-    } else if (!this.isDragging && targetNode) {
-      // Click mode: first click selects source, second click selects target
-      if (!this.sourceNode) {
-        this.sourceNode = targetNode;
-        // Highlight the selected source node
-        if (targetNode.element) {
-          targetNode.element.classList.add('node-selected-source');
-        }
-        return; // Don't reset state yet
-      } else {
-        // Second click - create edge
-        this.createEdge(this.sourceNode, targetNode);
-      }
     }
 
     this.resetState();

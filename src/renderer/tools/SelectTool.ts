@@ -232,6 +232,52 @@ export class SelectTool implements Tool {
   }
 
   onMouseLeave(): void {
+    // If dragging, commit the move to history before resetting
+    if (this.isDragging && this.dragOriginPoint && this.dragStartPoint) {
+      const totalDx = this.dragStartPoint.x - this.dragOriginPoint.x;
+      const totalDy = this.dragStartPoint.y - this.dragOriginPoint.y;
+
+      if (Math.abs(totalDx) > 1 || Math.abs(totalDy) > 1) {
+        const selectedShapes = selectionManager.getSelection();
+        if (selectedShapes.length > 0) {
+          // Undo the visual move first
+          selectedShapes.forEach(shape => {
+            shape.move(-totalDx, -totalDy);
+          });
+
+          // Create and execute command
+          const command = new MoveShapeCommand([...selectedShapes], totalDx, totalDy);
+          historyManager.execute(command);
+          this.callbacks.updateHandles();
+        }
+      }
+    }
+
+    // If resizing, commit the resize to history before resetting
+    if (this.isResizing && this.resizeShape && this.resizeBeforeState) {
+      const afterState = ResizeShapeCommand.captureState(this.resizeShape);
+      const hasChanged = JSON.stringify(this.resizeBeforeState) !== JSON.stringify(afterState);
+
+      if (hasChanged) {
+        // Undo the visual resize first
+        const tempCommand = new ResizeShapeCommand(
+          this.resizeShape,
+          afterState,
+          this.resizeBeforeState
+        );
+        tempCommand.execute();
+
+        // Create and execute the actual command
+        const command = new ResizeShapeCommand(
+          this.resizeShape,
+          this.resizeBeforeState,
+          afterState
+        );
+        historyManager.execute(command);
+        this.callbacks.updateHandles();
+      }
+    }
+
     this.resetState();
   }
 

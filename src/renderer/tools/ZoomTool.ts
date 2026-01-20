@@ -96,11 +96,11 @@ export class ZoomTool implements Tool {
 
       // Only zoom if the rectangle has meaningful size
       if (width > 10 && height > 10) {
-        // Shift+drag zooms out (fits view to include rectangle centered)
         if (event.shiftKey) {
-          // For zoom out, we expand the current view
+          // Shift+drag: zoom out at center point
           this.callbacks.zoomOutAt(screenX, screenY);
         } else {
+          // Normal drag: zoom to fit selected rectangle
           this.callbacks.zoomToRect(minX, minY, width, height);
         }
       }

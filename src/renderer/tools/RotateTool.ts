@@ -145,6 +145,28 @@ export class RotateTool implements Tool {
   }
 
   onMouseLeave(): void {
+    // If rotating, commit the rotation to history before resetting
+    if (this.isRotating && this.rotatingShape) {
+      const afterRotation = this.rotatingShape.rotation;
+
+      // Only create command if rotation actually changed
+      if (afterRotation !== this.beforeRotation) {
+        // Undo the visual rotation first
+        this.rotatingShape.setRotation(this.beforeRotation);
+
+        // Create and execute command
+        const command = new RotateShapeCommand(
+          this.rotatingShape,
+          this.beforeRotation,
+          afterRotation
+        );
+        historyManager.execute(command);
+
+        // Update handles
+        this.showRotationHandles();
+      }
+    }
+
     this.resetState();
   }
 

@@ -17,7 +17,14 @@
   - 複数サブパスを含む場合、直前の M コマンドに戻るように修正
 - 各図形の座標丸め方式を `round3()` に統一
   - `Math.round()` を使用していた箇所を小数第3位丸めの `round3()` に変更
-  - 対象: Path, Rectangle, Ellipse, Line, Polygon, Polyline, Node
+  - 対象: Path, Rectangle, Ellipse, Line, Polygon, Polyline, Node, TextTool
+- SelectTool でキャンバス外にマウスが離脱した時の Undo 履歴問題を修正
+  - ドラッグ中/リサイズ中にキャンバス外に出た場合、操作を確定して履歴に記録
+- RotateTool でキャンバス外にマウスが離脱した時の Undo 履歴問題を修正
+  - 回転中にキャンバス外に出た場合、操作を確定して履歴に記録
+- EdgeTool の到達不能コード（クリックモード）を削除
+  - ドラッグ操作のみをサポートする仕様に整理
+- ZoomTool のコメントと実装の不一致を修正
 
 ### 追加
 - パスのポイント追加・削除機能
