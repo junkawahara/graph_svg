@@ -139,6 +139,7 @@
 /* Confirm Dialog */
 .confirm-dialog {
   min-width: 400px;
+  max-width: 90%;
 }
 
 .confirm-message {
