@@ -2,7 +2,6 @@ import { Point } from '../../shared/types';
 import { Tool } from './Tool';
 import { Edge } from '../shapes/Edge';
 import { Node } from '../shapes/Node';
-import { getGraphManager } from '../core/GraphManager';
 import { editorState } from '../core/EditorState';
 import { eventBus } from '../core/EventBus';
 

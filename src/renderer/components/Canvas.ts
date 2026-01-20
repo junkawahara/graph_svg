@@ -641,9 +641,6 @@ export class Canvas {
     this.shapes = newOrder;
 
     // Reorder SVG elements to match new order
-    // Get the defs element (marker definitions) to insert shapes after it
-    const defs = this.svg.querySelector('defs');
-
     newOrder.forEach(shape => {
       if (shape.element) {
         // Re-append in order (moves element to end)

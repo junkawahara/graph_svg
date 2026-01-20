@@ -3,7 +3,6 @@ import { Tool } from './Tool';
 import { Shape, normalizeRotation } from '../shapes/Shape';
 import { selectionManager } from '../core/SelectionManager';
 import { historyManager } from '../core/HistoryManager';
-import { editorState } from '../core/EditorState';
 import { eventBus } from '../core/EventBus';
 import { RotateShapeCommand } from '../commands/RotateShapeCommand';
 import { createRotationHandleElement, createRotationGuideLine } from '../handles/Handle';
@@ -149,8 +148,8 @@ export class RotateTool implements Tool {
     if (this.isRotating && this.rotatingShape) {
       const afterRotation = this.rotatingShape.rotation;
 
-      // Only create command if rotation actually changed
-      if (afterRotation !== this.beforeRotation) {
+      // Only create command if rotation actually changed (same threshold as onMouseUp)
+      if (Math.abs(afterRotation - this.beforeRotation) > 0.1) {
         // Undo the visual rotation first
         this.rotatingShape.setRotation(this.beforeRotation);
 

@@ -10,7 +10,6 @@ import { Shape } from '../shapes/Shape';
 import { findSegmentAt, SegmentHitResult } from '../core/PathGeometry';
 import { AddPathPointCommand } from '../commands/AddPathPointCommand';
 import { historyManager } from '../core/HistoryManager';
-import { editorState } from '../core/EditorState';
 import { rotatePoint } from '../shapes/Shape';
 
 /**

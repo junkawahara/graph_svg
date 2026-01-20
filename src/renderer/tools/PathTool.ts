@@ -1,4 +1,4 @@
-import { Point, PathCommand } from '../../shared/types';
+import { Point, PathCommand, generateId } from '../../shared/types';
 import { Tool } from './Tool';
 import { Path } from '../shapes/Path';
 import { editorState } from '../core/EditorState';
@@ -271,7 +271,7 @@ export class PathTool implements Tool {
 
     // Create the path shape
     const path = new Path(
-      `path-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      generateId(),
       finalCommands,
       { ...editorState.currentStyle }
     );

@@ -1330,7 +1330,10 @@ export class Sidebar {
   private updateUIFromStyle(style: ShapeStyle): void {
     this.isUpdatingUI = true;
 
-    this.fillColor.value = style.fill;
+    // Only set fillColor if it's a valid color (not 'none')
+    if (!style.fillNone && style.fill !== 'none') {
+      this.fillColor.value = style.fill;
+    }
     this.fillNone.checked = style.fillNone;
     this.strokeColor.value = style.stroke;
     this.strokeWidth.value = String(style.strokeWidth);
