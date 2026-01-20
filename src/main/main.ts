@@ -226,7 +226,7 @@ function createMenu(): void {
         },
         {
           label: '多角形',
-          accelerator: 'P',
+          accelerator: '5',
           click: () => mainWindow?.webContents.send('menu:tool', 'polygon')
         },
         {
@@ -236,7 +236,7 @@ function createMenu(): void {
         },
         {
           label: 'パス',
-          accelerator: 'B',
+          accelerator: 'P',
           click: () => mainWindow?.webContents.send('menu:tool', 'path')
         },
         {
@@ -380,8 +380,10 @@ function createWindow(): void {
 
   mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
 
-  // Open DevTools in development
-  mainWindow.webContents.openDevTools();
+  // Open DevTools only in development (not packaged)
+  if (!app.isPackaged) {
+    mainWindow.webContents.openDevTools();
+  }
 
   // Handle close event - check for unsaved changes
   mainWindow.on('close', (e) => {
@@ -417,31 +419,6 @@ ipcMain.handle('file:saveAs', async (_event, content: string, defaultPath?: stri
   const result = await dialog.showSaveDialog(mainWindow, {
     title: 'Save SVG File',
     defaultPath: defaultPath || 'drawing.svg',
-    filters: [
-      { name: 'SVG Files', extensions: ['svg'] },
-      { name: 'All Files', extensions: ['*'] }
-    ]
-  });
-
-  if (result.canceled || !result.filePath) {
-    return null;
-  }
-
-  try {
-    fs.writeFileSync(result.filePath, content, 'utf-8');
-    return result.filePath;
-  } catch (error) {
-    console.error('Failed to save file:', error);
-    return null;
-  }
-});
-
-ipcMain.handle('file:save', async (_event, content: string): Promise<string | null> => {
-  if (!mainWindow) return null;
-
-  const result = await dialog.showSaveDialog(mainWindow, {
-    title: 'Save SVG File',
-    defaultPath: 'drawing.svg',
     filters: [
       { name: 'SVG Files', extensions: ['svg'] },
       { name: 'All Files', extensions: ['*'] }
