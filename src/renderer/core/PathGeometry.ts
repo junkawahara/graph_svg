@@ -333,6 +333,8 @@ export function findSegmentAt(
 ): SegmentHitResult | null {
   let prevX = 0;
   let prevY = 0;
+  let startX = 0; // Start point of current subpath (for Z command)
+  let startY = 0;
   let bestResult: SegmentHitResult | null = null;
   let bestDist = tolerance;
 
@@ -343,6 +345,8 @@ export function findSegmentAt(
       case 'M':
         prevX = cmd.x;
         prevY = cmd.y;
+        startX = cmd.x; // Remember subpath start for Z command
+        startY = cmd.y;
         break;
 
       case 'L': {
@@ -416,25 +420,22 @@ export function findSegmentAt(
         break;
 
       case 'Z': {
-        // Check the closing segment back to start
-        const startCmd = commands.find(c => c.type === 'M');
-        if (startCmd && startCmd.type === 'M') {
-          const result = findClosestPointOnLine(
-            point,
-            { x: prevX, y: prevY },
-            { x: startCmd.x, y: startCmd.y }
-          );
-          if (result.dist < bestDist) {
-            bestDist = result.dist;
-            // Note: Z doesn't have its own index for insertion,
-            // we treat it as a special case
-            bestResult = {
-              commandIndex: i,
-              t: result.t,
-              point: { x: round3(result.closestPoint.x), y: round3(result.closestPoint.y) },
-              segmentType: 'L' // Z segment is treated as L for splitting
-            };
-          }
+        // Check the closing segment back to the start of current subpath
+        const result = findClosestPointOnLine(
+          point,
+          { x: prevX, y: prevY },
+          { x: startX, y: startY }
+        );
+        if (result.dist < bestDist) {
+          bestDist = result.dist;
+          // Note: Z doesn't have its own index for insertion,
+          // we treat it as a special case
+          bestResult = {
+            commandIndex: i,
+            t: result.t,
+            point: { x: round3(result.closestPoint.x), y: round3(result.closestPoint.y) },
+            segmentType: 'L' // Z segment is treated as L for splitting
+          };
         }
         break;
       }

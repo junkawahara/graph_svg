@@ -132,10 +132,8 @@ export function parseTransform(transformStr: string | null): ParsedTransform {
     switch (funcName) {
       case 'translate':
         translateX += params[0] || 0;
-        translateY += params[1] ?? params[0] ?? 0; // If only one param, use it for both or 0
-        if (params.length === 1) {
-          translateY = 0; // translate(x) means translate(x, 0)
-        }
+        // translate(x) means translate(x, 0), so Y is 0 if not specified
+        translateY += params[1] ?? 0;
         break;
 
       case 'scale':

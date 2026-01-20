@@ -31,6 +31,7 @@ export class SelectionManager {
    */
   removeFromSelection(shape: Shape): void {
     this.selectedShapes.delete(shape);
+    shape.element?.classList.remove('selected');
     this.updateVisuals();
     eventBus.emit('selection:changed', this.getSelection());
   }
@@ -41,6 +42,7 @@ export class SelectionManager {
   toggleSelection(shape: Shape): void {
     if (this.selectedShapes.has(shape)) {
       this.selectedShapes.delete(shape);
+      shape.element?.classList.remove('selected');
     } else {
       this.selectedShapes.add(shape);
     }

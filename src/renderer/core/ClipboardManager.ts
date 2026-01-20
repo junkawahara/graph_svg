@@ -24,9 +24,10 @@ export class ClipboardManager {
 
   /**
    * Get clipboard content (serialized shape data)
+   * Returns a copy to prevent external modification of internal state
    */
   getContent(): ShapeData[] {
-    return this.clipboard;
+    return [...this.clipboard];
   }
 
   /**
