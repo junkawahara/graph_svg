@@ -41,10 +41,7 @@ export class GraphImportDialog {
       <div class="dialog-header">グラフファイルのインポート</div>
       <div class="dialog-body">
         <div class="dialog-field">
-          <p style="margin: 0 0 12px 0; color: #666; font-size: 13px;">
-            形式: ${detectedFormat}<br>
-            頂点数: ${nodeCount}, 辺数: ${edgeCount}
-          </p>
+          <p id="graph-import-info" style="margin: 0 0 12px 0; color: #666; font-size: 13px;"></p>
         </div>
         <div class="dialog-field">
           <label>グラフの種類</label>
@@ -81,6 +78,12 @@ export class GraphImportDialog {
 
     this.overlay.appendChild(this.dialog);
     document.body.appendChild(this.overlay);
+
+    // Set graph info text safely (avoid innerHTML injection)
+    const infoEl = this.dialog.querySelector('#graph-import-info') as HTMLParagraphElement;
+    if (infoEl) {
+      infoEl.textContent = `形式: ${detectedFormat} / 頂点数: ${nodeCount}, 辺数: ${edgeCount}`;
+    }
 
     // Setup event handlers
     const okBtn = this.dialog.querySelector('.dialog-btn-ok') as HTMLButtonElement;

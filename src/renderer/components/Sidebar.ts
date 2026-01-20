@@ -265,17 +265,8 @@ export class Sidebar {
       if (this.isUpdatingUI) return;
       this.applyStyleChange({ strokeWidth: parseFloat(this.strokeWidth.value) || 1 });
     });
-    this.strokeWidth.addEventListener('blur', () => {
-      if (this.isUpdatingUI) return;
-      this.applyStyleChange({ strokeWidth: parseFloat(this.strokeWidth.value) || 1 });
-    });
 
     this.opacity.addEventListener('change', () => {
-      if (this.isUpdatingUI) return;
-      const value = parseInt(this.opacity.value) / 100;
-      this.applyStyleChange({ opacity: value });
-    });
-    this.opacity.addEventListener('blur', () => {
       if (this.isUpdatingUI) return;
       const value = parseInt(this.opacity.value) / 100;
       this.applyStyleChange({ opacity: value });
@@ -305,16 +296,8 @@ export class Sidebar {
       if (this.isUpdatingUI) return;
       this.applyTextPropertyChange({ content: this.textContent.value });
     });
-    this.textContent.addEventListener('blur', () => {
-      if (this.isUpdatingUI) return;
-      this.applyTextPropertyChange({ content: this.textContent.value });
-    });
 
     this.fontSize.addEventListener('change', () => {
-      if (this.isUpdatingUI) return;
-      this.applyTextPropertyChange({ fontSize: parseInt(this.fontSize.value, 10) || 24 });
-    });
-    this.fontSize.addEventListener('blur', () => {
       if (this.isUpdatingUI) return;
       this.applyTextPropertyChange({ fontSize: parseInt(this.fontSize.value, 10) || 24 });
     });
@@ -393,10 +376,6 @@ export class Sidebar {
   private setupNodeInputListeners(): void {
     if (this.nodeLabel) {
       this.nodeLabel.addEventListener('change', () => {
-        if (this.isUpdatingUI) return;
-        this.applyNodePropertyChange({ label: this.nodeLabel!.value });
-      });
-      this.nodeLabel.addEventListener('blur', () => {
         if (this.isUpdatingUI) return;
         this.applyNodePropertyChange({ label: this.nodeLabel!.value });
       });
