@@ -396,6 +396,8 @@ export class SelectTool implements Tool {
     this.dragStartPoint = null;
     this.dragOriginPoint = null;
     this.draggedShape = null;
+    // Reset original bounds on the handle before clearing it
+    this.activeHandle?.resetOriginalBounds?.();
     this.activeHandle = null;
     this.resizeShape = null;
     this.resizeBeforeState = null;

@@ -22,6 +22,9 @@ export interface Handle {
 
   /** Handle drag operation - returns updated shape properties */
   onDrag(point: Point, event?: MouseEvent): void;
+
+  /** Reset original bounds after drag ends (optional) */
+  resetOriginalBounds?(): void;
 }
 
 /**
@@ -183,11 +186,14 @@ export function constrainAspectRatio(
   position: HandlePosition,
   minSize: number = 6
 ): ConstrainedResizeResult {
-  const aspectRatio = originalBounds.width / originalBounds.height;
+  // Guard against zero dimensions
+  const safeOriginalWidth = originalBounds.width || minSize;
+  const safeOriginalHeight = originalBounds.height || minSize;
+  const aspectRatio = safeOriginalWidth / safeOriginalHeight;
 
   // Determine which dimension changed more (proportionally)
-  const widthChange = Math.abs(newWidth - originalBounds.width) / originalBounds.width;
-  const heightChange = Math.abs(newHeight - originalBounds.height) / originalBounds.height;
+  const widthChange = Math.abs(newWidth - safeOriginalWidth) / safeOriginalWidth;
+  const heightChange = Math.abs(newHeight - safeOriginalHeight) / safeOriginalHeight;
 
   let constrainedWidth: number;
   let constrainedHeight: number;
