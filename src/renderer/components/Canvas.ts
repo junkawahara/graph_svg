@@ -157,6 +157,11 @@ export class Canvas {
       this.updateHandlesForSelection(shapes);
     });
 
+    // Listen for handle refresh requests (e.g., after edge line type change)
+    eventBus.on('handles:refresh', () => {
+      this.updateHandlesForSelection(selectionManager.getSelection());
+    });
+
     // Listen for delete requests
     eventBus.on('shapes:delete', (shapes: Shape[]) => {
       const command = new DeleteShapeCommand(this, [...shapes]);
@@ -197,13 +202,19 @@ export class Canvas {
     // Listen for group requests
     eventBus.on('shapes:group', (shapes: Shape[]) => {
       if (shapes.length < 2) return;
-      const command = new GroupShapesCommand(this, shapes);
+      const command = new GroupShapesCommand(this, shapes, (newSelection) => {
+        selectionManager.clearSelection();
+        newSelection.forEach(s => selectionManager.addToSelection(s));
+      });
       historyManager.execute(command);
     });
 
     // Listen for ungroup requests
     eventBus.on('shapes:ungroup', (group: Group) => {
-      const command = new UngroupShapesCommand(this, group);
+      const command = new UngroupShapesCommand(this, group, (newSelection) => {
+        selectionManager.clearSelection();
+        newSelection.forEach(s => selectionManager.addToSelection(s));
+      });
       historyManager.execute(command);
     });
 

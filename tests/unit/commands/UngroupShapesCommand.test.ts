@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { UngroupShapesCommand } from '../../../src/renderer/commands/UngroupShapesCommand';
 import { selectionManager } from '../../../src/renderer/core/SelectionManager';
 import {
@@ -69,21 +69,23 @@ describe('UngroupShapesCommand', () => {
       expectContainerLength(container, 3);
     });
 
-    it('should select ungrouped children', () => {
+    it('should call onSelectionChange callback with ungrouped children', () => {
       const container = createMockContainer();
       const rect = createTestRectangle({ id: 'rect-1' });
       const ellipse = createTestEllipse({ id: 'ellipse-1' });
       const group = createTestGroup([rect, ellipse], { id: 'group-1' });
       container.addShape(group);
 
-      const command = new UngroupShapesCommand(container, group);
+      const onSelectionChange = vi.fn();
+      const command = new UngroupShapesCommand(container, group, onSelectionChange);
 
       command.execute();
 
-      const selection = selectionManager.getSelection();
-      expect(selection).toContain(rect);
-      expect(selection).toContain(ellipse);
-      expect(selection.length).toBe(2);
+      expect(onSelectionChange).toHaveBeenCalledTimes(1);
+      const callArg = onSelectionChange.mock.calls[0][0];
+      expect(callArg).toContain(rect);
+      expect(callArg).toContain(ellipse);
+      expect(callArg.length).toBe(2);
     });
   });
 
@@ -138,21 +140,24 @@ describe('UngroupShapesCommand', () => {
       expect(restoredGroup.children).toContain(ellipse);
     });
 
-    it('should select the restored group', () => {
+    it('should call onSelectionChange callback with restored group', () => {
       const container = createMockContainer();
       const rect = createTestRectangle({ id: 'rect-1' });
       const ellipse = createTestEllipse({ id: 'ellipse-1' });
       const group = createTestGroup([rect, ellipse], { id: 'group-1' });
       container.addShape(group);
 
-      const command = new UngroupShapesCommand(container, group);
+      const onSelectionChange = vi.fn();
+      const command = new UngroupShapesCommand(container, group, onSelectionChange);
 
       command.execute();
       command.undo();
 
-      const selection = selectionManager.getSelection();
-      expect(selection).toContain(group);
-      expect(selection.length).toBe(1);
+      // Second call (undo) should have the group
+      expect(onSelectionChange).toHaveBeenCalledTimes(2);
+      const undoCallArg = onSelectionChange.mock.calls[1][0];
+      expect(undoCallArg).toContain(group);
+      expect(undoCallArg.length).toBe(1);
     });
   });
 

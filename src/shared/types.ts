@@ -296,6 +296,7 @@ export type EventName =
   | 'shapes:paste'
   | 'shapes:zorder'
   | 'selection:changed'
+  | 'handles:refresh'
   | 'history:changed'
   | 'canvas:render'
   | 'canvas:zoomChanged'

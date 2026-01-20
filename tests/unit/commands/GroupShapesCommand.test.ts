@@ -69,20 +69,22 @@ describe('GroupShapesCommand', () => {
       expect(group.children.length).toBe(2);
     });
 
-    it('should select the new group', () => {
+    it('should call onSelectionChange callback with the new group', () => {
       const container = createMockContainer();
       const rect = createTestRectangle({ id: 'rect-1' });
       const ellipse = createTestEllipse({ id: 'ellipse-1' });
       container.addShape(rect);
       container.addShape(ellipse);
 
-      const command = new GroupShapesCommand(container, [rect, ellipse]);
+      const onSelectionChange = vi.fn();
+      const command = new GroupShapesCommand(container, [rect, ellipse], onSelectionChange);
 
       command.execute();
 
-      const selection = selectionManager.getSelection();
-      expect(selection.length).toBe(1);
-      expect(selection[0].type).toBe('group');
+      expect(onSelectionChange).toHaveBeenCalledTimes(1);
+      const callArg = onSelectionChange.mock.calls[0][0];
+      expect(callArg.length).toBe(1);
+      expect(callArg[0].type).toBe('group');
     });
 
     it('should work with three shapes', () => {
@@ -157,21 +159,24 @@ describe('GroupShapesCommand', () => {
       expect(restoredEllipse).toBe(ellipse);
     });
 
-    it('should restore selection to original shapes', () => {
+    it('should call onSelectionChange callback with original shapes', () => {
       const container = createMockContainer();
       const rect = createTestRectangle({ id: 'rect-1' });
       const ellipse = createTestEllipse({ id: 'ellipse-1' });
       container.addShape(rect);
       container.addShape(ellipse);
 
-      const command = new GroupShapesCommand(container, [rect, ellipse]);
+      const onSelectionChange = vi.fn();
+      const command = new GroupShapesCommand(container, [rect, ellipse], onSelectionChange);
 
       command.execute();
       command.undo();
 
-      const selection = selectionManager.getSelection();
-      expect(selection).toContain(rect);
-      expect(selection).toContain(ellipse);
+      // Second call (undo) should have original shapes
+      expect(onSelectionChange).toHaveBeenCalledTimes(2);
+      const undoCallArg = onSelectionChange.mock.calls[1][0];
+      expect(undoCallArg).toContain(rect);
+      expect(undoCallArg).toContain(ellipse);
     });
   });
 

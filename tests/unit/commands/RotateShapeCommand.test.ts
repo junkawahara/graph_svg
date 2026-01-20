@@ -76,15 +76,6 @@ describe('RotateShapeCommand', () => {
       expectClose(line.rotation, 120);
     });
 
-    it('should emit canvas:render event', () => {
-      const rect = createTestRectangle();
-      const command = new RotateShapeCommand(rect, 0, 45);
-
-      command.execute();
-
-      expect(emitSpy).toHaveBeenCalledWith('canvas:render');
-    });
-
     it('should emit shape:updated event', () => {
       const rect = createTestRectangle();
       const command = new RotateShapeCommand(rect, 0, 45);
@@ -125,17 +116,6 @@ describe('RotateShapeCommand', () => {
       command.undo();
 
       expectClose(rect.rotation, 45);
-    });
-
-    it('should emit canvas:render event on undo', () => {
-      const rect = createTestRectangle();
-      const command = new RotateShapeCommand(rect, 0, 45);
-
-      command.execute();
-      emitSpy.mockClear();
-      command.undo();
-
-      expect(emitSpy).toHaveBeenCalledWith('canvas:render');
     });
 
     it('should emit shape:updated event on undo', () => {

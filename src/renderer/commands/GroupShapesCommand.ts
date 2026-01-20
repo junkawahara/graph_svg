@@ -2,7 +2,6 @@ import { Command } from './Command';
 import { ShapeContainer } from './AddShapeCommand';
 import { Shape } from '../shapes/Shape';
 import { Group } from '../shapes/Group';
-import { selectionManager } from '../core/SelectionManager';
 import { generateId, DEFAULT_STYLE } from '../../shared/types';
 
 /**
@@ -22,7 +21,8 @@ export class GroupShapesCommand implements Command {
 
   constructor(
     private container: ShapeContainerWithOrder,
-    private shapes: Shape[]
+    private shapes: Shape[],
+    private onSelectionChange?: (shapes: Shape[]) => void
   ) {
     // Record the original index of each shape
     const allShapes = container.getShapes();
@@ -47,9 +47,8 @@ export class GroupShapesCommand implements Command {
     // Add the group to the canvas
     this.container.addShape(this.group);
 
-    // Select the new group
-    selectionManager.clearSelection();
-    selectionManager.select(this.group);
+    // Notify selection change via callback
+    this.onSelectionChange?.([this.group]);
   }
 
   undo(): void {
@@ -83,9 +82,8 @@ export class GroupShapesCommand implements Command {
       this.container.reorderShapes(newAllShapes);
     }
 
-    // Restore selection
-    selectionManager.clearSelection();
-    this.shapes.forEach(shape => selectionManager.addToSelection(shape));
+    // Notify selection change via callback
+    this.onSelectionChange?.(this.shapes);
   }
 
   getDescription(): string {
