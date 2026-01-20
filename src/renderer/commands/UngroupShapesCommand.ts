@@ -2,7 +2,6 @@ import { Command } from './Command';
 import { ShapeContainer } from './AddShapeCommand';
 import { Shape } from '../shapes/Shape';
 import { Group } from '../shapes/Group';
-import { selectionManager } from '../core/SelectionManager';
 
 /**
  * Extended shape container interface with shape ordering support
@@ -21,7 +20,8 @@ export class UngroupShapesCommand implements Command {
 
   constructor(
     private container: ShapeContainerWithOrder,
-    private group: Group
+    private group: Group,
+    private onSelectionChange?: (shapes: Shape[]) => void
   ) {
     // Store children before ungrouping
     this.children = [...group.getChildren()];
@@ -39,9 +39,8 @@ export class UngroupShapesCommand implements Command {
       this.container.addShape(child);
     }
 
-    // Select the ungrouped children
-    selectionManager.clearSelection();
-    this.children.forEach(child => selectionManager.addToSelection(child));
+    // Notify selection change via callback
+    this.onSelectionChange?.(this.children);
   }
 
   undo(): void {
@@ -65,9 +64,8 @@ export class UngroupShapesCommand implements Command {
       }
     }
 
-    // Select the group
-    selectionManager.clearSelection();
-    selectionManager.select(this.group);
+    // Notify selection change via callback
+    this.onSelectionChange?.([this.group]);
   }
 
   getDescription(): string {

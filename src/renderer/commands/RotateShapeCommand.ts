@@ -14,13 +14,12 @@ export class RotateShapeCommand implements Command {
 
   execute(): void {
     this.shape.setRotation(this.afterAngle);
-    eventBus.emit('canvas:render');
+    // shape:updated for sidebar sync (canvas:render removed - setRotation handles rendering)
     eventBus.emit('shape:updated', this.shape);
   }
 
   undo(): void {
     this.shape.setRotation(this.beforeAngle);
-    eventBus.emit('canvas:render');
     eventBus.emit('shape:updated', this.shape);
   }
 
