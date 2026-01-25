@@ -462,7 +462,6 @@ export class Sidebar {
     const endIndex = parseInt(this.rangeEndInput?.value || '0', 10);
 
     if (startIndex >= endIndex) {
-      console.warn('Invalid range: start must be less than end');
       return;
     }
 
