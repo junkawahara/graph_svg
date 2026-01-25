@@ -1,7 +1,8 @@
-import { Point, Bounds, ShapeStyle, TextData, TextAnchor, DominantBaseline, generateId } from '../../shared/types';
+import { Point, Bounds, ShapeStyle, TextData, TextAnchor, DominantBaseline, TextRun, TextRunStyle, generateId } from '../../shared/types';
 import { Shape, applyStyle, applyRotation, normalizeRotation, rotatePoint, getRotatedBounds } from './Shape';
 import { round3 } from '../core/MathUtils';
 import { Matrix2D, decomposeMatrix } from '../core/TransformParser';
+import { plainTextToRuns, runsToPlainText, cloneRuns, hasRichStyles, normalizeRuns } from '../core/TextRunUtils';
 
 /**
  * Text shape implementation
@@ -11,6 +12,12 @@ export class Text implements Shape {
   element: SVGTextElement | null = null;
   rotation: number = 0;
   className?: string;
+
+  /**
+   * Rich text runs: array of lines, each line is array of styled text fragments.
+   * null = plain text mode (uses content property only)
+   */
+  runs: TextRun[][] | null = null;
 
   constructor(
     public readonly id: string,
@@ -27,9 +34,11 @@ export class Text implements Shape {
     public textUnderline: boolean = false,
     public textStrikethrough: boolean = false,
     public lineHeight: number = 1.2,
-    rotation: number = 0
+    rotation: number = 0,
+    runs: TextRun[][] | null = null
   ) {
     this.rotation = normalizeRotation(rotation);
+    this.runs = runs;
   }
 
   /**
@@ -41,26 +50,45 @@ export class Text implements Shape {
     const textUnderline = textDecoration.includes('underline');
     const textStrikethrough = textDecoration.includes('line-through');
 
-    // Parse content - handle tspan elements for multi-line
+    // Get direct child tspans (line-level)
+    const lineTspans = Array.from(el.children).filter(
+      child => child.tagName.toLowerCase() === 'tspan'
+    ) as SVGTSpanElement[];
+
     let content = '';
-    const tspans = el.querySelectorAll('tspan');
-    if (tspans.length > 0) {
-      content = Array.from(tspans).map(t => t.textContent || '').join('\n');
+    let runs: TextRun[][] | null = null;
+    let lineHeight = 1.2;
+
+    if (lineTspans.length > 0) {
+      // Check if we have nested tspans (rich text)
+      const hasNestedTspans = lineTspans.some(
+        lineTspan => lineTspan.querySelector('tspan') !== null
+      );
+
+      if (hasNestedTspans) {
+        // Parse rich text with nested tspans
+        const parsedRuns = Text.parseRichTextFromElement(lineTspans);
+        runs = parsedRuns.runs;
+        content = runsToPlainText(runs);
+      } else {
+        // Simple multi-line text without rich styling
+        content = lineTspans.map(t => t.textContent || '').join('\n');
+      }
+
+      // Parse line-height from second line tspan
+      if (lineTspans.length > 1) {
+        const dy = parseFloat(lineTspans[1].getAttribute('dy') || '0');
+        const fontSize = parseFloat(el.getAttribute('font-size') || '24');
+        if (dy > 0 && fontSize > 0) {
+          lineHeight = dy / fontSize;
+        }
+      }
     } else {
+      // No tspans - simple single-line text
       content = el.textContent || '';
     }
 
-    // Parse line-height (from dy attribute of second tspan or default)
-    let lineHeight = 1.2;
-    if (tspans.length > 1) {
-      const dy = parseFloat(tspans[1].getAttribute('dy') || '0');
-      const fontSize = parseFloat(el.getAttribute('font-size') || '24');
-      if (dy > 0 && fontSize > 0) {
-        lineHeight = dy / fontSize;
-      }
-    }
-
-    return new Text(
+    const text = new Text(
       el.id || generateId(),
       parseFloat(el.getAttribute('x') || '0'),
       parseFloat(el.getAttribute('y') || '0'),
@@ -74,17 +102,104 @@ export class Text implements Shape {
       (el.getAttribute('font-style') === 'italic' ? 'italic' : 'normal'),
       textUnderline,
       textStrikethrough,
-      lineHeight
+      lineHeight,
+      0,
+      runs
     );
+
+    return text;
   }
 
   /**
-   * Render content to text element (handles multi-line)
+   * Parse rich text from nested tspan elements
+   */
+  private static parseRichTextFromElement(lineTspans: SVGTSpanElement[]): { runs: TextRun[][] } {
+    const runs: TextRun[][] = [];
+
+    for (const lineTspan of lineTspans) {
+      const lineRuns: TextRun[] = [];
+      const nestedTspans = lineTspan.querySelectorAll('tspan');
+
+      if (nestedTspans.length > 0) {
+        // Parse each nested tspan as a run
+        nestedTspans.forEach(runTspan => {
+          const run: TextRun = {
+            text: runTspan.textContent || '',
+            style: Text.parseRunStyleFromElement(runTspan)
+          };
+          lineRuns.push(run);
+        });
+      } else {
+        // No nested tspans - treat as single run
+        lineRuns.push({
+          text: lineTspan.textContent || '',
+          style: Text.parseRunStyleFromElement(lineTspan)
+        });
+      }
+
+      runs.push(lineRuns.length > 0 ? lineRuns : [{ text: '' }]);
+    }
+
+    return { runs: normalizeRuns(runs) };
+  }
+
+  /**
+   * Parse TextRunStyle from a tspan element
+   */
+  private static parseRunStyleFromElement(tspan: SVGTSpanElement): TextRunStyle | undefined {
+    const style: TextRunStyle = {};
+    let hasStyle = false;
+
+    const fontWeight = tspan.getAttribute('font-weight');
+    if (fontWeight === 'bold' || fontWeight === 'normal') {
+      style.fontWeight = fontWeight;
+      hasStyle = true;
+    }
+
+    const fontStyle = tspan.getAttribute('font-style');
+    if (fontStyle === 'italic' || fontStyle === 'normal') {
+      style.fontStyle = fontStyle;
+      hasStyle = true;
+    }
+
+    const fill = tspan.getAttribute('fill');
+    if (fill) {
+      style.fill = fill;
+      hasStyle = true;
+    }
+
+    const textDecoration = tspan.getAttribute('text-decoration') || '';
+    if (textDecoration.includes('underline')) {
+      style.textUnderline = true;
+      hasStyle = true;
+    }
+    if (textDecoration.includes('line-through')) {
+      style.textStrikethrough = true;
+      hasStyle = true;
+    }
+
+    return hasStyle ? style : undefined;
+  }
+
+  /**
+   * Render content to text element (handles multi-line and rich text)
    */
   private renderContent(textElement: SVGTextElement): void {
     // Clear existing content
     textElement.innerHTML = '';
 
+    // Check if we have rich text runs
+    if (this.runs && hasRichStyles(this.runs)) {
+      this.renderRichContent(textElement);
+    } else {
+      this.renderPlainContent(textElement);
+    }
+  }
+
+  /**
+   * Render plain text content (no rich styling)
+   */
+  private renderPlainContent(textElement: SVGTextElement): void {
     const lines = this.content.split('\n');
 
     if (lines.length === 1) {
@@ -111,6 +226,80 @@ export class Text implements Shape {
   }
 
   /**
+   * Render rich text content with nested tspans for styling
+   */
+  private renderRichContent(textElement: SVGTextElement): void {
+    if (!this.runs) return;
+
+    this.runs.forEach((lineRuns, lineIndex) => {
+      // Create line tspan
+      const lineTspan = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
+      lineTspan.setAttribute('x', String(this.x));
+
+      if (lineIndex === 0) {
+        lineTspan.setAttribute('dy', '0');
+      } else {
+        lineTspan.setAttribute('dy', String(this.fontSize * this.lineHeight));
+      }
+
+      // Check if all runs have no style (plain line)
+      const hasStyledRuns = lineRuns.some(run => run.style && Object.keys(run.style).length > 0);
+
+      if (!hasStyledRuns) {
+        // No styled runs - just set text content
+        const lineText = lineRuns.map(run => run.text).join('');
+        lineTspan.textContent = lineText || ' ';
+      } else {
+        // Create nested tspans for each run
+        lineRuns.forEach(run => {
+          if (!run.style || Object.keys(run.style).length === 0) {
+            // No style - add text directly or as simple tspan
+            const runTspan = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
+            runTspan.textContent = run.text;
+            lineTspan.appendChild(runTspan);
+          } else {
+            // Has style - create styled tspan
+            const runTspan = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
+            runTspan.textContent = run.text;
+            this.applyRunStyle(runTspan, run.style);
+            lineTspan.appendChild(runTspan);
+          }
+        });
+
+        // Handle empty lines
+        if (lineTspan.childNodes.length === 0) {
+          lineTspan.textContent = ' ';
+        }
+      }
+
+      textElement.appendChild(lineTspan);
+    });
+  }
+
+  /**
+   * Apply TextRunStyle to a tspan element
+   */
+  private applyRunStyle(tspan: SVGTSpanElement, style: TextRunStyle): void {
+    if (style.fontWeight) {
+      tspan.setAttribute('font-weight', style.fontWeight);
+    }
+    if (style.fontStyle) {
+      tspan.setAttribute('font-style', style.fontStyle);
+    }
+    if (style.fill) {
+      tspan.setAttribute('fill', style.fill);
+    }
+
+    // Build text-decoration
+    const decorations: string[] = [];
+    if (style.textUnderline) decorations.push('underline');
+    if (style.textStrikethrough) decorations.push('line-through');
+    if (decorations.length > 0) {
+      tspan.setAttribute('text-decoration', decorations.join(' '));
+    }
+  }
+
+  /**
    * Build text-decoration attribute value
    */
   private getTextDecoration(): string {
@@ -118,6 +307,50 @@ export class Text implements Shape {
     if (this.textUnderline) decorations.push('underline');
     if (this.textStrikethrough) decorations.push('line-through');
     return decorations.length > 0 ? decorations.join(' ') : 'none';
+  }
+
+  /**
+   * Set content and sync runs if needed
+   * When content changes, reset runs to match new content
+   */
+  setContent(newContent: string): void {
+    if (this.content === newContent) return;
+
+    this.content = newContent;
+
+    // If we have runs, rebuild them from new content
+    // This preserves the runs structure but updates the text
+    if (this.runs) {
+      this.runs = plainTextToRuns(newContent);
+    }
+  }
+
+  /**
+   * Set runs and sync content
+   */
+  setRuns(newRuns: TextRun[][] | null): void {
+    this.runs = newRuns;
+    if (newRuns) {
+      this.content = runsToPlainText(newRuns);
+    }
+  }
+
+  /**
+   * Get runs, creating from content if necessary
+   * This allows applying rich text styles to plain text
+   */
+  getOrCreateRuns(): TextRun[][] {
+    if (!this.runs) {
+      this.runs = plainTextToRuns(this.content);
+    }
+    return this.runs;
+  }
+
+  /**
+   * Check if this text has rich styling
+   */
+  hasRichText(): boolean {
+    return this.runs !== null && hasRichStyles(this.runs);
   }
 
   render(): SVGTextElement {
@@ -245,7 +478,7 @@ export class Text implements Shape {
   }
 
   serialize(): TextData {
-    return {
+    const data: TextData = {
       id: this.id,
       type: 'text',
       content: this.content,
@@ -264,6 +497,13 @@ export class Text implements Shape {
       rotation: this.rotation,
       className: this.className
     };
+
+    // Include runs only if there are rich styles
+    if (this.runs && hasRichStyles(this.runs)) {
+      data.runs = cloneRuns(this.runs);
+    }
+
+    return data;
   }
 
   clone(): Text {
@@ -282,7 +522,8 @@ export class Text implements Shape {
       this.textUnderline,
       this.textStrikethrough,
       this.lineHeight,
-      this.rotation
+      this.rotation,
+      this.runs ? cloneRuns(this.runs) : null
     );
     cloned.className = this.className;
     return cloned;

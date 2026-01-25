@@ -1,4 +1,4 @@
-import { ShapeStyle, StrokeLinecap, MarkerType, EdgeDirection, CanvasSize, ToolType, TextAnchor, StyleClass } from '../../shared/types';
+import { ShapeStyle, StrokeLinecap, MarkerType, EdgeDirection, CanvasSize, ToolType, TextAnchor, StyleClass, TextRunStyle } from '../../shared/types';
 import { eventBus } from '../core/EventBus';
 import { editorState } from '../core/EditorState';
 import { selectionManager } from '../core/SelectionManager';
@@ -22,10 +22,12 @@ import { ResizeShapeCommand } from '../commands/ResizeShapeCommand';
 import { CanvasResizeCommand } from '../commands/CanvasResizeCommand';
 import { RotateShapeCommand } from '../commands/RotateShapeCommand';
 import { ApplyClassCommand } from '../commands/ApplyClassCommand';
+import { RichTextChangeCommand, ClearRichTextCommand } from '../commands/RichTextChangeCommand';
 import { ClassNameDialog } from './ClassNameDialog';
 import { StyleClassManagementDialog } from './StyleClassManagementDialog';
 import { parsePath, serializePath } from '../core/PathParser';
 import { round3 } from '../core/MathUtils';
+import { globalIndexToLineChar } from '../core/TextRunUtils';
 
 /**
  * Sidebar component - handles style property editing
@@ -126,6 +128,17 @@ export class Sidebar {
   private saveClassButton: HTMLButtonElement | null = null;
   private manageClassesButton: HTMLButtonElement | null = null;
 
+  // Rich text controls
+  private richTextControlsContainer: HTMLDivElement | null = null;
+  private rangeStartInput: HTMLInputElement | null = null;
+  private rangeEndInput: HTMLInputElement | null = null;
+  private rangeBoldBtn: HTMLButtonElement | null = null;
+  private rangeItalicBtn: HTMLButtonElement | null = null;
+  private rangeUnderlineBtn: HTMLButtonElement | null = null;
+  private rangeStrikethroughBtn: HTMLButtonElement | null = null;
+  private rangeColorInput: HTMLInputElement | null = null;
+  private clearFormattingBtn: HTMLButtonElement | null = null;
+
   private isUpdatingUI = false; // Prevent feedback loop
 
   constructor() {
@@ -222,6 +235,17 @@ export class Sidebar {
     this.saveClassButton = document.getElementById('btn-save-class') as HTMLButtonElement;
     this.manageClassesButton = document.getElementById('btn-manage-classes') as HTMLButtonElement;
 
+    // Rich text controls
+    this.richTextControlsContainer = document.getElementById('rich-text-controls') as HTMLDivElement;
+    this.rangeStartInput = document.getElementById('prop-range-start') as HTMLInputElement;
+    this.rangeEndInput = document.getElementById('prop-range-end') as HTMLInputElement;
+    this.rangeBoldBtn = document.getElementById('prop-range-bold-btn') as HTMLButtonElement;
+    this.rangeItalicBtn = document.getElementById('prop-range-italic-btn') as HTMLButtonElement;
+    this.rangeUnderlineBtn = document.getElementById('prop-range-underline-btn') as HTMLButtonElement;
+    this.rangeStrikethroughBtn = document.getElementById('prop-range-strikethrough-btn') as HTMLButtonElement;
+    this.rangeColorInput = document.getElementById('prop-range-color') as HTMLInputElement;
+    this.clearFormattingBtn = document.getElementById('prop-clear-formatting-btn') as HTMLButtonElement;
+
     this.setupInputListeners();
     this.setupStyleClassListeners();
     this.setupTextInputListeners();
@@ -233,6 +257,7 @@ export class Sidebar {
     this.setupCanvasSizeInputListeners();
     this.setupDefaultNodeSizeInputListeners();
     this.setupRotationInputListeners();
+    this.setupRichTextInputListeners();
     this.setupEventListeners();
 
     // Initialize with default style
@@ -353,6 +378,126 @@ export class Sidebar {
         this.applyTextPropertyChange({ textStrikethrough: !text.textStrikethrough });
       }
     });
+
+    // Listen for selection changes in textarea to update range inputs
+    this.textContent.addEventListener('select', () => {
+      this.updateRangeFromTextareaSelection();
+    });
+    this.textContent.addEventListener('mouseup', () => {
+      this.updateRangeFromTextareaSelection();
+    });
+    this.textContent.addEventListener('keyup', () => {
+      this.updateRangeFromTextareaSelection();
+    });
+  }
+
+  /**
+   * Setup rich text input listeners
+   */
+  private setupRichTextInputListeners(): void {
+    // Range style buttons
+    if (this.rangeBoldBtn) {
+      this.rangeBoldBtn.addEventListener('click', () => {
+        this.applyRangeStyle({ fontWeight: 'bold' });
+      });
+    }
+
+    if (this.rangeItalicBtn) {
+      this.rangeItalicBtn.addEventListener('click', () => {
+        this.applyRangeStyle({ fontStyle: 'italic' });
+      });
+    }
+
+    if (this.rangeUnderlineBtn) {
+      this.rangeUnderlineBtn.addEventListener('click', () => {
+        this.applyRangeStyle({ textUnderline: true });
+      });
+    }
+
+    if (this.rangeStrikethroughBtn) {
+      this.rangeStrikethroughBtn.addEventListener('click', () => {
+        this.applyRangeStyle({ textStrikethrough: true });
+      });
+    }
+
+    if (this.rangeColorInput) {
+      this.rangeColorInput.addEventListener('change', () => {
+        this.applyRangeStyle({ fill: this.rangeColorInput!.value });
+      });
+    }
+
+    if (this.clearFormattingBtn) {
+      this.clearFormattingBtn.addEventListener('click', () => {
+        this.clearTextFormatting();
+      });
+    }
+  }
+
+  /**
+   * Update range inputs from textarea selection
+   */
+  private updateRangeFromTextareaSelection(): void {
+    if (!this.textContent || !this.rangeStartInput || !this.rangeEndInput) return;
+
+    const start = this.textContent.selectionStart;
+    const end = this.textContent.selectionEnd;
+
+    if (start !== end) {
+      this.rangeStartInput.value = String(start);
+      this.rangeEndInput.value = String(end);
+    }
+  }
+
+  /**
+   * Apply rich text style to the selected range
+   */
+  private applyRangeStyle(style: TextRunStyle): void {
+    const selectedShapes = selectionManager.getSelection();
+    if (selectedShapes.length !== 1 || !(selectedShapes[0] instanceof Text)) return;
+
+    const text = selectedShapes[0] as Text;
+
+    // Get range from inputs
+    const startIndex = parseInt(this.rangeStartInput?.value || '0', 10);
+    const endIndex = parseInt(this.rangeEndInput?.value || '0', 10);
+
+    if (startIndex >= endIndex) {
+      console.warn('Invalid range: start must be less than end');
+      return;
+    }
+
+    // Get or create runs
+    const runs = text.getOrCreateRuns();
+
+    // Convert global indices to line/char coordinates
+    const startCoord = globalIndexToLineChar(runs, startIndex);
+    const endCoord = globalIndexToLineChar(runs, endIndex);
+
+    // Create and execute command
+    const command = new RichTextChangeCommand(
+      text,
+      startCoord.lineIndex,
+      startCoord.charIndex,
+      endCoord.lineIndex,
+      endCoord.charIndex,
+      style
+    );
+    historyManager.execute(command);
+  }
+
+  /**
+   * Clear all rich text formatting
+   */
+  private clearTextFormatting(): void {
+    const selectedShapes = selectionManager.getSelection();
+    if (selectedShapes.length !== 1 || !(selectedShapes[0] instanceof Text)) return;
+
+    const text = selectedShapes[0] as Text;
+
+    if (text.runs) {
+      const command = new ClearRichTextCommand(text);
+      historyManager.execute(command);
+    }
   }
 
   /**
@@ -1049,6 +1194,17 @@ export class Sidebar {
     this.textUnderlineBtn.classList.toggle('active', text.textUnderline);
     this.textStrikethroughBtn.classList.toggle('active', text.textStrikethrough);
 
+    // Show rich text controls and reset range inputs
+    if (this.richTextControlsContainer) {
+      this.richTextControlsContainer.style.display = 'block';
+    }
+    if (this.rangeStartInput) {
+      this.rangeStartInput.value = '0';
+    }
+    if (this.rangeEndInput) {
+      this.rangeEndInput.value = '0';
+    }
+
     this.isUpdatingUI = false;
   }
 
@@ -1057,6 +1213,9 @@ export class Sidebar {
    */
   private hideTextProperties(): void {
     this.textPropertiesContainer.style.display = 'none';
+    if (this.richTextControlsContainer) {
+      this.richTextControlsContainer.style.display = 'none';
+    }
   }
 
   /**

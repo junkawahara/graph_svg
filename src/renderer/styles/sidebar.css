@@ -266,3 +266,77 @@
 .class-btn:active {
   background: #555555;
 }
+
+/* Rich text controls */
+.rich-text-section {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid #3e3e3e;
+}
+
+.range-inputs {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+  margin-bottom: 12px;
+}
+
+.range-inputs .property-group.small {
+  flex: 1;
+}
+
+.range-hint {
+  font-size: 11px;
+  color: #666666;
+  white-space: nowrap;
+}
+
+.range-style-buttons {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.range-style-buttons .style-btn {
+  width: 28px;
+  height: 28px;
+}
+
+.range-style-buttons input[type="color"] {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid #4a4a4a;
+  border-radius: 4px;
+  cursor: pointer;
+  background-color: transparent;
+}
+
+.range-style-buttons input[type="color"]::-webkit-color-swatch-wrapper {
+  padding: 2px;
+}
+
+.range-style-buttons input[type="color"]::-webkit-color-swatch {
+  border: none;
+  border-radius: 2px;
+}
+
+.clear-formatting-btn {
+  width: 100%;
+  padding: 6px 12px;
+  background: #3c3c3c;
+  border: 1px solid #4a4a4a;
+  border-radius: 4px;
+  color: #cccccc;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.clear-formatting-btn:hover {
+  background: #4a4a4a;
+}
+
+.clear-formatting-btn:active {
+  background: #555555;
+}

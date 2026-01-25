@@ -165,6 +165,27 @@ export interface RectangleData extends BaseShapeData {
 }
 
 /**
+ * Partial style that can be applied to a text run (portion of text)
+ * undefined means inherit from parent Text element
+ */
+export interface TextRunStyle {
+  fontWeight?: 'normal' | 'bold';
+  fontStyle?: 'normal' | 'italic';
+  textUnderline?: boolean;
+  textStrikethrough?: boolean;
+  fill?: string;           // Text color (overrides parent fill)
+  // fontSize?: number;    // Phase 2: different font sizes within text
+}
+
+/**
+ * A styled text fragment within a Text element
+ */
+export interface TextRun {
+  text: string;
+  style?: TextRunStyle;    // undefined = inherit parent style
+}
+
+/**
  * Text shape data
  */
 export interface TextData extends BaseShapeData {
@@ -181,6 +202,7 @@ export interface TextData extends BaseShapeData {
   textUnderline: boolean;
   textStrikethrough: boolean;
   lineHeight: number;
+  runs?: TextRun[][];      // Rich text: array of lines, each line is array of runs. undefined = plain text
 }
 
 /**

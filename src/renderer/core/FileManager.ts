@@ -1,4 +1,5 @@
-import { ShapeStyle, StyleClass, DEFAULT_STYLE, StrokeLinecap, MarkerType, EdgeDirection, CanvasSize, DEFAULT_CANVAS_SIZE, Point, generateId, PathCommand } from '../../shared/types';
+import { ShapeStyle, StyleClass, DEFAULT_STYLE, StrokeLinecap, MarkerType, EdgeDirection, CanvasSize, DEFAULT_CANVAS_SIZE, Point, generateId, PathCommand, TextRun, TextRunStyle } from '../../shared/types';
+import { hasRichStyles } from './TextRunUtils';
 import { Shape } from '../shapes/Shape';
 import { Line } from '../shapes/Line';
 import { Ellipse } from '../shapes/Ellipse';
@@ -154,6 +155,12 @@ export class FileManager {
     } else if (shape instanceof Rectangle) {
       return `  <rect id="${shape.id}" ${classAttr}x="${shape.x}" y="${shape.y}" width="${shape.width}" height="${shape.height}" ${style}/>`;
     } else if (shape instanceof Text) {
+      // Check if text has rich styling
+      if (shape.runs && hasRichStyles(shape.runs)) {
+        return this.richTextToSvgElement(shape);
+      }
+
+      // Plain text output (no rich styling)
       // Build text-decoration attribute
       const decorations: string[] = [];
       if (shape.textUnderline) decorations.push('underline');
@@ -689,6 +696,87 @@ export class FileManager {
     }
 
     return `M ${round3(startX)} ${round3(startY)} C ${ctrl1X} ${ctrl1Y} ${ctrl2X} ${ctrl2Y} ${round3(endX)} ${round3(endY)}`;
+  }
+
+  /**
+   * Convert a Text with rich styling to SVG element string
+   */
+  private static richTextToSvgElement(shape: Text): string {
+    const style = this.getShapeStyleAttributes(shape);
+    const classAttr = shape.className ? `class="${shape.className}" ` : '';
+
+    // Build text-decoration attribute for parent (default styles)
+    const decorations: string[] = [];
+    if (shape.textUnderline) decorations.push('underline');
+    if (shape.textStrikethrough) decorations.push('line-through');
+    const textDecorationAttr = decorations.length > 0
+      ? ` text-decoration="${decorations.join(' ')}"`
+      : '';
+
+    // Build font-style attribute
+    const fontStyleAttr = shape.fontStyle === 'italic' ? ' font-style="italic"' : '';
+
+    if (!shape.runs) {
+      // Fallback to plain text if no runs
+      const escapedContent = this.escapeXml(shape.content);
+      return `  <text id="${shape.id}" ${classAttr}x="${shape.x}" y="${shape.y}" font-size="${shape.fontSize}" font-family="${shape.fontFamily}" font-weight="${shape.fontWeight}" text-anchor="${shape.textAnchor}"${fontStyleAttr}${textDecorationAttr} dominant-baseline="${shape.dominantBaseline}" ${style}>${escapedContent}</text>`;
+    }
+
+    // Build nested tspans for rich text
+    const tspanLines = shape.runs.map((lineRuns, lineIndex) => {
+      const dy = lineIndex === 0 ? 0 : shape.fontSize * shape.lineHeight;
+
+      // Check if line has any styled runs
+      const hasStyledRuns = lineRuns.some(run => run.style && Object.keys(run.style).length > 0);
+
+      if (!hasStyledRuns) {
+        // No styled runs - simple line tspan
+        const lineText = lineRuns.map(run => run.text).join('');
+        const escapedLine = this.escapeXml(lineText) || ' ';
+        return `    <tspan x="${shape.x}" dy="${dy}">${escapedLine}</tspan>`;
+      }
+
+      // Build nested tspans for each run
+      const runTspans = lineRuns.map(run => {
+        const escapedText = this.escapeXml(run.text);
+        if (!run.style || Object.keys(run.style).length === 0) {
+          return `<tspan>${escapedText}</tspan>`;
+        }
+        const styleAttrs = this.runStyleToAttributes(run.style);
+        return `<tspan${styleAttrs}>${escapedText}</tspan>`;
+      }).join('');
+
+      // Wrap in line tspan
+      return `    <tspan x="${shape.x}" dy="${dy}">${runTspans || ' '}</tspan>`;
+    }).join('\n');
+
+    return `  <text id="${shape.id}" ${classAttr}x="${shape.x}" y="${shape.y}" font-size="${shape.fontSize}" font-family="${shape.fontFamily}" font-weight="${shape.fontWeight}" text-anchor="${shape.textAnchor}"${fontStyleAttr}${textDecorationAttr} dominant-baseline="${shape.dominantBaseline}" ${style}>\n${tspanLines}\n  </text>`;
+  }
+
+  /**
+   * Convert TextRunStyle to SVG attribute string
+   */
+  private static runStyleToAttributes(style: TextRunStyle): string {
+    const attrs: string[] = [];
+
+    if (style.fontWeight) {
+      attrs.push(`font-weight="${style.fontWeight}"`);
+    }
+    if (style.fontStyle) {
+      attrs.push(`font-style="${style.fontStyle}"`);
+    }
+    if (style.fill) {
+      attrs.push(`fill="${style.fill}"`);
+    }
+
+    const decorations: string[] = [];
+    if (style.textUnderline) decorations.push('underline');
+    if (style.textStrikethrough) decorations.push('line-through');
+    if (decorations.length > 0) {
+      attrs.push(`text-decoration="${decorations.join(' ')}"`);
+    }
+
+    return attrs.length > 0 ? ' ' + attrs.join(' ') : '';
   }
 
   /**

@@ -295,6 +295,29 @@
               <button type="button" id="prop-text-strikethrough-btn" class="style-btn" title="Strikethrough"><s>S</s></button>
             </div>
           </div>
+          <!-- Rich Text Range Styling -->
+          <div id="rich-text-controls" class="rich-text-section">
+            <label class="section-label">Range Style</label>
+            <div class="range-inputs">
+              <div class="property-group small">
+                <label>From</label>
+                <input type="number" id="prop-range-start" min="0" step="1" value="0">
+              </div>
+              <div class="property-group small">
+                <label>To</label>
+                <input type="number" id="prop-range-end" min="0" step="1" value="0">
+              </div>
+              <span class="range-hint">(auto)</span>
+            </div>
+            <div class="range-style-buttons">
+              <button type="button" id="prop-range-bold-btn" class="style-btn" title="Bold selection">B</button>
+              <button type="button" id="prop-range-italic-btn" class="style-btn" title="Italic selection"><em>I</em></button>
+              <button type="button" id="prop-range-underline-btn" class="style-btn" title="Underline selection"><u>U</u></button>
+              <button type="button" id="prop-range-strikethrough-btn" class="style-btn" title="Strikethrough selection"><s>S</s></button>
+              <input type="color" id="prop-range-color" value="#000000" title="Text color">
+            </div>
+            <button type="button" id="prop-clear-formatting-btn" class="clear-formatting-btn">Clear Formatting</button>
+          </div>
         </div>
 
         <div class="property-group">

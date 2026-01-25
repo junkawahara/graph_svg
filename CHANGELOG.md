@@ -5,6 +5,19 @@
 ## [Unreleased]
 
 ### 追加
+- リッチテキスト機能（1行内の部分的スタイル変更）
+  - テキスト図形内で部分的に異なるスタイルを適用可能
+    - 太字、イタリック、下線、取消線
+    - 文字色（親のfillを上書き）
+  - サイドバーに Range Style セクションを追加
+    - Content の textarea でテキストを選択すると範囲が自動入力
+    - 範囲スタイルボタン: B（太字）、I（イタリック）、U（下線）、S（取消線）
+    - 色ピッカーで範囲の文字色を変更
+    - Clear Formatting ボタンで全てのリッチテキストスタイルをクリア
+  - 新規型定義: `TextRunStyle`, `TextRun`
+  - `TextData` に `runs` フィールドを追加（行の配列、各行はRunの配列）
+  - SVG 出力形式: ネストした `<tspan>` でスタイルを保持
+  - Undo/Redo 対応: `RichTextChangeCommand`, `ClearRichTextCommand`
 - Electron と Web ブラウザの両方で動作するハイブリッドアプリ化
   - Platform Adapter パターンによるプラットフォーム抽象化
     - `PlatformAdapter` インターフェース（ファイル操作、設定、メニューイベント）
