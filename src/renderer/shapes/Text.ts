@@ -60,23 +60,51 @@ export class Text implements Shape {
     let lineHeight = 1.2;
 
     if (lineTspans.length > 0) {
-      // Check if we have nested tspans (rich text)
+      // Check if we have nested tspans (rich text with line wrappers)
       const hasNestedTspans = lineTspans.some(
         lineTspan => lineTspan.querySelector('tspan') !== null
       );
 
+      // Check if this is multi-line text (tspans with dy attributes indicating new lines)
+      // Multi-line: second+ tspans have positive dy values
+      const isMultiLine = lineTspans.length > 1 && lineTspans.slice(1).some(
+        tspan => {
+          const dy = parseFloat(tspan.getAttribute('dy') || '0');
+          return dy > 0;
+        }
+      );
+
+      // Check if direct child tspans have styling (inline rich text without line wrappers)
+      const hasStyledDirectTspans = lineTspans.some(tspan => {
+        return tspan.hasAttribute('font-weight') ||
+               tspan.hasAttribute('font-style') ||
+               tspan.hasAttribute('fill') ||
+               tspan.hasAttribute('text-decoration');
+      });
+
       if (hasNestedTspans) {
-        // Parse rich text with nested tspans
+        // Parse rich text with nested tspans (our output format)
         const parsedRuns = Text.parseRichTextFromElement(lineTspans);
         runs = parsedRuns.runs;
         content = runsToPlainText(runs);
-      } else {
+      } else if (isMultiLine) {
         // Simple multi-line text without rich styling
         content = lineTspans.map(t => t.textContent || '').join('\n');
+      } else if (hasStyledDirectTspans) {
+        // Inline rich text: direct child tspans with styles (single line)
+        const lineRuns: TextRun[] = lineTspans.map(tspan => ({
+          text: tspan.textContent || '',
+          style: Text.parseRunStyleFromElement(tspan)
+        }));
+        runs = [lineRuns];
+        content = lineRuns.map(r => r.text).join('');
+      } else {
+        // Plain text with tspans but no styling - treat as single line
+        content = lineTspans.map(t => t.textContent || '').join('');
       }
 
-      // Parse line-height from second line tspan
-      if (lineTspans.length > 1) {
+      // Parse line-height from second line tspan (only for multi-line)
+      if (isMultiLine && lineTspans.length > 1) {
         const dy = parseFloat(lineTspans[1].getAttribute('dy') || '0');
         const fontSize = parseFloat(el.getAttribute('font-size') || '24');
         if (dy > 0 && fontSize > 0) {

@@ -37,6 +37,9 @@
     - 出力先: `dist-web/`
 
 ### 修正
+- Text.ts: SVGファイル読み込み時にインラインtspanを持つテキストが改行で分割される問題を修正
+  - `<text><tspan>L</tspan><tspan>=</tspan><tspan>0</tspan></text>` のような形式を正しく1行として読み込む
+  - dy属性の有無で複数行テキストとインラインリッチテキストを区別
 - PathParser.ts: `vectorAngle()` が退化した弧（長さゼロのベクトル）で NaN を返す問題を修正
   - `len < 1e-10` の場合は 0 を返すように修正
 - Path.ts: `samplePath()` が Z コマンドを処理しない問題を修正
