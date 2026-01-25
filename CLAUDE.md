@@ -626,6 +626,46 @@ e ghij3 45
 </g>
 ```
 
+## リッチテキスト機能
+
+テキスト図形内で、部分的に異なるスタイルを適用できる機能。
+
+### Phase 1（実装済み）
+
+サイドバーの Range Style セクションで、選択範囲にスタイルを適用:
+
+- **太字** (`font-weight: bold`)
+- **イタリック** (`font-style: italic`)
+- **下線** (`text-decoration: underline`)
+- **取消線** (`text-decoration: line-through`)
+- **文字色** (`fill`)
+
+### Phase 2（計画中）
+
+- **フォントサイズの部分変更** (`font-size`)
+- **上付き文字** (`baseline-shift: super` + 小さいフォントサイズ)
+- **下付き文字** (`baseline-shift: sub` + 小さいフォントサイズ)
+
+### SVG 出力形式
+
+リッチテキストはネストした `<tspan>` で出力:
+
+```xml
+<text x="100" y="100" font-size="24" ...>
+  <tspan x="100" dy="0">
+    <tspan>H</tspan>
+    <tspan baseline-shift="sub" font-size="70%">2</tspan>
+    <tspan>O</tspan>
+  </tspan>
+</text>
+```
+
+### 関連ファイル
+
+- `src/shared/types.ts` - `TextRunStyle`, `TextRun` 型定義
+- `src/renderer/core/TextRunUtils.ts` - Run 操作ユーティリティ
+- `src/renderer/commands/RichTextChangeCommand.ts` - Undo/Redo 対応コマンド
+
 ## 開発ワークフロー
 
 ### CHANGELOG.md への記録

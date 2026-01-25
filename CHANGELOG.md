@@ -37,6 +37,9 @@
     - 出力先: `dist-web/`
 
 ### 修正
+- Node.ts: ノード内テキストを getBBox() を使って正確に上下中央に配置
+  - `dominant-baseline="middle"` だけでは正確に中央にならないフォントに対応
+  - render() と updateElement() で位置を自動調整
 - Text.ts: SVGファイル読み込み時にインラインtspanを持つテキストが改行で分割される問題を修正
   - `<text><tspan>L</tspan><tspan>=</tspan><tspan>0</tspan></text>` のような形式を正しく1行として読み込む
   - dy属性の有無で複数行テキストとインラインリッチテキストを区別

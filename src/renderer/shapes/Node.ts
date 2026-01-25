@@ -113,7 +113,31 @@ export class Node implements Shape {
     gm.registerNode(this.id);
     gm.setNodeShape(this.id, this);
 
+    // Adjust text vertical position after rendering (requires DOM)
+    // Use requestAnimationFrame to ensure element is in DOM
+    requestAnimationFrame(() => this.adjustTextVerticalCenter());
+
     return group;
+  }
+
+  /**
+   * Adjust text vertical position to be exactly centered using getBBox
+   */
+  private adjustTextVerticalCenter(): void {
+    if (!this.textElement || !this.label) return;
+
+    try {
+      const bbox = this.textElement.getBBox();
+      // Calculate the actual center of the text bounding box
+      const textCenterY = bbox.y + bbox.height / 2;
+      // Calculate offset from node center
+      const offset = this.cy - textCenterY;
+      // Adjust y position
+      const currentY = parseFloat(this.textElement.getAttribute('y') || String(this.cy));
+      this.textElement.setAttribute('y', String(round3(currentY + offset)));
+    } catch (e) {
+      // getBBox may fail if element is not in DOM yet
+    }
   }
 
   updateElement(): void {
@@ -126,7 +150,7 @@ export class Node implements Shape {
     this.ellipseElement.setAttribute('ry', String(this.ry));
     applyStyle(this.ellipseElement, this.style);
 
-    // Update text
+    // Update text (reset to center first, then adjust)
     this.textElement.setAttribute('x', String(this.cx));
     this.textElement.setAttribute('y', String(this.cy));
     this.textElement.setAttribute('font-size', String(this.fontSize));
@@ -140,6 +164,9 @@ export class Node implements Shape {
       // Apply rotation
       applyRotation(this.element, this.rotation, this.cx, this.cy);
     }
+
+    // Adjust text vertical position
+    this.adjustTextVerticalCenter();
   }
 
   hitTest(point: Point, tolerance: number = 5): boolean {
