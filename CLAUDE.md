@@ -640,11 +640,10 @@ e ghij3 45
 - **取消線** (`text-decoration: line-through`)
 - **文字色** (`fill`)
 
-### Phase 2（計画中）
+### Phase 2（実装済み）
 
-- **フォントサイズの部分変更** (`font-size`)
-- **上付き文字** (`baseline-shift: super` + 小さいフォントサイズ)
-- **下付き文字** (`baseline-shift: sub` + 小さいフォントサイズ)
+- **上付き文字** (`baseline-shift: super` + `font-size: 70%`)
+- **下付き文字** (`baseline-shift: sub` + `font-size: 70%`)
 
 ### SVG 出力形式
 

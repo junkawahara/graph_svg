@@ -9,12 +9,14 @@
   - テキスト図形内で部分的に異なるスタイルを適用可能
     - 太字、イタリック、下線、取消線
     - 文字色（親のfillを上書き）
+    - **上付き文字**（X²ボタン）: `baseline-shift: super` + フォントサイズ70%
+    - **下付き文字**（X₂ボタン）: `baseline-shift: sub` + フォントサイズ70%
   - サイドバーに Range Style セクションを追加
     - Content の textarea でテキストを選択すると範囲が自動入力
-    - 範囲スタイルボタン: B（太字）、I（イタリック）、U（下線）、S（取消線）
+    - 範囲スタイルボタン: B（太字）、I（イタリック）、U（下線）、S（取消線）、X²（上付き）、X₂（下付き）
     - 色ピッカーで範囲の文字色を変更
     - Clear Formatting ボタンで全てのリッチテキストスタイルをクリア
-  - 新規型定義: `TextRunStyle`, `TextRun`
+  - 新規型定義: `TextRunStyle`, `TextRun`, `BaselineShift`
   - `TextData` に `runs` フィールドを追加（行の配列、各行はRunの配列）
   - SVG 出力形式: ネストした `<tspan>` でスタイルを保持
   - Undo/Redo 対応: `RichTextChangeCommand`, `ClearRichTextCommand`

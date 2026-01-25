@@ -165,6 +165,11 @@ export interface RectangleData extends BaseShapeData {
 }
 
 /**
+ * Baseline shift for superscript/subscript
+ */
+export type BaselineShift = 'super' | 'sub' | 'baseline';
+
+/**
  * Partial style that can be applied to a text run (portion of text)
  * undefined means inherit from parent Text element
  */
@@ -174,7 +179,8 @@ export interface TextRunStyle {
   textUnderline?: boolean;
   textStrikethrough?: boolean;
   fill?: string;           // Text color (overrides parent fill)
-  // fontSize?: number;    // Phase 2: different font sizes within text
+  fontSize?: number;       // Font size (absolute value or percentage of parent)
+  baselineShift?: BaselineShift;  // Superscript/subscript
 }
 
 /**

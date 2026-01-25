@@ -137,6 +137,8 @@ export class Sidebar {
   private rangeUnderlineBtn: HTMLButtonElement | null = null;
   private rangeStrikethroughBtn: HTMLButtonElement | null = null;
   private rangeColorInput: HTMLInputElement | null = null;
+  private rangeSuperscriptBtn: HTMLButtonElement | null = null;
+  private rangeSubscriptBtn: HTMLButtonElement | null = null;
   private clearFormattingBtn: HTMLButtonElement | null = null;
 
   private isUpdatingUI = false; // Prevent feedback loop
@@ -244,6 +246,8 @@ export class Sidebar {
     this.rangeUnderlineBtn = document.getElementById('prop-range-underline-btn') as HTMLButtonElement;
     this.rangeStrikethroughBtn = document.getElementById('prop-range-strikethrough-btn') as HTMLButtonElement;
     this.rangeColorInput = document.getElementById('prop-range-color') as HTMLInputElement;
+    this.rangeSuperscriptBtn = document.getElementById('prop-range-superscript-btn') as HTMLButtonElement;
+    this.rangeSubscriptBtn = document.getElementById('prop-range-subscript-btn') as HTMLButtonElement;
     this.clearFormattingBtn = document.getElementById('prop-clear-formatting-btn') as HTMLButtonElement;
 
     this.setupInputListeners();
@@ -423,6 +427,20 @@ export class Sidebar {
     if (this.rangeColorInput) {
       this.rangeColorInput.addEventListener('change', () => {
         this.applyRangeStyle({ fill: this.rangeColorInput!.value });
+      });
+    }
+
+    if (this.rangeSuperscriptBtn) {
+      this.rangeSuperscriptBtn.addEventListener('click', () => {
+        // Superscript: baseline-shift: super, font-size: 70%
+        this.applyRangeStyle({ baselineShift: 'super', fontSize: -70 });
+      });
+    }
+
+    if (this.rangeSubscriptBtn) {
+      this.rangeSubscriptBtn.addEventListener('click', () => {
+        // Subscript: baseline-shift: sub, font-size: 70%
+        this.applyRangeStyle({ baselineShift: 'sub', fontSize: -70 });
       });
     }
 

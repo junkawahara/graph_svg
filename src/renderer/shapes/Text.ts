@@ -1,4 +1,4 @@
-import { Point, Bounds, ShapeStyle, TextData, TextAnchor, DominantBaseline, TextRun, TextRunStyle, generateId } from '../../shared/types';
+import { Point, Bounds, ShapeStyle, TextData, TextAnchor, DominantBaseline, TextRun, TextRunStyle, BaselineShift, generateId } from '../../shared/types';
 import { Shape, applyStyle, applyRotation, normalizeRotation, rotatePoint, getRotatedBounds } from './Shape';
 import { round3 } from '../core/MathUtils';
 import { Matrix2D, decomposeMatrix } from '../core/TransformParser';
@@ -206,6 +206,25 @@ export class Text implements Shape {
       hasStyle = true;
     }
 
+    // Parse font-size (can be absolute like "12" or percentage like "70%")
+    const fontSize = tspan.getAttribute('font-size');
+    if (fontSize) {
+      if (fontSize.endsWith('%')) {
+        // Percentage - store as negative value to indicate percentage
+        style.fontSize = -parseFloat(fontSize);
+      } else {
+        style.fontSize = parseFloat(fontSize);
+      }
+      hasStyle = true;
+    }
+
+    // Parse baseline-shift (super, sub, or baseline)
+    const baselineShift = tspan.getAttribute('baseline-shift');
+    if (baselineShift === 'super' || baselineShift === 'sub' || baselineShift === 'baseline') {
+      style.baselineShift = baselineShift as BaselineShift;
+      hasStyle = true;
+    }
+
     return hasStyle ? style : undefined;
   }
 
@@ -324,6 +343,20 @@ export class Text implements Shape {
     if (style.textStrikethrough) decorations.push('line-through');
     if (decorations.length > 0) {
       tspan.setAttribute('text-decoration', decorations.join(' '));
+    }
+
+    // Apply font-size (negative value indicates percentage)
+    if (style.fontSize !== undefined) {
+      if (style.fontSize < 0) {
+        tspan.setAttribute('font-size', `${Math.abs(style.fontSize)}%`);
+      } else {
+        tspan.setAttribute('font-size', String(style.fontSize));
+      }
+    }
+
+    // Apply baseline-shift
+    if (style.baselineShift && style.baselineShift !== 'baseline') {
+      tspan.setAttribute('baseline-shift', style.baselineShift);
     }
   }
 

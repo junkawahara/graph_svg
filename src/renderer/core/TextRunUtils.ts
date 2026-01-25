@@ -17,7 +17,9 @@ export function stylesEqual(a?: TextRunStyle, b?: TextRunStyle): boolean {
     a.fontStyle === b.fontStyle &&
     a.textUnderline === b.textUnderline &&
     a.textStrikethrough === b.textStrikethrough &&
-    a.fill === b.fill
+    a.fill === b.fill &&
+    a.fontSize === b.fontSize &&
+    a.baselineShift === b.baselineShift
   );
 }
 
@@ -35,6 +37,8 @@ export function mergeStyles(base?: TextRunStyle, override?: TextRunStyle): TextR
   if (override.textUnderline !== undefined) merged.textUnderline = override.textUnderline;
   if (override.textStrikethrough !== undefined) merged.textStrikethrough = override.textStrikethrough;
   if (override.fill !== undefined) merged.fill = override.fill;
+  if (override.fontSize !== undefined) merged.fontSize = override.fontSize;
+  if (override.baselineShift !== undefined) merged.baselineShift = override.baselineShift;
 
   return merged;
 }
@@ -49,7 +53,9 @@ export function hasStyle(style?: TextRunStyle): boolean {
     style.fontStyle !== undefined ||
     style.textUnderline !== undefined ||
     style.textStrikethrough !== undefined ||
-    style.fill !== undefined
+    style.fill !== undefined ||
+    style.fontSize !== undefined ||
+    style.baselineShift !== undefined
   );
 }
 
@@ -69,13 +75,29 @@ export function runsToPlainText(runs: TextRun[][]): string {
 }
 
 /**
+ * Deep clone a TextRunStyle
+ */
+function cloneStyle(style?: TextRunStyle): TextRunStyle | undefined {
+  if (!style) return undefined;
+  return {
+    fontWeight: style.fontWeight,
+    fontStyle: style.fontStyle,
+    textUnderline: style.textUnderline,
+    textStrikethrough: style.textStrikethrough,
+    fill: style.fill,
+    fontSize: style.fontSize,
+    baselineShift: style.baselineShift
+  };
+}
+
+/**
  * Deep clone a TextRun array
  */
 export function cloneRuns(runs: TextRun[][]): TextRun[][] {
   return runs.map(line =>
     line.map(run => ({
       text: run.text,
-      style: run.style ? { ...run.style } : undefined
+      style: cloneStyle(run.style)
     }))
   );
 }
