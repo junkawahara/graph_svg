@@ -1183,7 +1183,9 @@ export class Sidebar {
     this.textPropertiesContainer.style.display = 'block';
     this.textContent.value = text.content;
     this.fontSize.value = String(text.fontSize);
-    this.fontFamily.value = text.fontFamily;
+    // Extract first font name from font-family (e.g., "CMU Serif, serif" -> "CMU Serif")
+    const primaryFont = text.fontFamily.split(',')[0].trim();
+    this.fontFamily.value = primaryFont;
     this.textAnchor.value = text.textAnchor;
     this.lineHeight.value = String(text.lineHeight);
 

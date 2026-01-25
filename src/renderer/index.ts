@@ -5,6 +5,9 @@ import './styles/canvas.css';
 import './styles/dialog.css';
 import './styles/menubar.css';
 
+// Computer Modern fonts
+import 'computer-modern/cmu-serif.css';
+
 import { Canvas } from './components/Canvas';
 import { Toolbar } from './components/Toolbar';
 import { Sidebar } from './components/Sidebar';
