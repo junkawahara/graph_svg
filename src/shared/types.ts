@@ -410,7 +410,7 @@ export interface EdgeLabelPlacement {
  * Default node label placement
  */
 export const DEFAULT_NODE_LABEL_PLACEMENT: NodeLabelPlacement = {
-  position: 'center',
+  position: 'auto',
   distance: 5
 };
 

@@ -66,10 +66,28 @@ export function labelPosToNumber(pos: EdgeLabelPos): number {
 }
 
 /**
+ * Trial positions for auto label placement (8 directions)
+ */
+export const AUTO_LABEL_TRIAL_POSITIONS: NodeLabelPosition[] = [
+  'above', 'above left', 'above right', 'left', 'right',
+  'below left', 'below right', 'below'
+];
+
+/**
+ * Distance increments for auto label placement fallback
+ */
+export const AUTO_LABEL_DISTANCE_INCREMENTS = [0, 5, 10];
+
+/**
+ * Angle increment for auto label placement fallback (degrees)
+ */
+export const AUTO_LABEL_ANGLE_INCREMENT = 15;
+
+/**
  * Convert NodeLabelPosition keyword to angle in degrees
  * 0=right, 90=above, 180=left, 270=below
  */
-function positionToAngle(position: NodeLabelPosition): number {
+export function positionToAngle(position: NodeLabelPosition): number {
   if (typeof position === 'number') {
     return normalizeAngle(position);
   }
@@ -91,7 +109,7 @@ function positionToAngle(position: NodeLabelPosition): number {
  * Calculate text-anchor based on angle
  * Uses sectors: right (315-45) = start, top/bottom (45-135, 225-315) = middle, left (135-225) = end
  */
-function getTextAnchorForAngle(angleDeg: number): TextAnchorValue {
+export function getTextAnchorForAngle(angleDeg: number): TextAnchorValue {
   const angle = normalizeAngle(angleDeg);
   // Right sector: -45 to 45 (315-360, 0-45)
   if (angle >= 315 || angle < 45) return 'start';
@@ -106,7 +124,7 @@ function getTextAnchorForAngle(angleDeg: number): TextAnchorValue {
 /**
  * Calculate dominant-baseline based on angle
  */
-function getDominantBaselineForAngle(angleDeg: number): string {
+export function getDominantBaselineForAngle(angleDeg: number): string {
   const angle = normalizeAngle(angleDeg);
   // Top sector: 45 to 135 -> text below anchor (auto/hanging behavior varies)
   if (angle >= 45 && angle < 135) return 'auto';  // Text hangs below
@@ -146,6 +164,47 @@ export function calculateNodeLabelPosition(
   const angleDeg = positionToAngle(placement.position);
   const angleRad = (angleDeg * Math.PI) / 180;
   const distance = placement.distance;
+
+  // Point on ellipse boundary
+  const boundaryX = rx * Math.cos(angleRad);
+  const boundaryY = -ry * Math.sin(angleRad);  // Negative because SVG Y is inverted
+
+  // Unit vector from center towards the boundary point
+  const len = Math.sqrt(boundaryX * boundaryX + boundaryY * boundaryY);
+  const unitX = len > 0 ? boundaryX / len : 0;
+  const unitY = len > 0 ? boundaryY / len : -1;
+
+  // Position outside the boundary
+  const x = round3(cx + boundaryX + unitX * distance);
+  const y = round3(cy + boundaryY + unitY * distance);
+
+  return {
+    x,
+    y,
+    textAnchor: getTextAnchorForAngle(angleDeg),
+    dominantBaseline: getDominantBaselineForAngle(angleDeg)
+  };
+}
+
+/**
+ * Calculate node label position for a specific angle (for auto placement)
+ * @param cx Node center X
+ * @param cy Node center Y
+ * @param rx Node X radius
+ * @param ry Node Y radius
+ * @param angleDeg Angle in degrees (0=right, 90=up, 180=left, 270=down)
+ * @param distance Distance from node boundary (px)
+ * @returns Position and text alignment
+ */
+export function calculateLabelPositionForAngle(
+  cx: number,
+  cy: number,
+  rx: number,
+  ry: number,
+  angleDeg: number,
+  distance: number
+): NodeLabelPositionResult {
+  const angleRad = (angleDeg * Math.PI) / 180;
 
   // Point on ellipse boundary
   const boundaryX = rx * Math.cos(angleRad);

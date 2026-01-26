@@ -5,9 +5,20 @@
 ## [Unreleased]
 
 ### 追加
+- ノードの auto ラベル配置機能
+  - デフォルト位置を `center` から `auto` に変更
+  - `auto` は他のオブジェクトと重ならない位置に自動配置
+    - Phase 1: 8方向（above, above left, above right, left, right, below left, below right, below）を試行
+    - Phase 2: 15度刻みで全方向、距離+5pxで試行
+    - Phase 3: 15度刻みで全方向、距離+10pxで試行
+    - フォールバック: 重なりが最も少ない位置に配置
+  - 重なり判定対象: ノード（楕円）、ノードラベル、エッジ、エッジラベル、通常図形
+  - 再計算トリガー: ノード移動/リサイズ、図形追加/削除、Undo/Redo、ファイル読み込み
+  - SVG 保存時は `data-label-position="auto"` として保存
+  - `AutoLabelPlacementManager` による効率的なバッチ計算
 - ラベル配置機能（TikZ スタイル）
   - ノードのラベル配置オプション
-    - 位置: `center`（デフォルト）、`above`、`below`、`left`、`right`、斜め4方向、カスタム角度（0-360°）
+    - 位置: `auto`（デフォルト）、`center`、`above`、`below`、`left`、`right`、斜め4方向、カスタム角度（0-360°）
     - 距離: ノード境界からの距離（px）
   - エッジのラベル配置オプション
     - 長さ方向: `auto`（midway）、`midway`（0.5）、`near start`（0.25）、`near end`（0.75）、カスタム（0-1）

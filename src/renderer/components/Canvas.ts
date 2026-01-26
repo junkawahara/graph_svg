@@ -64,6 +64,7 @@ import { CompositeCommand } from '../commands/CompositeCommand';
 import { SvgEditDialog } from './SvgEditDialog';
 import { ContextMenu } from './ContextMenu';
 import { FileManager } from '../core/FileManager';
+import { getAutoLabelPlacementManager } from '../core/AutoLabelPlacementManager';
 
 /**
  * Canvas component - manages SVG element, tools, shapes, and handles
@@ -118,6 +119,10 @@ export class Canvas {
     this.setupEventListeners();
     this.updateSize();
     this.updateCursor();
+
+    // Initialize auto label placement manager
+    const autoLabelManager = getAutoLabelPlacementManager();
+    autoLabelManager.setCanvas(this);
 
     // Listen for tool changes
     eventBus.on('tool:changed', (tool: ToolType) => {
@@ -275,13 +280,16 @@ export class Canvas {
       this.updateCanvasBoundary();
     });
 
-    // Listen for history changes (undo/redo) to update handles
+    // Listen for history changes (undo/redo) to update handles and auto labels
     eventBus.on('history:changed', () => {
       // Update handles for currently selected shapes after undo/redo
       const selectedShapes = selectionManager.getSelection();
       if (selectedShapes.length > 0) {
         this.updateHandlesForSelection(selectedShapes);
       }
+
+      // Recalculate auto label positions
+      getAutoLabelPlacementManager().scheduleRecalculation();
     });
   }
 

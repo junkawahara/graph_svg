@@ -3,7 +3,7 @@ import { Shape, applyStyle, applyRotation, normalizeRotation, rotatePoint, getRo
 import { getGraphManager } from '../core/GraphManager';
 import { round3 } from '../core/MathUtils';
 import { Matrix2D, decomposeMatrix } from '../core/TransformParser';
-import { calculateNodeLabelPosition } from '../core/LabelGeometry';
+import { calculateNodeLabelPosition, calculateLabelPositionForAngle } from '../core/LabelGeometry';
 
 /**
  * Graph Node shape - a composite shape with ellipse and label
@@ -16,6 +16,10 @@ export class Node implements Shape {
   rotation: number = 0;
   className?: string;
   labelPlacement: NodeLabelPlacement;
+
+  // Auto placement resolved position (internal state)
+  private resolvedLabelAngle: number = 90;  // Default: above
+  private resolvedLabelDistance: number = 5;
 
   constructor(
     public readonly id: string,
@@ -124,9 +128,18 @@ export class Node implements Shape {
     this.ellipseElement = ellipse;
 
     // Calculate label position
-    const labelPos = calculateNodeLabelPosition(
-      this.cx, this.cy, this.rx, this.ry, this.labelPlacement
-    );
+    let labelPos;
+    if (this.labelPlacement.position === 'auto') {
+      // Use resolved auto position
+      labelPos = calculateLabelPositionForAngle(
+        this.cx, this.cy, this.rx, this.ry,
+        this.resolvedLabelAngle, this.resolvedLabelDistance
+      );
+    } else {
+      labelPos = calculateNodeLabelPosition(
+        this.cx, this.cy, this.rx, this.ry, this.labelPlacement
+      );
+    }
 
     // Create text label
     const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
@@ -192,9 +205,18 @@ export class Node implements Shape {
     applyStyle(this.ellipseElement, this.style);
 
     // Calculate label position
-    const labelPos = calculateNodeLabelPosition(
-      this.cx, this.cy, this.rx, this.ry, this.labelPlacement
-    );
+    let labelPos;
+    if (this.labelPlacement.position === 'auto') {
+      // Use resolved auto position
+      labelPos = calculateLabelPositionForAngle(
+        this.cx, this.cy, this.rx, this.ry,
+        this.resolvedLabelAngle, this.resolvedLabelDistance
+      );
+    } else {
+      labelPos = calculateNodeLabelPosition(
+        this.cx, this.cy, this.rx, this.ry, this.labelPlacement
+      );
+    }
 
     // Update text
     this.textElement.setAttribute('x', String(labelPos.x));
@@ -379,5 +401,80 @@ export class Node implements Shape {
   setLabel(label: string): void {
     this.label = label;
     this.updateElement();
+  }
+
+  /**
+   * Set the resolved auto position (called by AutoLabelPlacementManager)
+   * @param angle Angle in degrees (0=right, 90=up, 180=left, 270=down)
+   * @param distance Distance from node boundary
+   */
+  setResolvedAutoPosition(angle: number, distance: number): void {
+    this.resolvedLabelAngle = angle;
+    this.resolvedLabelDistance = distance;
+    this.updateElement();
+  }
+
+  /**
+   * Get the resolved auto position
+   */
+  getResolvedAutoPosition(): { angle: number; distance: number } {
+    return {
+      angle: this.resolvedLabelAngle,
+      distance: this.resolvedLabelDistance
+    };
+  }
+
+  /**
+   * Get the label's bounding box (for overlap detection)
+   * Returns null if label is empty or not rendered
+   */
+  getLabelBounds(): Bounds | null {
+    if (!this.label || !this.textElement) {
+      return null;
+    }
+
+    try {
+      const bbox = this.textElement.getBBox();
+      return {
+        x: bbox.x,
+        y: bbox.y,
+        width: bbox.width,
+        height: bbox.height
+      };
+    } catch (e) {
+      // getBBox may fail if element is not in DOM
+      // Estimate based on font size and text length
+      const charWidth = this.fontSize * 0.6;
+      const width = this.label.length * charWidth;
+      const height = this.fontSize * 1.2;
+
+      // Get label position
+      let labelPos;
+      if (this.labelPlacement.position === 'auto') {
+        labelPos = calculateLabelPositionForAngle(
+          this.cx, this.cy, this.rx, this.ry,
+          this.resolvedLabelAngle, this.resolvedLabelDistance
+        );
+      } else {
+        labelPos = calculateNodeLabelPosition(
+          this.cx, this.cy, this.rx, this.ry, this.labelPlacement
+        );
+      }
+
+      // Adjust for text anchor
+      let x = labelPos.x;
+      if (labelPos.textAnchor === 'middle') {
+        x -= width / 2;
+      } else if (labelPos.textAnchor === 'end') {
+        x -= width;
+      }
+
+      return {
+        x,
+        y: labelPos.y - height / 2,
+        width,
+        height
+      };
+    }
   }
 }

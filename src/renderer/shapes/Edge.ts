@@ -1429,6 +1429,29 @@ export class Edge implements Shape {
   }
 
   /**
+   * Get the label's bounding box (for overlap detection)
+   * Returns null if label is empty or not rendered
+   */
+  getLabelBounds(): Bounds | null {
+    if (!this.label || !this.labelElement) {
+      return null;
+    }
+
+    try {
+      const bbox = this.labelElement.getBBox();
+      return {
+        x: bbox.x,
+        y: bbox.y,
+        width: bbox.width,
+        height: bbox.height
+      };
+    } catch (e) {
+      // getBBox may fail if element is not in DOM
+      return null;
+    }
+  }
+
+  /**
    * Set the line type
    */
   setLineType(lineType: EdgeLineType): void {
