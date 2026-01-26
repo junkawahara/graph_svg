@@ -452,33 +452,36 @@
             <div class="property-group">
               <label>Label Position</label>
               <select id="prop-edge-label-position">
-                <option value="auto">Auto (midway)</option>
-                <option value="midway">Midway</option>
-                <option value="near start">Near Start</option>
-                <option value="near end">Near End</option>
-                <option value="custom">Custom (0-1)...</option>
+                <option value="auto">Auto</option>
+                <option value="midway">Midway (0.5)</option>
+                <option value="near start">Near Start (0.25)</option>
+                <option value="near end">Near End (0.75)</option>
+                <option value="custom">Custom...</option>
               </select>
             </div>
             <div id="edge-label-pos-section" class="property-group" style="display: none;">
               <label>Position (0-1)</label>
               <input type="number" id="prop-edge-label-pos" min="0" max="1" step="0.05" value="0.5">
             </div>
-            <div class="property-group">
-              <label>Label Side</label>
-              <select id="prop-edge-label-side">
-                <option value="above">Above</option>
-                <option value="below">Below</option>
-              </select>
+            <!-- Manual placement options (hidden when auto) -->
+            <div id="edge-label-manual-section">
+              <div class="property-group">
+                <label>Label Side</label>
+                <select id="prop-edge-label-side">
+                  <option value="above">Above</option>
+                  <option value="below">Below</option>
+                </select>
+              </div>
+              <div class="property-group">
+                <label>Label Distance</label>
+                <input type="number" id="prop-edge-label-distance" value="5" min="0" max="50" step="any">
+              </div>
             </div>
             <div class="property-group">
               <label style="display: flex; align-items: center; gap: 8px;">
                 <input type="checkbox" id="prop-edge-label-sloped">
                 <span>Sloped (follow edge)</span>
               </label>
-            </div>
-            <div class="property-group">
-              <label>Label Distance</label>
-              <input type="number" id="prop-edge-label-distance" value="5" min="0" max="50" step="any">
             </div>
           </div>
         </div>

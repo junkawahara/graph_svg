@@ -1,4 +1,4 @@
-import { Point, Bounds, ShapeStyle, EdgeData, EdgeDirection, EdgeLineType, PathCommand, EdgeLabelPlacement, DEFAULT_EDGE_LABEL_PLACEMENT, generateId } from '../../shared/types';
+import { Point, Bounds, ShapeStyle, EdgeData, EdgeDirection, EdgeLineType, PathCommand, EdgeLabelPlacement, EdgeLabelSide, DEFAULT_EDGE_LABEL_PLACEMENT, generateId } from '../../shared/types';
 import { Shape, applyStyle } from './Shape';
 import { getGraphManager } from '../core/GraphManager';
 import { Node } from './Node';
@@ -34,6 +34,11 @@ export class Edge implements Shape {
 
   // Label placement configuration (TikZ-style)
   labelPlacement: EdgeLabelPlacement;
+
+  // Resolved auto placement values (used when labelPlacement.pos === 'auto')
+  private resolvedLabelPos: number = 0.5;
+  private resolvedLabelSide: EdgeLabelSide = 'above';
+  private resolvedLabelDistance: number = 5;
 
   constructor(
     public readonly id: string,
@@ -539,13 +544,11 @@ export class Edge implements Shape {
     }
     if (this.label) {
       group.setAttribute('data-label', this.label);
-      // Add label placement attributes if not default
-      if (this.labelPlacement.pos !== 'auto') {
-        const posValue = typeof this.labelPlacement.pos === 'number'
-          ? String(this.labelPlacement.pos)
-          : this.labelPlacement.pos;
-        group.setAttribute('data-label-position', posValue);
-      }
+      // Add label placement attributes
+      const posValue = typeof this.labelPlacement.pos === 'number'
+        ? String(this.labelPlacement.pos)
+        : this.labelPlacement.pos;
+      group.setAttribute('data-label-position', posValue);
       if (this.labelPlacement.side !== 'above') {
         group.setAttribute('data-label-side', this.labelPlacement.side);
       }
@@ -697,14 +700,27 @@ export class Edge implements Shape {
    * Calculate label position using TikZ-style placement
    */
   private calculateLabelPosition(sourceNode: Node, targetNode: Node): { x: number; y: number; rotation: number } {
+    // Determine effective placement: use resolved values for auto mode
+    let effectivePlacement: EdgeLabelPlacement;
+    if (this.labelPlacement.pos === 'auto') {
+      effectivePlacement = {
+        pos: this.resolvedLabelPos,
+        side: this.resolvedLabelSide,
+        sloped: this.labelPlacement.sloped,  // sloped is user-controlled
+        distance: this.resolvedLabelDistance
+      };
+    } else {
+      effectivePlacement = this.labelPlacement;
+    }
+
     // Handle self-loop
     if (this.isSelfLoop) {
-      return this.calculateSelfLoopLabelPosition(sourceNode);
+      return this.calculateSelfLoopLabelPosition(sourceNode, effectivePlacement);
     }
 
     // Handle path type with pathCommands
     if (this.lineType === 'path' && this.pathCommands.length >= 2) {
-      const result = calculatePathEdgeLabelPosition(this.pathCommands, this.labelPlacement);
+      const result = calculatePathEdgeLabelPosition(this.pathCommands, effectivePlacement);
       if (result) return result;
       // Fallback to midpoint if calculation fails
       const midpoint = this.getPathMidpoint(sourceNode, targetNode);
@@ -722,7 +738,7 @@ export class Edge implements Shape {
 
     if (effectiveOffset === 0) {
       // Straight line
-      return calculateStraightEdgeLabelPosition(start, end, this.labelPlacement);
+      return calculateStraightEdgeLabelPosition(start, end, effectivePlacement);
     } else {
       // Curved line (quadratic bezier)
       const midX = (start.x + end.x) / 2;
@@ -747,7 +763,7 @@ export class Edge implements Shape {
         newStart,
         { x: ctrlX, y: ctrlY },
         newEnd,
-        this.labelPlacement
+        effectivePlacement
       );
     }
   }
@@ -755,7 +771,7 @@ export class Edge implements Shape {
   /**
    * Calculate label position for self-loop edges
    */
-  private calculateSelfLoopLabelPosition(node: Node): { x: number; y: number; rotation: number } {
+  private calculateSelfLoopLabelPosition(node: Node, placement: EdgeLabelPlacement): { x: number; y: number; rotation: number } {
     const angle = this.selfLoopAngle;
     const loopSize = Math.max(node.rx, node.ry) * 1.5;
     const startAngle = angle - Math.PI / 6;
@@ -774,7 +790,7 @@ export class Edge implements Shape {
       ctrl1,
       ctrl2,
       { x: endX, y: endY },
-      this.labelPlacement
+      placement
     );
   }
 
@@ -958,14 +974,10 @@ export class Edge implements Shape {
       if (this.label) {
         this.element.setAttribute('data-label', this.label);
         // Update label placement attributes
-        if (this.labelPlacement.pos !== 'auto') {
-          const posValue = typeof this.labelPlacement.pos === 'number'
-            ? String(this.labelPlacement.pos)
-            : this.labelPlacement.pos;
-          this.element.setAttribute('data-label-position', posValue);
-        } else {
-          this.element.removeAttribute('data-label-position');
-        }
+        const posValue = typeof this.labelPlacement.pos === 'number'
+          ? String(this.labelPlacement.pos)
+          : this.labelPlacement.pos;
+        this.element.setAttribute('data-label-position', posValue);
         if (this.labelPlacement.side !== 'above') {
           this.element.setAttribute('data-label-side', this.labelPlacement.side);
         } else {
@@ -1426,6 +1438,27 @@ export class Edge implements Shape {
   setLabel(label: string | undefined): void {
     this.label = label;
     this.updateElement();
+  }
+
+  /**
+   * Set resolved auto placement values (called by AutoEdgeLabelPlacementManager)
+   */
+  setResolvedAutoPlacement(pos: number, side: EdgeLabelSide, distance: number): void {
+    this.resolvedLabelPos = pos;
+    this.resolvedLabelSide = side;
+    this.resolvedLabelDistance = distance;
+    this.updateElement();
+  }
+
+  /**
+   * Get resolved auto placement values
+   */
+  getResolvedAutoPlacement(): { pos: number; side: EdgeLabelSide; distance: number } {
+    return {
+      pos: this.resolvedLabelPos,
+      side: this.resolvedLabelSide,
+      distance: this.resolvedLabelDistance
+    };
   }
 
   /**

@@ -32,6 +32,7 @@ import { ZOrderOperation } from './commands/ZOrderCommand';
 import { calculateFitToContent, calculateContentBounds } from './core/BoundsCalculator';
 import { getPlatformAdapter } from './platform';
 import { getAutoLabelPlacementManager } from './core/AutoLabelPlacementManager';
+import { getAutoEdgeLabelPlacementManager } from './core/AutoEdgeLabelPlacementManager';
 
 document.addEventListener('DOMContentLoaded', () => {
   console.log('DrawSVG initialized');
@@ -166,8 +167,9 @@ document.addEventListener('DOMContentLoaded', () => {
       // Set file path and mark as clean
       editorState.setCurrentFilePath(result.path);
       editorState.markClean();
-      // Recalculate auto label positions for loaded shapes
+      // Recalculate auto label positions for loaded shapes (node labels first, then edge labels)
       getAutoLabelPlacementManager().scheduleRecalculation();
+      getAutoEdgeLabelPlacementManager().scheduleRecalculation();
       console.log('File loaded:', result.path, `(${shapes.length} shapes, ${canvasSize.width}x${canvasSize.height})`);
     }
   });
@@ -218,8 +220,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Clear selection
     selectionManager.clearSelection();
 
-    // Recalculate auto label positions for imported nodes
+    // Recalculate auto label positions for imported nodes and edges
     getAutoLabelPlacementManager().scheduleRecalculation();
+    getAutoEdgeLabelPlacementManager().scheduleRecalculation();
 
     // Mark dirty if adding to existing
     if (!options.clearCanvas) {

@@ -87,6 +87,7 @@ export class Sidebar {
   private edgeLabelPosition: HTMLSelectElement | null = null;
   private edgeLabelPosSection: HTMLDivElement | null = null;
   private edgeLabelPos: HTMLInputElement | null = null;
+  private edgeLabelManualSection: HTMLDivElement | null = null;
   private edgeLabelSide: HTMLSelectElement | null = null;
   private edgeLabelSloped: HTMLInputElement | null = null;
   private edgeLabelDistance: HTMLInputElement | null = null;
@@ -215,6 +216,7 @@ export class Sidebar {
     this.edgeLabelPosition = document.getElementById('prop-edge-label-position') as HTMLSelectElement;
     this.edgeLabelPosSection = document.getElementById('edge-label-pos-section') as HTMLDivElement;
     this.edgeLabelPos = document.getElementById('prop-edge-label-pos') as HTMLInputElement;
+    this.edgeLabelManualSection = document.getElementById('edge-label-manual-section') as HTMLDivElement;
     this.edgeLabelSide = document.getElementById('prop-edge-label-side') as HTMLSelectElement;
     this.edgeLabelSloped = document.getElementById('prop-edge-label-sloped') as HTMLInputElement;
     this.edgeLabelDistance = document.getElementById('prop-edge-label-distance') as HTMLInputElement;
@@ -688,6 +690,11 @@ export class Sidebar {
         // Show/hide custom pos section
         if (this.edgeLabelPosSection) {
           this.edgeLabelPosSection.style.display = value === 'custom' ? 'block' : 'none';
+        }
+
+        // Show/hide manual section (side, distance) - hide for auto
+        if (this.edgeLabelManualSection) {
+          this.edgeLabelManualSection.style.display = value === 'auto' ? 'none' : 'block';
         }
 
         if (value !== 'custom') {
@@ -1641,6 +1648,10 @@ export class Sidebar {
       // Show/hide custom pos section
       if (this.edgeLabelPosSection) {
         this.edgeLabelPosSection.style.display = typeof lp.pos === 'number' ? 'block' : 'none';
+      }
+      // Show/hide manual section (side, distance) - hide for auto
+      if (this.edgeLabelManualSection) {
+        this.edgeLabelManualSection.style.display = lp.pos === 'auto' ? 'none' : 'block';
       }
       if (this.edgeLabelSide) this.edgeLabelSide.value = lp.side;
       if (this.edgeLabelSloped) this.edgeLabelSloped.checked = lp.sloped;
