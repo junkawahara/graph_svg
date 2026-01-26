@@ -650,9 +650,9 @@ export class Sidebar {
         if (this.nodeLabelAngleSection) {
           this.nodeLabelAngleSection.style.display = value === 'custom' ? 'block' : 'none';
         }
-        // Show/hide distance section (not for center)
+        // Show/hide distance section (not for center or auto)
         if (this.nodeLabelDistanceSection) {
-          this.nodeLabelDistanceSection.style.display = value !== 'center' ? 'block' : 'none';
+          this.nodeLabelDistanceSection.style.display = (value !== 'center' && value !== 'auto') ? 'block' : 'none';
         }
 
         if (value !== 'custom') {
@@ -1568,9 +1568,9 @@ export class Sidebar {
     if (this.nodeLabelAngleSection) {
       this.nodeLabelAngleSection.style.display = typeof lp.position === 'number' ? 'block' : 'none';
     }
-    // Show/hide distance section (not for center)
+    // Show/hide distance section (not for center or auto)
     if (this.nodeLabelDistanceSection) {
-      this.nodeLabelDistanceSection.style.display = lp.position !== 'center' ? 'block' : 'none';
+      this.nodeLabelDistanceSection.style.display = (lp.position !== 'center' && lp.position !== 'auto') ? 'block' : 'none';
     }
     if (this.nodeLabelDistance) this.nodeLabelDistance.value = String(lp.distance);
 
