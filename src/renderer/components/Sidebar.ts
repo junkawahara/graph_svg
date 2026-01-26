@@ -1,4 +1,4 @@
-import { ShapeStyle, StrokeLinecap, MarkerType, EdgeDirection, CanvasSize, ToolType, TextAnchor, StyleClass, TextRunStyle } from '../../shared/types';
+import { ShapeStyle, StrokeLinecap, MarkerType, EdgeDirection, CanvasSize, ToolType, TextAnchor, StyleClass, TextRunStyle, NodeLabelPlacement, EdgeLabelPlacement, NodeLabelPosition, EdgeLabelPos, DEFAULT_NODE_LABEL_PLACEMENT, DEFAULT_EDGE_LABEL_PLACEMENT } from '../../shared/types';
 import { eventBus } from '../core/EventBus';
 import { editorState } from '../core/EditorState';
 import { selectionManager } from '../core/SelectionManager';
@@ -23,6 +23,8 @@ import { CanvasResizeCommand } from '../commands/CanvasResizeCommand';
 import { RotateShapeCommand } from '../commands/RotateShapeCommand';
 import { ApplyClassCommand } from '../commands/ApplyClassCommand';
 import { RichTextChangeCommand, ClearRichTextCommand } from '../commands/RichTextChangeCommand';
+import { NodeLabelPlacementCommand } from '../commands/NodeLabelPlacementCommand';
+import { EdgeLabelPlacementCommand } from '../commands/EdgeLabelPlacementCommand';
 import { ClassNameDialog } from './ClassNameDialog';
 import { StyleClassManagementDialog } from './StyleClassManagementDialog';
 import { parsePath, serializePath } from '../core/PathParser';
@@ -64,6 +66,13 @@ export class Sidebar {
   private nodeLabel: HTMLInputElement | null = null;
   private nodeFontSize: HTMLInputElement | null = null;
 
+  // Node label placement properties
+  private nodeLabelPosition: HTMLSelectElement | null = null;
+  private nodeLabelAngleSection: HTMLDivElement | null = null;
+  private nodeLabelAngle: HTMLInputElement | null = null;
+  private nodeLabelDistanceSection: HTMLDivElement | null = null;
+  private nodeLabelDistance: HTMLInputElement | null = null;
+
   // Edge-specific properties
   private edgePropertiesContainer: HTMLDivElement | null = null;
   private edgeDirection: HTMLSelectElement | null = null;
@@ -72,6 +81,15 @@ export class Sidebar {
   private edgeCurveAmount: HTMLInputElement | null = null;
   private edgeCurveAmountValue: HTMLSpanElement | null = null;
   private edgeLabel: HTMLInputElement | null = null;
+
+  // Edge label placement properties
+  private edgeLabelPlacementSection: HTMLDivElement | null = null;
+  private edgeLabelPosition: HTMLSelectElement | null = null;
+  private edgeLabelPosSection: HTMLDivElement | null = null;
+  private edgeLabelPos: HTMLInputElement | null = null;
+  private edgeLabelSide: HTMLSelectElement | null = null;
+  private edgeLabelSloped: HTMLInputElement | null = null;
+  private edgeLabelDistance: HTMLInputElement | null = null;
 
   // Path-specific properties
   private pathPropertiesContainer: HTMLDivElement | null = null;
@@ -176,6 +194,13 @@ export class Sidebar {
     this.nodeLabel = document.getElementById('prop-node-label') as HTMLInputElement;
     this.nodeFontSize = document.getElementById('prop-node-font-size') as HTMLInputElement;
 
+    // Node label placement elements
+    this.nodeLabelPosition = document.getElementById('prop-node-label-position') as HTMLSelectElement;
+    this.nodeLabelAngleSection = document.getElementById('node-label-angle-section') as HTMLDivElement;
+    this.nodeLabelAngle = document.getElementById('prop-node-label-angle') as HTMLInputElement;
+    this.nodeLabelDistanceSection = document.getElementById('node-label-distance-section') as HTMLDivElement;
+    this.nodeLabelDistance = document.getElementById('prop-node-label-distance') as HTMLInputElement;
+
     // Edge-specific elements
     this.edgePropertiesContainer = document.getElementById('edge-properties') as HTMLDivElement;
     this.edgeDirection = document.getElementById('prop-edge-direction') as HTMLSelectElement;
@@ -184,6 +209,15 @@ export class Sidebar {
     this.edgeCurveAmount = document.getElementById('prop-edge-curve-amount') as HTMLInputElement;
     this.edgeCurveAmountValue = document.getElementById('edge-curve-amount-value') as HTMLSpanElement;
     this.edgeLabel = document.getElementById('prop-edge-label') as HTMLInputElement;
+
+    // Edge label placement elements
+    this.edgeLabelPlacementSection = document.getElementById('edge-label-placement-section') as HTMLDivElement;
+    this.edgeLabelPosition = document.getElementById('prop-edge-label-position') as HTMLSelectElement;
+    this.edgeLabelPosSection = document.getElementById('edge-label-pos-section') as HTMLDivElement;
+    this.edgeLabelPos = document.getElementById('prop-edge-label-pos') as HTMLInputElement;
+    this.edgeLabelSide = document.getElementById('prop-edge-label-side') as HTMLSelectElement;
+    this.edgeLabelSloped = document.getElementById('prop-edge-label-sloped') as HTMLInputElement;
+    this.edgeLabelDistance = document.getElementById('prop-edge-label-distance') as HTMLInputElement;
 
     // Path-specific elements
     this.pathPropertiesContainer = document.getElementById('path-properties') as HTMLDivElement;
@@ -255,7 +289,9 @@ export class Sidebar {
     this.setupTextInputListeners();
     this.setupLineInputListeners();
     this.setupNodeInputListeners();
+    this.setupNodeLabelPlacementListeners();
     this.setupEdgeInputListeners();
+    this.setupEdgeLabelPlacementListeners();
     this.setupPathInputListeners();
     this.setupPositionInputListeners();
     this.setupCanvasSizeInputListeners();
@@ -599,6 +635,144 @@ export class Sidebar {
         this.applyEdgeLabelChange(this.edgeLabel!.value);
       });
     }
+  }
+
+  /**
+   * Setup node label placement input listeners
+   */
+  private setupNodeLabelPlacementListeners(): void {
+    if (this.nodeLabelPosition) {
+      this.nodeLabelPosition.addEventListener('change', () => {
+        if (this.isUpdatingUI) return;
+        const value = this.nodeLabelPosition!.value;
+
+        // Show/hide angle section for custom
+        if (this.nodeLabelAngleSection) {
+          this.nodeLabelAngleSection.style.display = value === 'custom' ? 'block' : 'none';
+        }
+        // Show/hide distance section (not for center)
+        if (this.nodeLabelDistanceSection) {
+          this.nodeLabelDistanceSection.style.display = value !== 'center' ? 'block' : 'none';
+        }
+
+        if (value !== 'custom') {
+          this.applyNodeLabelPlacementChange();
+        }
+      });
+    }
+
+    if (this.nodeLabelAngle) {
+      this.nodeLabelAngle.addEventListener('change', () => {
+        if (this.isUpdatingUI) return;
+        this.applyNodeLabelPlacementChange();
+      });
+    }
+
+    if (this.nodeLabelDistance) {
+      this.nodeLabelDistance.addEventListener('change', () => {
+        if (this.isUpdatingUI) return;
+        this.applyNodeLabelPlacementChange();
+      });
+    }
+  }
+
+  /**
+   * Setup edge label placement input listeners
+   */
+  private setupEdgeLabelPlacementListeners(): void {
+    if (this.edgeLabelPosition) {
+      this.edgeLabelPosition.addEventListener('change', () => {
+        if (this.isUpdatingUI) return;
+        const value = this.edgeLabelPosition!.value;
+
+        // Show/hide custom pos section
+        if (this.edgeLabelPosSection) {
+          this.edgeLabelPosSection.style.display = value === 'custom' ? 'block' : 'none';
+        }
+
+        if (value !== 'custom') {
+          this.applyEdgeLabelPlacementChange();
+        }
+      });
+    }
+
+    if (this.edgeLabelPos) {
+      this.edgeLabelPos.addEventListener('change', () => {
+        if (this.isUpdatingUI) return;
+        this.applyEdgeLabelPlacementChange();
+      });
+    }
+
+    if (this.edgeLabelSide) {
+      this.edgeLabelSide.addEventListener('change', () => {
+        if (this.isUpdatingUI) return;
+        this.applyEdgeLabelPlacementChange();
+      });
+    }
+
+    if (this.edgeLabelSloped) {
+      this.edgeLabelSloped.addEventListener('change', () => {
+        if (this.isUpdatingUI) return;
+        this.applyEdgeLabelPlacementChange();
+      });
+    }
+
+    if (this.edgeLabelDistance) {
+      this.edgeLabelDistance.addEventListener('change', () => {
+        if (this.isUpdatingUI) return;
+        this.applyEdgeLabelPlacementChange();
+      });
+    }
+  }
+
+  /**
+   * Apply node label placement change
+   */
+  private applyNodeLabelPlacementChange(): void {
+    const selectedShapes = selectionManager.getSelection();
+    if (selectedShapes.length !== 1 || !(selectedShapes[0] instanceof Node)) return;
+
+    const node = selectedShapes[0] as Node;
+    const posValue = this.nodeLabelPosition?.value || 'center';
+
+    let position: NodeLabelPosition;
+    if (posValue === 'custom') {
+      position = parseFloat(this.nodeLabelAngle?.value || '90');
+    } else {
+      position = posValue as NodeLabelPosition;
+    }
+
+    const distance = parseFloat(this.nodeLabelDistance?.value || '5');
+
+    const newPlacement: NodeLabelPlacement = { position, distance };
+    const command = new NodeLabelPlacementCommand(node, newPlacement);
+    historyManager.execute(command);
+  }
+
+  /**
+   * Apply edge label placement change
+   */
+  private applyEdgeLabelPlacementChange(): void {
+    const selectedShapes = selectionManager.getSelection();
+    if (selectedShapes.length !== 1 || !(selectedShapes[0] instanceof Edge)) return;
+
+    const edge = selectedShapes[0] as Edge;
+    const posValue = this.edgeLabelPosition?.value || 'auto';
+
+    let pos: EdgeLabelPos;
+    if (posValue === 'custom') {
+      pos = parseFloat(this.edgeLabelPos?.value || '0.5');
+    } else {
+      pos = posValue as EdgeLabelPos;
+    }
+
+    const side = (this.edgeLabelSide?.value || 'above') as 'above' | 'below';
+    const sloped = this.edgeLabelSloped?.checked || false;
+    const distance = parseFloat(this.edgeLabelDistance?.value || '5');
+
+    const newPlacement: EdgeLabelPlacement = { pos, side, sloped, distance };
+    const command = new EdgeLabelPlacementCommand(edge, newPlacement);
+    historyManager.execute(command);
   }
 
   /**
@@ -1380,6 +1554,26 @@ export class Sidebar {
     if (this.nodeLabel) this.nodeLabel.value = node.label;
     if (this.nodeFontSize) this.nodeFontSize.value = String(node.fontSize);
 
+    // Update label placement UI
+    const lp = node.labelPlacement;
+    if (this.nodeLabelPosition) {
+      if (typeof lp.position === 'number') {
+        this.nodeLabelPosition.value = 'custom';
+        if (this.nodeLabelAngle) this.nodeLabelAngle.value = String(lp.position);
+      } else {
+        this.nodeLabelPosition.value = lp.position;
+      }
+    }
+    // Show/hide angle section
+    if (this.nodeLabelAngleSection) {
+      this.nodeLabelAngleSection.style.display = typeof lp.position === 'number' ? 'block' : 'none';
+    }
+    // Show/hide distance section (not for center)
+    if (this.nodeLabelDistanceSection) {
+      this.nodeLabelDistanceSection.style.display = lp.position !== 'center' ? 'block' : 'none';
+    }
+    if (this.nodeLabelDistance) this.nodeLabelDistance.value = String(lp.distance);
+
     this.isUpdatingUI = false;
   }
 
@@ -1389,6 +1583,12 @@ export class Sidebar {
   private hideNodeProperties(): void {
     if (this.nodePropertiesContainer) {
       this.nodePropertiesContainer.style.display = 'none';
+    }
+    if (this.nodeLabelAngleSection) {
+      this.nodeLabelAngleSection.style.display = 'none';
+    }
+    if (this.nodeLabelDistanceSection) {
+      this.nodeLabelDistanceSection.style.display = 'none';
     }
   }
 
@@ -1422,6 +1622,31 @@ export class Sidebar {
     }
     if (this.edgeLabel) this.edgeLabel.value = edge.label || '';
 
+    // Show/hide label placement section (only when edge has a label)
+    if (this.edgeLabelPlacementSection) {
+      this.edgeLabelPlacementSection.style.display = edge.label ? 'block' : 'none';
+    }
+
+    // Update label placement UI
+    if (edge.label) {
+      const lp = edge.labelPlacement;
+      if (this.edgeLabelPosition) {
+        if (typeof lp.pos === 'number') {
+          this.edgeLabelPosition.value = 'custom';
+          if (this.edgeLabelPos) this.edgeLabelPos.value = String(lp.pos);
+        } else {
+          this.edgeLabelPosition.value = lp.pos;
+        }
+      }
+      // Show/hide custom pos section
+      if (this.edgeLabelPosSection) {
+        this.edgeLabelPosSection.style.display = typeof lp.pos === 'number' ? 'block' : 'none';
+      }
+      if (this.edgeLabelSide) this.edgeLabelSide.value = lp.side;
+      if (this.edgeLabelSloped) this.edgeLabelSloped.checked = lp.sloped;
+      if (this.edgeLabelDistance) this.edgeLabelDistance.value = String(lp.distance);
+    }
+
     this.isUpdatingUI = false;
   }
 
@@ -1431,6 +1656,12 @@ export class Sidebar {
   private hideEdgeProperties(): void {
     if (this.edgePropertiesContainer) {
       this.edgePropertiesContainer.style.display = 'none';
+    }
+    if (this.edgeLabelPlacementSection) {
+      this.edgeLabelPlacementSection.style.display = 'none';
+    }
+    if (this.edgeLabelPosSection) {
+      this.edgeLabelPosSection.style.display = 'none';
     }
   }
 

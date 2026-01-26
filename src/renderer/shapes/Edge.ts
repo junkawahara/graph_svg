@@ -1,9 +1,17 @@
-import { Point, Bounds, ShapeStyle, EdgeData, EdgeDirection, EdgeLineType, PathCommand, generateId } from '../../shared/types';
+import { Point, Bounds, ShapeStyle, EdgeData, EdgeDirection, EdgeLineType, PathCommand, EdgeLabelPlacement, DEFAULT_EDGE_LABEL_PLACEMENT, generateId } from '../../shared/types';
 import { Shape, applyStyle } from './Shape';
 import { getGraphManager } from '../core/GraphManager';
 import { Node } from './Node';
 import { calculateArrowGeometry, getMarkerShortenDistance } from '../core/ArrowGeometry';
 import { round3 } from '../core/MathUtils';
+import {
+  calculateStraightEdgeLabelPosition,
+  calculateQuadraticEdgeLabelPosition,
+  calculateCubicEdgeLabelPosition,
+  calculatePathEdgeLabelPosition,
+  labelPosToNumber,
+  normalizeTextRotation
+} from '../core/LabelGeometry';
 
 /**
  * Graph Edge shape - connects two nodes
@@ -24,6 +32,9 @@ export class Edge implements Shape {
   sourceConnectionAngle: number | null = null;
   targetConnectionAngle: number | null = null;
 
+  // Label placement configuration (TikZ-style)
+  labelPlacement: EdgeLabelPlacement;
+
   constructor(
     public readonly id: string,
     public sourceNodeId: string,
@@ -38,10 +49,12 @@ export class Edge implements Shape {
     public curveAmount: number = 0,
     public pathCommands: PathCommand[] = [],
     sourceConnectionAngle: number | null = null,
-    targetConnectionAngle: number | null = null
+    targetConnectionAngle: number | null = null,
+    labelPlacement: EdgeLabelPlacement = { ...DEFAULT_EDGE_LABEL_PLACEMENT }
   ) {
     this.sourceConnectionAngle = sourceConnectionAngle;
     this.targetConnectionAngle = targetConnectionAngle;
+    this.labelPlacement = labelPlacement;
   }
 
   /**
@@ -151,6 +164,30 @@ export class Edge implements Shape {
     const sourceConnectionAngle = sourceAngleAttr !== null ? parseFloat(sourceAngleAttr) : null;
     const targetConnectionAngle = targetAngleAttr !== null ? parseFloat(targetAngleAttr) : null;
 
+    // Parse label placement attributes
+    const labelPlacement: EdgeLabelPlacement = { ...DEFAULT_EDGE_LABEL_PLACEMENT };
+    const labelPosAttr = el.getAttribute('data-label-position');
+    if (labelPosAttr) {
+      const numValue = parseFloat(labelPosAttr);
+      if (!isNaN(numValue)) {
+        labelPlacement.pos = numValue;
+      } else {
+        labelPlacement.pos = labelPosAttr as EdgeLabelPlacement['pos'];
+      }
+    }
+    const labelSideAttr = el.getAttribute('data-label-side');
+    if (labelSideAttr === 'above' || labelSideAttr === 'below') {
+      labelPlacement.side = labelSideAttr;
+    }
+    const labelSlopedAttr = el.getAttribute('data-label-sloped');
+    if (labelSlopedAttr === 'true') {
+      labelPlacement.sloped = true;
+    }
+    const labelDistAttr = el.getAttribute('data-label-distance');
+    if (labelDistAttr) {
+      labelPlacement.distance = parseFloat(labelDistAttr);
+    }
+
     return new Edge(
       el.id || generateId(),
       sourceNodeId,
@@ -165,7 +202,8 @@ export class Edge implements Shape {
       curveAmount,
       pathCommands,
       sourceConnectionAngle,
-      targetConnectionAngle
+      targetConnectionAngle,
+      labelPlacement
     );
   }
 
@@ -501,6 +539,22 @@ export class Edge implements Shape {
     }
     if (this.label) {
       group.setAttribute('data-label', this.label);
+      // Add label placement attributes if not default
+      if (this.labelPlacement.pos !== 'auto') {
+        const posValue = typeof this.labelPlacement.pos === 'number'
+          ? String(this.labelPlacement.pos)
+          : this.labelPlacement.pos;
+        group.setAttribute('data-label-position', posValue);
+      }
+      if (this.labelPlacement.side !== 'above') {
+        group.setAttribute('data-label-side', this.labelPlacement.side);
+      }
+      if (this.labelPlacement.sloped) {
+        group.setAttribute('data-label-sloped', 'true');
+      }
+      if (this.labelPlacement.distance !== 5) {
+        group.setAttribute('data-label-distance', String(this.labelPlacement.distance));
+      }
     }
 
     // Create path element
@@ -553,7 +607,7 @@ export class Edge implements Shape {
 
     // Add label if exists
     if (this.label && sourceNode && targetNode) {
-      const midpoint = this.getPathMidpoint(sourceNode, targetNode);
+      const labelPos = this.calculateLabelPosition(sourceNode, targetNode);
 
       // Create background rect for label
       const labelBg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
@@ -566,14 +620,17 @@ export class Edge implements Shape {
 
       // Create text element
       const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-      text.setAttribute('x', String(midpoint.x));
-      text.setAttribute('y', String(midpoint.y));
+      text.setAttribute('x', String(labelPos.x));
+      text.setAttribute('y', String(labelPos.y));
       text.setAttribute('text-anchor', 'middle');
       text.setAttribute('dominant-baseline', 'middle');
       text.setAttribute('font-size', '12');
       text.setAttribute('font-family', 'Arial');
       text.setAttribute('fill', this.style.stroke);
       text.setAttribute('pointer-events', 'none');
+      if (labelPos.rotation !== 0) {
+        text.setAttribute('transform', `rotate(${labelPos.rotation}, ${labelPos.x}, ${labelPos.y})`);
+      }
       text.textContent = this.label;
       group.appendChild(text);
       this.labelElement = text;
@@ -591,7 +648,7 @@ export class Edge implements Shape {
   }
 
   /**
-   * Get the midpoint of the path for label positioning
+   * Get the midpoint of the path for label positioning (legacy, kept for compatibility)
    */
   private getPathMidpoint(sourceNode: Node, targetNode: Node): Point {
     if (this.isSelfLoop) {
@@ -634,6 +691,91 @@ export class Edge implements Shape {
       // Quadratic bezier at t=0.5
       return this.quadraticBezierPoint(newStart, { x: ctrlX, y: ctrlY }, newEnd, 0.5);
     }
+  }
+
+  /**
+   * Calculate label position using TikZ-style placement
+   */
+  private calculateLabelPosition(sourceNode: Node, targetNode: Node): { x: number; y: number; rotation: number } {
+    // Handle self-loop
+    if (this.isSelfLoop) {
+      return this.calculateSelfLoopLabelPosition(sourceNode);
+    }
+
+    // Handle path type with pathCommands
+    if (this.lineType === 'path' && this.pathCommands.length >= 2) {
+      const result = calculatePathEdgeLabelPosition(this.pathCommands, this.labelPlacement);
+      if (result) return result;
+      // Fallback to midpoint if calculation fails
+      const midpoint = this.getPathMidpoint(sourceNode, targetNode);
+      return { ...midpoint, rotation: 0 };
+    }
+
+    // Get start and end points
+    const start = sourceNode.getConnectionPoint(targetNode.cx, targetNode.cy);
+    const end = targetNode.getConnectionPoint(sourceNode.cx, sourceNode.cy);
+
+    // Use curveAmount if set, otherwise fall back to curveOffset
+    const effectiveOffset = this.lineType === 'curve' && this.curveAmount !== 0
+      ? this.curveAmount
+      : this.curveOffset;
+
+    if (effectiveOffset === 0) {
+      // Straight line
+      return calculateStraightEdgeLabelPosition(start, end, this.labelPlacement);
+    } else {
+      // Curved line (quadratic bezier)
+      const midX = (start.x + end.x) / 2;
+      const midY = (start.y + end.y) / 2;
+      const dx = end.x - start.x;
+      const dy = end.y - start.y;
+      const len = Math.sqrt(dx * dx + dy * dy);
+
+      if (len === 0) {
+        return { x: midX, y: midY, rotation: 0 };
+      }
+
+      const perpX = -dy / len;
+      const perpY = dx / len;
+      const ctrlX = midX + perpX * effectiveOffset;
+      const ctrlY = midY + perpY * effectiveOffset;
+
+      const newStart = sourceNode.getConnectionPoint(ctrlX, ctrlY);
+      const newEnd = targetNode.getConnectionPoint(ctrlX, ctrlY);
+
+      return calculateQuadraticEdgeLabelPosition(
+        newStart,
+        { x: ctrlX, y: ctrlY },
+        newEnd,
+        this.labelPlacement
+      );
+    }
+  }
+
+  /**
+   * Calculate label position for self-loop edges
+   */
+  private calculateSelfLoopLabelPosition(node: Node): { x: number; y: number; rotation: number } {
+    const angle = this.selfLoopAngle;
+    const loopSize = Math.max(node.rx, node.ry) * 1.5;
+    const startAngle = angle - Math.PI / 6;
+    const endAngle = angle + Math.PI / 6;
+
+    // Self-loop control points
+    const startX = node.cx + node.rx * Math.cos(startAngle);
+    const startY = node.cy + node.ry * Math.sin(startAngle);
+    const endX = node.cx + node.rx * Math.cos(endAngle);
+    const endY = node.cy + node.ry * Math.sin(endAngle);
+    const ctrl1 = { x: node.cx + (node.rx + loopSize) * Math.cos(startAngle), y: node.cy + (node.ry + loopSize) * Math.sin(startAngle) };
+    const ctrl2 = { x: node.cx + (node.rx + loopSize) * Math.cos(endAngle), y: node.cy + (node.ry + loopSize) * Math.sin(endAngle) };
+
+    return calculateCubicEdgeLabelPosition(
+      { x: startX, y: startY },
+      ctrl1,
+      ctrl2,
+      { x: endX, y: endY },
+      this.labelPlacement
+    );
   }
 
   /**
@@ -756,10 +898,15 @@ export class Edge implements Shape {
 
       // Update label position
       if (this.labelElement && this.label) {
-        const midpoint = this.getPathMidpoint(sourceNode, targetNode);
-        this.labelElement.setAttribute('x', String(midpoint.x));
-        this.labelElement.setAttribute('y', String(midpoint.y));
+        const labelPos = this.calculateLabelPosition(sourceNode, targetNode);
+        this.labelElement.setAttribute('x', String(labelPos.x));
+        this.labelElement.setAttribute('y', String(labelPos.y));
         this.labelElement.setAttribute('fill', this.style.stroke);
+        if (labelPos.rotation !== 0) {
+          this.labelElement.setAttribute('transform', `rotate(${labelPos.rotation}, ${labelPos.x}, ${labelPos.y})`);
+        } else {
+          this.labelElement.removeAttribute('transform');
+        }
         this.updateLabelBackground();
       }
     }
@@ -806,12 +953,40 @@ export class Edge implements Shape {
       this.arrowElement = null;
     }
 
-    // Update data-label attribute
+    // Update data-label attribute and label placement attributes
     if (this.element) {
       if (this.label) {
         this.element.setAttribute('data-label', this.label);
+        // Update label placement attributes
+        if (this.labelPlacement.pos !== 'auto') {
+          const posValue = typeof this.labelPlacement.pos === 'number'
+            ? String(this.labelPlacement.pos)
+            : this.labelPlacement.pos;
+          this.element.setAttribute('data-label-position', posValue);
+        } else {
+          this.element.removeAttribute('data-label-position');
+        }
+        if (this.labelPlacement.side !== 'above') {
+          this.element.setAttribute('data-label-side', this.labelPlacement.side);
+        } else {
+          this.element.removeAttribute('data-label-side');
+        }
+        if (this.labelPlacement.sloped) {
+          this.element.setAttribute('data-label-sloped', 'true');
+        } else {
+          this.element.removeAttribute('data-label-sloped');
+        }
+        if (this.labelPlacement.distance !== 5) {
+          this.element.setAttribute('data-label-distance', String(this.labelPlacement.distance));
+        } else {
+          this.element.removeAttribute('data-label-distance');
+        }
       } else {
         this.element.removeAttribute('data-label');
+        this.element.removeAttribute('data-label-position');
+        this.element.removeAttribute('data-label-side');
+        this.element.removeAttribute('data-label-sloped');
+        this.element.removeAttribute('data-label-distance');
       }
     }
   }
@@ -1195,7 +1370,7 @@ export class Edge implements Shape {
   }
 
   serialize(): EdgeData {
-    return {
+    const data: EdgeData = {
       id: this.id,
       type: 'edge',
       sourceNodeId: this.sourceNodeId,
@@ -1213,6 +1388,14 @@ export class Edge implements Shape {
       sourceConnectionAngle: this.sourceConnectionAngle,
       targetConnectionAngle: this.targetConnectionAngle
     };
+
+    // Include labelPlacement if not default
+    const lp = this.labelPlacement;
+    if (lp.pos !== 'auto' || lp.side !== 'above' || lp.sloped || lp.distance !== 5) {
+      data.labelPlacement = { ...lp };
+    }
+
+    return data;
   }
 
   clone(): Edge {
@@ -1230,7 +1413,8 @@ export class Edge implements Shape {
       this.curveAmount,
       this.pathCommands.length > 0 ? this.pathCommands.map(cmd => ({ ...cmd })) : [],
       this.sourceConnectionAngle,
-      this.targetConnectionAngle
+      this.targetConnectionAngle,
+      { ...this.labelPlacement }
     );
     cloned.className = this.className;
     return cloned;

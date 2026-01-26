@@ -5,6 +5,18 @@
 ## [Unreleased]
 
 ### 追加
+- ラベル配置機能（TikZ スタイル）
+  - ノードのラベル配置オプション
+    - 位置: `center`（デフォルト）、`above`、`below`、`left`、`right`、斜め4方向、カスタム角度（0-360°）
+    - 距離: ノード境界からの距離（px）
+  - エッジのラベル配置オプション
+    - 長さ方向: `auto`（midway）、`midway`（0.5）、`near start`（0.25）、`near end`（0.75）、カスタム（0-1）
+    - 側面: `above`（デフォルト）、`below`
+    - 傾き: `sloped`（エッジの傾きに合わせて回転）
+    - 距離: エッジからの距離（px）
+  - サイドバーに Label Position セクションを追加
+  - SVG 保存時に `data-label-position`、`data-label-distance` 等の属性を出力
+  - Undo/Redo 対応: `NodeLabelPlacementCommand`、`EdgeLabelPlacementCommand`
 - リッチテキスト機能（1行内の部分的スタイル変更）
   - テキスト図形内で部分的に異なるスタイルを適用可能
     - 太字、イタリック、下線、取消線

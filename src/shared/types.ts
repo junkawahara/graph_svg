@@ -223,6 +223,7 @@ export interface NodeData extends BaseShapeData {
   label: string;
   fontSize: number;
   fontFamily: string;
+  labelPlacement?: NodeLabelPlacement;
 }
 
 /**
@@ -242,6 +243,7 @@ export interface EdgeData extends BaseShapeData {
   pathCommands?: PathCommand[];  // Path commands for 'path' type
   sourceConnectionAngle?: number | null;  // Manual source connection angle (null = auto)
   targetConnectionAngle?: number | null;  // Manual target connection angle (null = auto)
+  labelPlacement?: EdgeLabelPlacement;
 }
 
 /**
@@ -357,6 +359,70 @@ export type EventName =
   | 'file:dirtyChanged'
   | 'canvas:fitToContent'
   | 'app:beforeClose';
+
+/**
+ * Node label position options (TikZ-style)
+ * - 'auto' = default ('above')
+ * - 'center' = inside the ellipse (current behavior)
+ * - direction keywords = outside the ellipse
+ * - number = angle in degrees (0=right, 90=up, 180=left, 270=down)
+ */
+export type NodeLabelPosition =
+  | 'auto' | 'center'
+  | 'above' | 'below' | 'left' | 'right'
+  | 'above left' | 'above right' | 'below left' | 'below right'
+  | number;
+
+/**
+ * Edge label position along the edge (TikZ-style)
+ * - 'auto' = default ('midway')
+ * - 'midway' = 0.5 (center)
+ * - 'near start' = 0.25
+ * - 'near end' = 0.75
+ * - number = position from 0 (start) to 1 (end)
+ */
+export type EdgeLabelPos = 'auto' | 'midway' | 'near start' | 'near end' | number;
+
+/**
+ * Edge label side (which side of the edge)
+ */
+export type EdgeLabelSide = 'above' | 'below';
+
+/**
+ * Node label placement configuration
+ */
+export interface NodeLabelPlacement {
+  position: NodeLabelPosition;
+  distance: number;  // Distance from node boundary (px), default: 5
+}
+
+/**
+ * Edge label placement configuration
+ */
+export interface EdgeLabelPlacement {
+  pos: EdgeLabelPos;        // Position along edge (0-1)
+  side: EdgeLabelSide;      // Above or below the edge
+  sloped: boolean;          // Rotate with edge tangent
+  distance: number;         // Distance from edge (px), default: 5
+}
+
+/**
+ * Default node label placement
+ */
+export const DEFAULT_NODE_LABEL_PLACEMENT: NodeLabelPlacement = {
+  position: 'center',
+  distance: 5
+};
+
+/**
+ * Default edge label placement
+ */
+export const DEFAULT_EDGE_LABEL_PLACEMENT: EdgeLabelPlacement = {
+  pos: 'auto',
+  side: 'above',
+  sloped: false,
+  distance: 5
+};
 
 /**
  * Generate unique ID

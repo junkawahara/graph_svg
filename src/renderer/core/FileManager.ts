@@ -279,7 +279,21 @@ export class FileManager {
     const escapedLabel = this.escapeXml(node.label);
     const lines: string[] = [];
 
-    lines.push(`  <g id="${node.id}" ${classAttr}data-graph-type="node" data-label="${escapedLabel}">`);
+    // Build data attributes for group
+    let dataAttrs = `data-graph-type="node" data-label="${escapedLabel}"`;
+
+    // Add label placement attributes if not default
+    if (node.labelPlacement.position !== 'center') {
+      const posValue = typeof node.labelPlacement.position === 'number'
+        ? String(node.labelPlacement.position)
+        : node.labelPlacement.position;
+      dataAttrs += ` data-label-position="${posValue}"`;
+    }
+    if (node.labelPlacement.distance !== 5) {
+      dataAttrs += ` data-label-distance="${node.labelPlacement.distance}"`;
+    }
+
+    lines.push(`  <g id="${node.id}" ${classAttr}${dataAttrs}>`);
     lines.push(`    <ellipse cx="${node.cx}" cy="${node.cy}" rx="${node.rx}" ry="${node.ry}" ${style}/>`);
     lines.push(`    <text x="${node.cx}" y="${node.cy}" text-anchor="middle" dominant-baseline="middle" font-size="${node.fontSize}" font-family="${node.fontFamily}" fill="${node.style.stroke}" pointer-events="none">${escapedLabel}</text>`);
     lines.push(`  </g>`);
@@ -312,6 +326,21 @@ export class FileManager {
     }
     if (edge.label) {
       groupDataAttrs += ` data-label="${this.escapeXml(edge.label)}"`;
+      // Add label placement attributes if not default
+      const lp = edge.labelPlacement;
+      if (lp.pos !== 'auto') {
+        const posValue = typeof lp.pos === 'number' ? String(lp.pos) : lp.pos;
+        groupDataAttrs += ` data-label-position="${posValue}"`;
+      }
+      if (lp.side !== 'above') {
+        groupDataAttrs += ` data-label-side="${lp.side}"`;
+      }
+      if (lp.sloped) {
+        groupDataAttrs += ` data-label-sloped="true"`;
+      }
+      if (lp.distance !== 5) {
+        groupDataAttrs += ` data-label-distance="${lp.distance}"`;
+      }
     }
 
     // Build style attributes for path

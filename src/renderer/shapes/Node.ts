@@ -1,8 +1,9 @@
-import { Point, Bounds, ShapeStyle, NodeData, generateId } from '../../shared/types';
+import { Point, Bounds, ShapeStyle, NodeData, NodeLabelPlacement, DEFAULT_NODE_LABEL_PLACEMENT, generateId } from '../../shared/types';
 import { Shape, applyStyle, applyRotation, normalizeRotation, rotatePoint, getRotatedBounds } from './Shape';
 import { getGraphManager } from '../core/GraphManager';
 import { round3 } from '../core/MathUtils';
 import { Matrix2D, decomposeMatrix } from '../core/TransformParser';
+import { calculateNodeLabelPosition } from '../core/LabelGeometry';
 
 /**
  * Graph Node shape - a composite shape with ellipse and label
@@ -14,6 +15,7 @@ export class Node implements Shape {
   private textElement: SVGTextElement | null = null;
   rotation: number = 0;
   className?: string;
+  labelPlacement: NodeLabelPlacement;
 
   constructor(
     public readonly id: string,
@@ -25,9 +27,11 @@ export class Node implements Shape {
     public fontSize: number,
     public fontFamily: string,
     public style: ShapeStyle,
-    rotation: number = 0
+    rotation: number = 0,
+    labelPlacement: NodeLabelPlacement = { ...DEFAULT_NODE_LABEL_PLACEMENT }
   ) {
     this.rotation = normalizeRotation(rotation);
+    this.labelPlacement = labelPlacement;
   }
 
   /**
@@ -60,6 +64,23 @@ export class Node implements Shape {
     const fontSize = text ? parseFloat(text.getAttribute('font-size') || '14') : 14;
     const fontFamily = text?.getAttribute('font-family') || 'Arial';
 
+    // Parse label placement attributes
+    const labelPlacement: NodeLabelPlacement = { ...DEFAULT_NODE_LABEL_PLACEMENT };
+    const posAttr = el.getAttribute('data-label-position');
+    if (posAttr) {
+      // Check if it's a number (angle)
+      const numValue = parseFloat(posAttr);
+      if (!isNaN(numValue)) {
+        labelPlacement.position = numValue;
+      } else {
+        labelPlacement.position = posAttr as NodeLabelPlacement['position'];
+      }
+    }
+    const distAttr = el.getAttribute('data-label-distance');
+    if (distAttr) {
+      labelPlacement.distance = parseFloat(distAttr);
+    }
+
     return new Node(
       el.id || generateId(),
       parseFloat(ellipse.getAttribute('cx') || '0'),
@@ -69,7 +90,9 @@ export class Node implements Shape {
       label,
       fontSize,
       fontFamily,
-      style
+      style,
+      0,  // rotation
+      labelPlacement
     );
   }
 
@@ -78,6 +101,17 @@ export class Node implements Shape {
     group.id = this.id;
     group.setAttribute('data-graph-type', 'node');
     group.setAttribute('data-label', this.label);
+
+    // Add label placement attributes if not default
+    if (this.labelPlacement.position !== 'center') {
+      const posValue = typeof this.labelPlacement.position === 'number'
+        ? String(this.labelPlacement.position)
+        : this.labelPlacement.position;
+      group.setAttribute('data-label-position', posValue);
+    }
+    if (this.labelPlacement.distance !== 5) {
+      group.setAttribute('data-label-distance', String(this.labelPlacement.distance));
+    }
 
     // Create ellipse
     const ellipse = document.createElementNS('http://www.w3.org/2000/svg', 'ellipse');
@@ -89,12 +123,17 @@ export class Node implements Shape {
     group.appendChild(ellipse);
     this.ellipseElement = ellipse;
 
+    // Calculate label position
+    const labelPos = calculateNodeLabelPosition(
+      this.cx, this.cy, this.rx, this.ry, this.labelPlacement
+    );
+
     // Create text label
     const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-    text.setAttribute('x', String(this.cx));
-    text.setAttribute('y', String(this.cy));
-    text.setAttribute('text-anchor', 'middle');
-    text.setAttribute('dominant-baseline', 'middle');
+    text.setAttribute('x', String(labelPos.x));
+    text.setAttribute('y', String(labelPos.y));
+    text.setAttribute('text-anchor', labelPos.textAnchor);
+    text.setAttribute('dominant-baseline', labelPos.dominantBaseline);
     text.setAttribute('font-size', String(this.fontSize));
     text.setAttribute('font-family', this.fontFamily);
     text.setAttribute('fill', this.style.stroke);  // Use stroke color for text
@@ -114,8 +153,10 @@ export class Node implements Shape {
     gm.setNodeShape(this.id, this);
 
     // Adjust text vertical position after rendering (requires DOM)
-    // Use requestAnimationFrame to ensure element is in DOM
-    requestAnimationFrame(() => this.adjustTextVerticalCenter());
+    // Only for center position which needs getBBox adjustment
+    if (this.labelPlacement.position === 'center') {
+      requestAnimationFrame(() => this.adjustTextVerticalCenter());
+    }
 
     return group;
   }
@@ -150,23 +191,48 @@ export class Node implements Shape {
     this.ellipseElement.setAttribute('ry', String(this.ry));
     applyStyle(this.ellipseElement, this.style);
 
-    // Update text (reset to center first, then adjust)
-    this.textElement.setAttribute('x', String(this.cx));
-    this.textElement.setAttribute('y', String(this.cy));
+    // Calculate label position
+    const labelPos = calculateNodeLabelPosition(
+      this.cx, this.cy, this.rx, this.ry, this.labelPlacement
+    );
+
+    // Update text
+    this.textElement.setAttribute('x', String(labelPos.x));
+    this.textElement.setAttribute('y', String(labelPos.y));
+    this.textElement.setAttribute('text-anchor', labelPos.textAnchor);
+    this.textElement.setAttribute('dominant-baseline', labelPos.dominantBaseline);
     this.textElement.setAttribute('font-size', String(this.fontSize));
     this.textElement.setAttribute('font-family', this.fontFamily);
     this.textElement.setAttribute('fill', this.style.stroke);
     this.textElement.textContent = this.label;
 
-    // Update group data attribute
+    // Update group data attributes
     if (this.element) {
       this.element.setAttribute('data-label', this.label);
+
+      // Update label placement attributes
+      if (this.labelPlacement.position !== 'center') {
+        const posValue = typeof this.labelPlacement.position === 'number'
+          ? String(this.labelPlacement.position)
+          : this.labelPlacement.position;
+        this.element.setAttribute('data-label-position', posValue);
+      } else {
+        this.element.removeAttribute('data-label-position');
+      }
+      if (this.labelPlacement.distance !== 5) {
+        this.element.setAttribute('data-label-distance', String(this.labelPlacement.distance));
+      } else {
+        this.element.removeAttribute('data-label-distance');
+      }
+
       // Apply rotation
       applyRotation(this.element, this.rotation, this.cx, this.cy);
     }
 
-    // Adjust text vertical position
-    this.adjustTextVerticalCenter();
+    // Adjust text vertical position (only for center position)
+    if (this.labelPlacement.position === 'center') {
+      this.adjustTextVerticalCenter();
+    }
   }
 
   hitTest(point: Point, tolerance: number = 5): boolean {
@@ -214,7 +280,7 @@ export class Node implements Shape {
   }
 
   serialize(): NodeData {
-    return {
+    const data: NodeData = {
       id: this.id,
       type: 'node',
       cx: this.cx,
@@ -228,6 +294,13 @@ export class Node implements Shape {
       rotation: this.rotation,
       className: this.className
     };
+
+    // Include labelPlacement if not default
+    if (this.labelPlacement.position !== 'center' || this.labelPlacement.distance !== 5) {
+      data.labelPlacement = { ...this.labelPlacement };
+    }
+
+    return data;
   }
 
   clone(): Node {
@@ -241,7 +314,8 @@ export class Node implements Shape {
       this.fontSize,
       this.fontFamily,
       { ...this.style },
-      this.rotation
+      this.rotation,
+      { ...this.labelPlacement }
     );
     cloned.className = this.className;
     return cloned;

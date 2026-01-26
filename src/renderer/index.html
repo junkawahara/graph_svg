@@ -392,6 +392,29 @@
             <label>Font Size</label>
             <input type="number" id="prop-node-font-size" value="14" min="8" max="72">
           </div>
+          <div class="property-group">
+            <label>Label Position</label>
+            <select id="prop-node-label-position">
+              <option value="center">Center</option>
+              <option value="above">Above</option>
+              <option value="below">Below</option>
+              <option value="left">Left</option>
+              <option value="right">Right</option>
+              <option value="above left">Above Left</option>
+              <option value="above right">Above Right</option>
+              <option value="below left">Below Left</option>
+              <option value="below right">Below Right</option>
+              <option value="custom">Custom Angle...</option>
+            </select>
+          </div>
+          <div id="node-label-angle-section" class="property-group" style="display: none;">
+            <label>Label Angle (0-360)</label>
+            <input type="number" id="prop-node-label-angle" min="0" max="360" value="90" step="any">
+          </div>
+          <div id="node-label-distance-section" class="property-group" style="display: none;">
+            <label>Label Distance</label>
+            <input type="number" id="prop-node-label-distance" value="5" min="0" max="50" step="any">
+          </div>
         </div>
 
         <!-- Edge-specific properties (hidden by default) -->
@@ -422,6 +445,40 @@
           <div class="property-group">
             <label>Edge Label</label>
             <input type="text" id="prop-edge-label" placeholder="Label">
+          </div>
+          <!-- Edge label placement (shown when edge has a label) -->
+          <div id="edge-label-placement-section" style="display: none;">
+            <div class="property-group">
+              <label>Label Position</label>
+              <select id="prop-edge-label-position">
+                <option value="auto">Auto (midway)</option>
+                <option value="midway">Midway</option>
+                <option value="near start">Near Start</option>
+                <option value="near end">Near End</option>
+                <option value="custom">Custom (0-1)...</option>
+              </select>
+            </div>
+            <div id="edge-label-pos-section" class="property-group" style="display: none;">
+              <label>Position (0-1)</label>
+              <input type="number" id="prop-edge-label-pos" min="0" max="1" step="0.05" value="0.5">
+            </div>
+            <div class="property-group">
+              <label>Label Side</label>
+              <select id="prop-edge-label-side">
+                <option value="above">Above</option>
+                <option value="below">Below</option>
+              </select>
+            </div>
+            <div class="property-group">
+              <label style="display: flex; align-items: center; gap: 8px;">
+                <input type="checkbox" id="prop-edge-label-sloped">
+                <span>Sloped (follow edge)</span>
+              </label>
+            </div>
+            <div class="property-group">
+              <label>Label Distance</label>
+              <input type="number" id="prop-edge-label-distance" value="5" min="0" max="50" step="any">
+            </div>
           </div>
         </div>
 
