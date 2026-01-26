@@ -983,4 +983,353 @@ describe('Graph Round-Trip', () => {
       expect(targetNode!.label).toBe('End');
     });
   });
+
+  describe('Label Placement', () => {
+    describe('Node Label Placement', () => {
+      it('should preserve node label position "center"', () => {
+        const node = createTestNode({ id: 'node-1', label: 'A' });
+        node.labelPlacement = { position: 'center', distance: 0 };
+
+        const gm = getGraphManager();
+        gm.registerNode(node.id);
+        gm.setNodeShape(node.id, node);
+
+        const { shapes } = roundTrip([node]);
+
+        const restored = shapes[0] as Node;
+        expect(restored.labelPlacement.position).toBe('center');
+      });
+
+      it('should preserve node label position "above"', () => {
+        const node = createTestNode({ id: 'node-1', label: 'A' });
+        node.labelPlacement = { position: 'above', distance: 5 };
+
+        const gm = getGraphManager();
+        gm.registerNode(node.id);
+        gm.setNodeShape(node.id, node);
+
+        const { shapes } = roundTrip([node]);
+
+        const restored = shapes[0] as Node;
+        expect(restored.labelPlacement.position).toBe('above');
+        expectClose(restored.labelPlacement.distance, 5);
+      });
+
+      it('should preserve node label position "below"', () => {
+        const node = createTestNode({ id: 'node-1', label: 'A' });
+        node.labelPlacement = { position: 'below', distance: 10 };
+
+        const gm = getGraphManager();
+        gm.registerNode(node.id);
+        gm.setNodeShape(node.id, node);
+
+        const { shapes } = roundTrip([node]);
+
+        const restored = shapes[0] as Node;
+        expect(restored.labelPlacement.position).toBe('below');
+        expectClose(restored.labelPlacement.distance, 10);
+      });
+
+      it('should preserve node label position "left"', () => {
+        const node = createTestNode({ id: 'node-1', label: 'A' });
+        node.labelPlacement = { position: 'left', distance: 8 };
+
+        const gm = getGraphManager();
+        gm.registerNode(node.id);
+        gm.setNodeShape(node.id, node);
+
+        const { shapes } = roundTrip([node]);
+
+        const restored = shapes[0] as Node;
+        expect(restored.labelPlacement.position).toBe('left');
+      });
+
+      it('should preserve node label position "right"', () => {
+        const node = createTestNode({ id: 'node-1', label: 'A' });
+        node.labelPlacement = { position: 'right', distance: 12 };
+
+        const gm = getGraphManager();
+        gm.registerNode(node.id);
+        gm.setNodeShape(node.id, node);
+
+        const { shapes } = roundTrip([node]);
+
+        const restored = shapes[0] as Node;
+        expect(restored.labelPlacement.position).toBe('right');
+      });
+
+      it('should preserve node label diagonal positions', () => {
+        const diagonalPositions = ['above left', 'above right', 'below left', 'below right'] as const;
+
+        for (const position of diagonalPositions) {
+          const gm = getGraphManager();
+          gm.clear();
+
+          const node = createTestNode({ id: 'node-1', label: 'A' });
+          node.labelPlacement = { position, distance: 5 };
+
+          gm.registerNode(node.id);
+          gm.setNodeShape(node.id, node);
+
+          const { shapes } = roundTrip([node]);
+
+          const restored = shapes[0] as Node;
+          expect(restored.labelPlacement.position).toBe(position);
+        }
+      });
+
+      it('should preserve node label numeric angle position', () => {
+        const node = createTestNode({ id: 'node-1', label: 'A' });
+        node.labelPlacement = { position: 45, distance: 5 };
+
+        const gm = getGraphManager();
+        gm.registerNode(node.id);
+        gm.setNodeShape(node.id, node);
+
+        const { shapes } = roundTrip([node]);
+
+        const restored = shapes[0] as Node;
+        expectClose(restored.labelPlacement.position as number, 45);
+      });
+
+      it('should preserve node label distance', () => {
+        const node = createTestNode({ id: 'node-1', label: 'A' });
+        node.labelPlacement = { position: 'above', distance: 25 };
+
+        const gm = getGraphManager();
+        gm.registerNode(node.id);
+        gm.setNodeShape(node.id, node);
+
+        const { shapes } = roundTrip([node]);
+
+        const restored = shapes[0] as Node;
+        expectClose(restored.labelPlacement.distance, 25);
+      });
+    });
+
+    describe('Edge Label Placement', () => {
+      it('should preserve edge label position "midway"', () => {
+        const node1 = createTestNode({ id: 'node-1', cx: 100, cy: 100 });
+        const node2 = createTestNode({ id: 'node-2', cx: 200, cy: 100 });
+
+        const gm = getGraphManager();
+        gm.registerNode(node1.id);
+        gm.setNodeShape(node1.id, node1);
+        gm.registerNode(node2.id);
+        gm.setNodeShape(node2.id, node2);
+
+        const edge = createTestEdge(node1.id, node2.id, { label: 'weight' });
+        edge.labelPlacement = { pos: 'midway', side: 'above', sloped: false, distance: 5 };
+        gm.registerEdge(edge.id, node1.id, node2.id);
+
+        const { shapes } = roundTrip([node1, node2, edge]);
+
+        const restoredEdge = shapes.find(s => s.type === 'edge') as Edge;
+        expect(restoredEdge.labelPlacement.pos).toBe('midway');
+      });
+
+      it('should preserve edge label position "near start"', () => {
+        const node1 = createTestNode({ id: 'node-1', cx: 100, cy: 100 });
+        const node2 = createTestNode({ id: 'node-2', cx: 200, cy: 100 });
+
+        const gm = getGraphManager();
+        gm.registerNode(node1.id);
+        gm.setNodeShape(node1.id, node1);
+        gm.registerNode(node2.id);
+        gm.setNodeShape(node2.id, node2);
+
+        const edge = createTestEdge(node1.id, node2.id, { label: 'weight' });
+        edge.labelPlacement = { pos: 'near start', side: 'above', sloped: false, distance: 5 };
+        gm.registerEdge(edge.id, node1.id, node2.id);
+
+        const { shapes } = roundTrip([node1, node2, edge]);
+
+        const restoredEdge = shapes.find(s => s.type === 'edge') as Edge;
+        expect(restoredEdge.labelPlacement.pos).toBe('near start');
+      });
+
+      it('should preserve edge label position "near end"', () => {
+        const node1 = createTestNode({ id: 'node-1', cx: 100, cy: 100 });
+        const node2 = createTestNode({ id: 'node-2', cx: 200, cy: 100 });
+
+        const gm = getGraphManager();
+        gm.registerNode(node1.id);
+        gm.setNodeShape(node1.id, node1);
+        gm.registerNode(node2.id);
+        gm.setNodeShape(node2.id, node2);
+
+        const edge = createTestEdge(node1.id, node2.id, { label: 'weight' });
+        edge.labelPlacement = { pos: 'near end', side: 'above', sloped: false, distance: 5 };
+        gm.registerEdge(edge.id, node1.id, node2.id);
+
+        const { shapes } = roundTrip([node1, node2, edge]);
+
+        const restoredEdge = shapes.find(s => s.type === 'edge') as Edge;
+        expect(restoredEdge.labelPlacement.pos).toBe('near end');
+      });
+
+      it('should preserve edge label numeric position', () => {
+        const node1 = createTestNode({ id: 'node-1', cx: 100, cy: 100 });
+        const node2 = createTestNode({ id: 'node-2', cx: 200, cy: 100 });
+
+        const gm = getGraphManager();
+        gm.registerNode(node1.id);
+        gm.setNodeShape(node1.id, node1);
+        gm.registerNode(node2.id);
+        gm.setNodeShape(node2.id, node2);
+
+        const edge = createTestEdge(node1.id, node2.id, { label: 'weight' });
+        edge.labelPlacement = { pos: 0.3, side: 'above', sloped: false, distance: 5 };
+        gm.registerEdge(edge.id, node1.id, node2.id);
+
+        const { shapes } = roundTrip([node1, node2, edge]);
+
+        const restoredEdge = shapes.find(s => s.type === 'edge') as Edge;
+        expectClose(restoredEdge.labelPlacement.pos as number, 0.3);
+      });
+
+      it('should preserve edge label side "above"', () => {
+        const node1 = createTestNode({ id: 'node-1', cx: 100, cy: 100 });
+        const node2 = createTestNode({ id: 'node-2', cx: 200, cy: 100 });
+
+        const gm = getGraphManager();
+        gm.registerNode(node1.id);
+        gm.setNodeShape(node1.id, node1);
+        gm.registerNode(node2.id);
+        gm.setNodeShape(node2.id, node2);
+
+        const edge = createTestEdge(node1.id, node2.id, { label: 'weight' });
+        edge.labelPlacement = { pos: 'midway', side: 'above', sloped: false, distance: 5 };
+        gm.registerEdge(edge.id, node1.id, node2.id);
+
+        const { shapes } = roundTrip([node1, node2, edge]);
+
+        const restoredEdge = shapes.find(s => s.type === 'edge') as Edge;
+        expect(restoredEdge.labelPlacement.side).toBe('above');
+      });
+
+      it('should preserve edge label side "below"', () => {
+        const node1 = createTestNode({ id: 'node-1', cx: 100, cy: 100 });
+        const node2 = createTestNode({ id: 'node-2', cx: 200, cy: 100 });
+
+        const gm = getGraphManager();
+        gm.registerNode(node1.id);
+        gm.setNodeShape(node1.id, node1);
+        gm.registerNode(node2.id);
+        gm.setNodeShape(node2.id, node2);
+
+        const edge = createTestEdge(node1.id, node2.id, { label: 'weight' });
+        edge.labelPlacement = { pos: 'midway', side: 'below', sloped: false, distance: 5 };
+        gm.registerEdge(edge.id, node1.id, node2.id);
+
+        const { shapes } = roundTrip([node1, node2, edge]);
+
+        const restoredEdge = shapes.find(s => s.type === 'edge') as Edge;
+        expect(restoredEdge.labelPlacement.side).toBe('below');
+      });
+
+      it('should preserve edge label sloped=true', () => {
+        const node1 = createTestNode({ id: 'node-1', cx: 100, cy: 100 });
+        const node2 = createTestNode({ id: 'node-2', cx: 200, cy: 100 });
+
+        const gm = getGraphManager();
+        gm.registerNode(node1.id);
+        gm.setNodeShape(node1.id, node1);
+        gm.registerNode(node2.id);
+        gm.setNodeShape(node2.id, node2);
+
+        const edge = createTestEdge(node1.id, node2.id, { label: 'weight' });
+        edge.labelPlacement = { pos: 'midway', side: 'above', sloped: true, distance: 5 };
+        gm.registerEdge(edge.id, node1.id, node2.id);
+
+        const { shapes } = roundTrip([node1, node2, edge]);
+
+        const restoredEdge = shapes.find(s => s.type === 'edge') as Edge;
+        expect(restoredEdge.labelPlacement.sloped).toBe(true);
+      });
+
+      it('should preserve edge label sloped=false', () => {
+        const node1 = createTestNode({ id: 'node-1', cx: 100, cy: 100 });
+        const node2 = createTestNode({ id: 'node-2', cx: 200, cy: 100 });
+
+        const gm = getGraphManager();
+        gm.registerNode(node1.id);
+        gm.setNodeShape(node1.id, node1);
+        gm.registerNode(node2.id);
+        gm.setNodeShape(node2.id, node2);
+
+        const edge = createTestEdge(node1.id, node2.id, { label: 'weight' });
+        edge.labelPlacement = { pos: 'midway', side: 'above', sloped: false, distance: 5 };
+        gm.registerEdge(edge.id, node1.id, node2.id);
+
+        const { shapes } = roundTrip([node1, node2, edge]);
+
+        const restoredEdge = shapes.find(s => s.type === 'edge') as Edge;
+        expect(restoredEdge.labelPlacement.sloped).toBe(false);
+      });
+
+      it('should preserve edge label distance', () => {
+        const node1 = createTestNode({ id: 'node-1', cx: 100, cy: 100 });
+        const node2 = createTestNode({ id: 'node-2', cx: 200, cy: 100 });
+
+        const gm = getGraphManager();
+        gm.registerNode(node1.id);
+        gm.setNodeShape(node1.id, node1);
+        gm.registerNode(node2.id);
+        gm.setNodeShape(node2.id, node2);
+
+        const edge = createTestEdge(node1.id, node2.id, { label: 'weight' });
+        edge.labelPlacement = { pos: 'midway', side: 'above', sloped: false, distance: 20 };
+        gm.registerEdge(edge.id, node1.id, node2.id);
+
+        const { shapes } = roundTrip([node1, node2, edge]);
+
+        const restoredEdge = shapes.find(s => s.type === 'edge') as Edge;
+        expectClose(restoredEdge.labelPlacement.distance, 20);
+      });
+
+      it('should preserve all edge label placement properties', () => {
+        const node1 = createTestNode({ id: 'node-1', cx: 100, cy: 100 });
+        const node2 = createTestNode({ id: 'node-2', cx: 200, cy: 100 });
+
+        const gm = getGraphManager();
+        gm.registerNode(node1.id);
+        gm.setNodeShape(node1.id, node1);
+        gm.registerNode(node2.id);
+        gm.setNodeShape(node2.id, node2);
+
+        const edge = createTestEdge(node1.id, node2.id, { label: 'weight' });
+        edge.labelPlacement = { pos: 0.7, side: 'below', sloped: true, distance: 15 };
+        gm.registerEdge(edge.id, node1.id, node2.id);
+
+        const { shapes } = roundTrip([node1, node2, edge]);
+
+        const restoredEdge = shapes.find(s => s.type === 'edge') as Edge;
+        expectClose(restoredEdge.labelPlacement.pos as number, 0.7);
+        expect(restoredEdge.labelPlacement.side).toBe('below');
+        expect(restoredEdge.labelPlacement.sloped).toBe(true);
+        expectClose(restoredEdge.labelPlacement.distance, 15);
+      });
+
+      it('should preserve edge without label (default placement)', () => {
+        const node1 = createTestNode({ id: 'node-1', cx: 100, cy: 100 });
+        const node2 = createTestNode({ id: 'node-2', cx: 200, cy: 100 });
+
+        const gm = getGraphManager();
+        gm.registerNode(node1.id);
+        gm.setNodeShape(node1.id, node1);
+        gm.registerNode(node2.id);
+        gm.setNodeShape(node2.id, node2);
+
+        const edge = createTestEdge(node1.id, node2.id, {});
+        gm.registerEdge(edge.id, node1.id, node2.id);
+
+        const { shapes } = roundTrip([node1, node2, edge]);
+
+        const restoredEdge = shapes.find(s => s.type === 'edge') as Edge;
+        // Should have default placement
+        expect(restoredEdge.labelPlacement).toBeDefined();
+      });
+    });
+  });
 });

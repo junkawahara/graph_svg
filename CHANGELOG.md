@@ -32,6 +32,13 @@
   - `TextData` に `runs` フィールドを追加（行の配列、各行はRunの配列）
   - SVG 出力形式: ネストした `<tspan>` でスタイルを保持
   - Undo/Redo 対応: `RichTextChangeCommand`, `ClearRichTextCommand`
+- テスト追加
+  - `LabelGeometry.test.ts`: ラベル配置計算のユニットテスト（59テスト）
+  - `NodeLabelPlacementCommand.test.ts`: ノードラベル配置コマンドのテスト（33テスト）
+  - `EdgeLabelPlacementCommand.test.ts`: エッジラベル配置コマンドのテスト（29テスト）
+  - `graph.test.ts`: ラベル配置のラウンドトリップテスト（20テスト追加）
+  - `TextRunUtils.test.ts`: リッチテキストユーティリティのテスト（51テスト）
+  - `RichTextChangeCommand.test.ts`: リッチテキストコマンドのテスト（21テスト）
 - Electron と Web ブラウザの両方で動作するハイブリッドアプリ化
   - Platform Adapter パターンによるプラットフォーム抽象化
     - `PlatformAdapter` インターフェース（ファイル操作、設定、メニューイベント）

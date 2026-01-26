@@ -456,9 +456,10 @@ describe('Edge.updatePath()', () => {
 
       // Label should be near the midpoint of the edge
       // Midpoint between (100, 100) and (300, 100) is (200, 100)
+      // With default label placement (side: 'above', distance: 5), y is offset by -5
       expect(x).toBeGreaterThan(150);
       expect(x).toBeLessThan(250);
-      expect(y).toBeCloseTo(100, 0);
+      expect(y).toBeCloseTo(95, 0); // 100 - 5 (default distance above)
     });
   });
 
