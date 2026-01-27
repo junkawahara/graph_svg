@@ -54,6 +54,14 @@ export class SettingsDialog {
           <label for="auto-layout-padding">自動レイアウト 余白 (px)</label>
           <input type="number" id="auto-layout-padding" value="${currentSettings.autoLayoutPadding ?? 50}" min="0" step="10">
         </div>
+        <div class="dialog-field">
+          <label for="auto-node-label-prefix">Auto Node Label Prefix</label>
+          <input type="text" id="auto-node-label-prefix" value="${currentSettings.autoNodeLabelPrefix ?? 'v'}">
+        </div>
+        <div class="dialog-field">
+          <label for="auto-node-label-start">Auto Node Label Start Number</label>
+          <input type="number" id="auto-node-label-start" value="${currentSettings.autoNodeLabelStartNumber ?? 0}" step="1">
+        </div>
       </div>
       <div class="dialog-footer">
         <button class="dialog-btn dialog-btn-cancel">キャンセル</button>
@@ -69,6 +77,8 @@ export class SettingsDialog {
     const gridSizeInput = this.dialog.querySelector('#grid-size') as HTMLInputElement;
     const fitMarginInput = this.dialog.querySelector('#fit-margin') as HTMLInputElement;
     const autoLayoutPaddingInput = this.dialog.querySelector('#auto-layout-padding') as HTMLInputElement;
+    const autoNodeLabelPrefixInput = this.dialog.querySelector('#auto-node-label-prefix') as HTMLInputElement;
+    const autoNodeLabelStartInput = this.dialog.querySelector('#auto-node-label-start') as HTMLInputElement;
     const okBtn = this.dialog.querySelector('.dialog-btn-ok') as HTMLButtonElement;
     const cancelBtn = this.dialog.querySelector('.dialog-btn-cancel') as HTMLButtonElement;
 
@@ -82,13 +92,13 @@ export class SettingsDialog {
         this.close(null);
       } else if (e.key === 'Enter') {
         e.preventDefault();
-        this.submitDialog(snapOnStartupCheckbox, gridSizeInput, fitMarginInput, autoLayoutPaddingInput);
+        this.submitDialog(snapOnStartupCheckbox, gridSizeInput, fitMarginInput, autoLayoutPaddingInput, autoNodeLabelPrefixInput, autoNodeLabelStartInput);
       }
     });
 
     // Button handlers
     okBtn.addEventListener('click', () => {
-      this.submitDialog(snapOnStartupCheckbox, gridSizeInput, fitMarginInput, autoLayoutPaddingInput);
+      this.submitDialog(snapOnStartupCheckbox, gridSizeInput, fitMarginInput, autoLayoutPaddingInput, autoNodeLabelPrefixInput, autoNodeLabelStartInput);
     });
 
     cancelBtn.addEventListener('click', () => {
@@ -96,15 +106,26 @@ export class SettingsDialog {
     });
   }
 
-  private submitDialog(snapOnStartupCheckbox: HTMLInputElement, gridSizeInput: HTMLInputElement, fitMarginInput: HTMLInputElement, autoLayoutPaddingInput: HTMLInputElement): void {
+  private submitDialog(
+    snapOnStartupCheckbox: HTMLInputElement,
+    gridSizeInput: HTMLInputElement,
+    fitMarginInput: HTMLInputElement,
+    autoLayoutPaddingInput: HTMLInputElement,
+    autoNodeLabelPrefixInput: HTMLInputElement,
+    autoNodeLabelStartInput: HTMLInputElement
+  ): void {
     const gridSize = Math.max(5, Math.min(100, parseInt(gridSizeInput.value, 10) || 10));
     const fitToContentMargin = Math.max(0, Math.min(100, parseInt(fitMarginInput.value, 10) || 20));
     const autoLayoutPadding = Math.max(0, parseInt(autoLayoutPaddingInput.value, 10) || 50);
+    const autoNodeLabelPrefix = autoNodeLabelPrefixInput.value;
+    const autoNodeLabelStartNumber = parseInt(autoNodeLabelStartInput.value, 10) || 0;
     const result: AppSettings = {
       snapOnStartup: snapOnStartupCheckbox.checked,
       gridSize,
       fitToContentMargin,
       autoLayoutPadding,
+      autoNodeLabelPrefix,
+      autoNodeLabelStartNumber,
       styleClasses: this.currentStyleClasses
     };
 

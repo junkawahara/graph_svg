@@ -5,6 +5,19 @@
 ## [Unreleased]
 
 ### 追加
+- Graph メニューを新規作成（View の後に配置）
+  - Import Graph File...（File メニューから移動）
+  - Auto Layout（Arrange メニュー・ツールバーから移動）
+  - Auto Label Nodes（新機能）
+  - Toggle Directed Edge（Arrange メニューから移動）
+- Auto Label Nodes 機能
+  - ノードを作成順（内部ID順）に自動ラベル付け（例: v0, v1, v2, ...）
+  - 既存ラベルを上書き
+  - Undo/Redo 対応
+  - ノードがない場合は静かに無視
+- 設定画面に Auto Node Label 設定を追加
+  - Auto Node Label Prefix（デフォルト: `v`、空文字可）
+  - Auto Node Label Start Number（デフォルト: `0`、負の数可、整数のみ）
 - エッジラベルの auto 配置機能
   - デフォルト位置を `auto` に設定
   - `auto` は他のオブジェクトと重ならない位置に自動配置

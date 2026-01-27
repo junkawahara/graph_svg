@@ -28,7 +28,6 @@ const MENUS: Menu[] = [
     items: [
       { label: 'New', event: 'new', shortcut: 'Ctrl+N' },
       { label: 'Open...', event: 'open', shortcut: 'Ctrl+O' },
-      { label: 'Import Graph...', event: 'importGraph' },
       { separator: true, label: '' },
       { label: 'Save', event: 'save', shortcut: 'Ctrl+S' },
       { label: 'Save As...', event: 'saveAs', shortcut: 'Ctrl+Shift+S' },
@@ -58,6 +57,17 @@ const MENUS: Menu[] = [
       { label: 'Toggle Grid Snap', event: 'toggleSnap', shortcut: 'G' },
       { separator: true, label: '' },
       { label: 'Fit Canvas to Content', event: 'fitCanvasToContent' }
+    ]
+  },
+  {
+    label: 'Graph',
+    items: [
+      { label: 'Import Graph File...', event: 'importGraph' },
+      { separator: true, label: '' },
+      { label: 'Auto Layout', event: 'autoLayout' },
+      { label: 'Auto Label Nodes', event: 'autoLabelNodes' },
+      { separator: true, label: '' },
+      { label: 'Toggle Directed Edge', event: 'toggleDirectedEdge' }
     ]
   },
   {
@@ -94,10 +104,7 @@ const MENUS: Menu[] = [
       { label: 'Align Bottom', eventWithArg: { event: 'align', arg: 'bottom' } },
       { separator: true, label: '' },
       { label: 'Distribute Horizontally', eventWithArg: { event: 'distribute', arg: 'horizontal' } },
-      { label: 'Distribute Vertically', eventWithArg: { event: 'distribute', arg: 'vertical' } },
-      { separator: true, label: '' },
-      { label: 'Auto Layout', event: 'autoLayout' },
-      { label: 'Toggle Directed Edge', event: 'toggleDirectedEdge' }
+      { label: 'Distribute Vertically', eventWithArg: { event: 'distribute', arg: 'vertical' } }
     ]
   }
 ];

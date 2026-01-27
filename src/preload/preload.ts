@@ -114,6 +114,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('menu:autoLayout', handler);
     return () => ipcRenderer.removeListener('menu:autoLayout', handler);
   },
+  onMenuAutoLabelNodes: (callback: () => void) => {
+    const handler = (_event: IpcRendererEvent) => callback();
+    ipcRenderer.on('menu:autoLabelNodes', handler);
+    return () => ipcRenderer.removeListener('menu:autoLabelNodes', handler);
+  },
   onMenuToggleDirectedEdge: (callback: () => void) => {
     const handler = (_event: IpcRendererEvent) => callback();
     ipcRenderer.on('menu:toggleDirectedEdge', handler);
@@ -162,6 +167,7 @@ declare global {
       onMenuTool: (callback: (tool: string) => void) => () => void;
       onMenuZorder: (callback: (operation: string) => void) => () => void;
       onMenuAutoLayout: (callback: () => void) => () => void;
+      onMenuAutoLabelNodes: (callback: () => void) => () => void;
       onMenuToggleDirectedEdge: (callback: () => void) => () => void;
       onMenuAlign: (callback: (alignment: string) => void) => () => void;
       onMenuDistribute: (callback: (distribution: string) => void) => () => void;

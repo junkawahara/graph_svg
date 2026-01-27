@@ -42,6 +42,7 @@ export type MenuEventType =
   | 'toggleSnap'
   | 'fitCanvasToContent'
   | 'autoLayout'
+  | 'autoLabelNodes'
   | 'toggleDirectedEdge'
   | 'openSettings';
 

@@ -8,6 +8,8 @@ export interface AppSettings {
   gridSize: number;
   fitToContentMargin: number;
   autoLayoutPadding: number;
+  autoNodeLabelPrefix: string;
+  autoNodeLabelStartNumber: number;
   styleClasses: StyleClass[];
 }
 
@@ -55,6 +57,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   gridSize: 10,
   fitToContentMargin: 20,
   autoLayoutPadding: 50,
+  autoNodeLabelPrefix: 'v',
+  autoNodeLabelStartNumber: 0,
   styleClasses: DEFAULT_STYLE_CLASSES
 };
 

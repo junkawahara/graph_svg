@@ -99,6 +99,7 @@ export class ElectronAdapter implements PlatformAdapter {
       toggleSnap: 'onMenuToggleSnap',
       fitCanvasToContent: 'onMenuFitCanvasToContent',
       autoLayout: 'onMenuAutoLayout',
+      autoLabelNodes: 'onMenuAutoLabelNodes',
       toggleDirectedEdge: 'onMenuToggleDirectedEdge',
       openSettings: 'onOpenSettings'
     };

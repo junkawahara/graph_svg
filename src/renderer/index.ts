@@ -27,6 +27,8 @@ import { GraphFileParser } from './core/GraphFileParser';
 import { GraphImportDialog } from './components/GraphImportDialog';
 import { Shape } from './shapes/Shape';
 import { Group } from './shapes/Group';
+import { Node } from './shapes/Node';
+import { AutoLabelNodesCommand } from './commands/AutoLabelNodesCommand';
 import { ToolType } from '../shared/types';
 import { ZOrderOperation } from './commands/ZOrderCommand';
 import { calculateFitToContent, calculateContentBounds } from './core/BoundsCalculator';
@@ -554,6 +556,29 @@ function setupMenuListeners(canvas: Canvas): void {
   // Menu: Auto Layout
   adapter.onMenuEvent('autoLayout', () => {
     eventBus.emit('graph:autoLayout', null);
+  });
+
+  // Menu: Auto Label Nodes
+  adapter.onMenuEvent('autoLabelNodes', async () => {
+    const shapes = canvas.getShapes();
+    const nodes = shapes.filter((s): s is Node => s instanceof Node);
+
+    // Do nothing if no nodes
+    if (nodes.length === 0) {
+      return;
+    }
+
+    // Sort nodes by ID (creation order)
+    nodes.sort((a, b) => a.id.localeCompare(b.id));
+
+    // Get settings
+    const settings = await adapter.readSettings();
+    const prefix = settings.autoNodeLabelPrefix ?? 'v';
+    const startNumber = settings.autoNodeLabelStartNumber ?? 0;
+
+    // Execute command
+    const command = new AutoLabelNodesCommand(nodes, prefix, startNumber);
+    historyManager.execute(command);
   });
 
   // Menu: Toggle Directed Edge
