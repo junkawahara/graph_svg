@@ -66,6 +66,7 @@ const MENUS: Menu[] = [
       { separator: true, label: '' },
       { label: 'Auto Layout', event: 'autoLayout' },
       { label: 'Auto Label Nodes', event: 'autoLabelNodes' },
+      { label: 'Auto Label Edges', event: 'autoLabelEdges' },
       { separator: true, label: '' },
       { label: 'Toggle Directed Edge', event: 'toggleDirectedEdge' }
     ]

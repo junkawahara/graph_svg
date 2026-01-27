@@ -62,6 +62,14 @@ export class SettingsDialog {
           <label for="auto-node-label-start">Auto Node Label Start Number</label>
           <input type="number" id="auto-node-label-start" value="${currentSettings.autoNodeLabelStartNumber ?? 0}" step="1">
         </div>
+        <div class="dialog-field">
+          <label for="auto-edge-label-prefix">Auto Edge Label Prefix</label>
+          <input type="text" id="auto-edge-label-prefix" value="${currentSettings.autoEdgeLabelPrefix ?? 'e'}">
+        </div>
+        <div class="dialog-field">
+          <label for="auto-edge-label-start">Auto Edge Label Start Number</label>
+          <input type="number" id="auto-edge-label-start" value="${currentSettings.autoEdgeLabelStartNumber ?? 0}" step="1">
+        </div>
       </div>
       <div class="dialog-footer">
         <button class="dialog-btn dialog-btn-cancel">キャンセル</button>
@@ -79,6 +87,8 @@ export class SettingsDialog {
     const autoLayoutPaddingInput = this.dialog.querySelector('#auto-layout-padding') as HTMLInputElement;
     const autoNodeLabelPrefixInput = this.dialog.querySelector('#auto-node-label-prefix') as HTMLInputElement;
     const autoNodeLabelStartInput = this.dialog.querySelector('#auto-node-label-start') as HTMLInputElement;
+    const autoEdgeLabelPrefixInput = this.dialog.querySelector('#auto-edge-label-prefix') as HTMLInputElement;
+    const autoEdgeLabelStartInput = this.dialog.querySelector('#auto-edge-label-start') as HTMLInputElement;
     const okBtn = this.dialog.querySelector('.dialog-btn-ok') as HTMLButtonElement;
     const cancelBtn = this.dialog.querySelector('.dialog-btn-cancel') as HTMLButtonElement;
 
@@ -92,13 +102,13 @@ export class SettingsDialog {
         this.close(null);
       } else if (e.key === 'Enter') {
         e.preventDefault();
-        this.submitDialog(snapOnStartupCheckbox, gridSizeInput, fitMarginInput, autoLayoutPaddingInput, autoNodeLabelPrefixInput, autoNodeLabelStartInput);
+        this.submitDialog(snapOnStartupCheckbox, gridSizeInput, fitMarginInput, autoLayoutPaddingInput, autoNodeLabelPrefixInput, autoNodeLabelStartInput, autoEdgeLabelPrefixInput, autoEdgeLabelStartInput);
       }
     });
 
     // Button handlers
     okBtn.addEventListener('click', () => {
-      this.submitDialog(snapOnStartupCheckbox, gridSizeInput, fitMarginInput, autoLayoutPaddingInput, autoNodeLabelPrefixInput, autoNodeLabelStartInput);
+      this.submitDialog(snapOnStartupCheckbox, gridSizeInput, fitMarginInput, autoLayoutPaddingInput, autoNodeLabelPrefixInput, autoNodeLabelStartInput, autoEdgeLabelPrefixInput, autoEdgeLabelStartInput);
     });
 
     cancelBtn.addEventListener('click', () => {
@@ -112,13 +122,17 @@ export class SettingsDialog {
     fitMarginInput: HTMLInputElement,
     autoLayoutPaddingInput: HTMLInputElement,
     autoNodeLabelPrefixInput: HTMLInputElement,
-    autoNodeLabelStartInput: HTMLInputElement
+    autoNodeLabelStartInput: HTMLInputElement,
+    autoEdgeLabelPrefixInput: HTMLInputElement,
+    autoEdgeLabelStartInput: HTMLInputElement
   ): void {
     const gridSize = Math.max(5, Math.min(100, parseInt(gridSizeInput.value, 10) || 10));
     const fitToContentMargin = Math.max(0, Math.min(100, parseInt(fitMarginInput.value, 10) || 20));
     const autoLayoutPadding = Math.max(0, parseInt(autoLayoutPaddingInput.value, 10) || 50);
     const autoNodeLabelPrefix = autoNodeLabelPrefixInput.value;
     const autoNodeLabelStartNumber = parseInt(autoNodeLabelStartInput.value, 10) || 0;
+    const autoEdgeLabelPrefix = autoEdgeLabelPrefixInput.value;
+    const autoEdgeLabelStartNumber = parseInt(autoEdgeLabelStartInput.value, 10) || 0;
     const result: AppSettings = {
       snapOnStartup: snapOnStartupCheckbox.checked,
       gridSize,
@@ -126,6 +140,8 @@ export class SettingsDialog {
       autoLayoutPadding,
       autoNodeLabelPrefix,
       autoNodeLabelStartNumber,
+      autoEdgeLabelPrefix,
+      autoEdgeLabelStartNumber,
       styleClasses: this.currentStyleClasses
     };
 

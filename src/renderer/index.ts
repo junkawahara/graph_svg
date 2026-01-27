@@ -28,7 +28,9 @@ import { GraphImportDialog } from './components/GraphImportDialog';
 import { Shape } from './shapes/Shape';
 import { Group } from './shapes/Group';
 import { Node } from './shapes/Node';
+import { Edge } from './shapes/Edge';
 import { AutoLabelNodesCommand } from './commands/AutoLabelNodesCommand';
+import { AutoLabelEdgesCommand } from './commands/AutoLabelEdgesCommand';
 import { ToolType } from '../shared/types';
 import { ZOrderOperation } from './commands/ZOrderCommand';
 import { calculateFitToContent, calculateContentBounds } from './core/BoundsCalculator';
@@ -578,6 +580,29 @@ function setupMenuListeners(canvas: Canvas): void {
 
     // Execute command
     const command = new AutoLabelNodesCommand(nodes, prefix, startNumber);
+    historyManager.execute(command);
+  });
+
+  // Menu: Auto Label Edges
+  adapter.onMenuEvent('autoLabelEdges', async () => {
+    const shapes = canvas.getShapes();
+    const edges = shapes.filter((s): s is Edge => s instanceof Edge);
+
+    // Do nothing if no edges
+    if (edges.length === 0) {
+      return;
+    }
+
+    // Sort edges by ID (creation order)
+    edges.sort((a, b) => a.id.localeCompare(b.id));
+
+    // Get settings
+    const settings = await adapter.readSettings();
+    const prefix = settings.autoEdgeLabelPrefix ?? 'e';
+    const startNumber = settings.autoEdgeLabelStartNumber ?? 0;
+
+    // Execute command
+    const command = new AutoLabelEdgesCommand(edges, prefix, startNumber);
     historyManager.execute(command);
   });
 

@@ -10,6 +10,8 @@ export interface AppSettings {
   autoLayoutPadding: number;
   autoNodeLabelPrefix: string;
   autoNodeLabelStartNumber: number;
+  autoEdgeLabelPrefix: string;
+  autoEdgeLabelStartNumber: number;
   styleClasses: StyleClass[];
 }
 
@@ -59,6 +61,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   autoLayoutPadding: 50,
   autoNodeLabelPrefix: 'v',
   autoNodeLabelStartNumber: 0,
+  autoEdgeLabelPrefix: 'e',
+  autoEdgeLabelStartNumber: 0,
   styleClasses: DEFAULT_STYLE_CLASSES
 };
 

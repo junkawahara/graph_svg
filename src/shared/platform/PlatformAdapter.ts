@@ -43,6 +43,7 @@ export type MenuEventType =
   | 'fitCanvasToContent'
   | 'autoLayout'
   | 'autoLabelNodes'
+  | 'autoLabelEdges'
   | 'toggleDirectedEdge'
   | 'openSettings';
 
