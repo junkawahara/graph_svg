@@ -30,6 +30,7 @@ export type MenuEventType =
   | 'new'
   | 'open'
   | 'importGraph'
+  | 'exportGraph'
   | 'save'
   | 'saveAs'
   | 'exportFitToContent'
@@ -81,6 +82,7 @@ export interface PlatformAdapter {
   saveFile(content: string, currentPath?: string): Promise<FileSaveResult | null>;
   saveFileAs(content: string, defaultPath?: string): Promise<FileSaveResult | null>;
   saveFileToPath(path: string, content: string): Promise<boolean>;
+  exportGraphFile(content: string, defaultPath?: string): Promise<FileSaveResult | null>;
 
   // Settings
   readSettings(): Promise<AppSettings>;

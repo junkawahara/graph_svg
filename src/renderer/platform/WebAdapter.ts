@@ -73,6 +73,58 @@ export class WebAdapter implements PlatformAdapter {
     }
   }
 
+  async exportGraphFile(content: string, defaultPath?: string): Promise<FileSaveResult | null> {
+    try {
+      if (this.hasFileSystemAccess) {
+        return this.exportGraphWithFSAccess(content, defaultPath);
+      }
+      return this.exportGraphWithDownload(content, defaultPath);
+    } catch (e) {
+      if ((e as Error).name === 'AbortError') {
+        return null;
+      }
+      throw e;
+    }
+  }
+
+  private async exportGraphWithFSAccess(content: string, defaultPath?: string): Promise<FileSaveResult | null> {
+    const handle = await (window as unknown as {
+      showSaveFilePicker: (options: {
+        suggestedName?: string;
+        types: FilePickerTypes[];
+      }) => Promise<FileSystemFileHandle>
+    }).showSaveFilePicker({
+      suggestedName: defaultPath || 'untitled.txt',
+      types: [
+        { description: 'Text files', accept: { 'text/plain': ['.txt'] } }
+      ]
+    });
+
+    // Normalize line endings to LF
+    const normalizedContent = content.replace(/\r\n/g, '\n');
+    const writable = await handle.createWritable();
+    await writable.write(normalizedContent);
+    await writable.close();
+
+    return { path: handle.name, success: true };
+  }
+
+  private exportGraphWithDownload(content: string, defaultPath?: string): FileSaveResult {
+    const filename = defaultPath || 'untitled.txt';
+    // Normalize line endings to LF
+    const normalizedContent = content.replace(/\r\n/g, '\n');
+    const blob = new Blob([normalizedContent], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+
+    URL.revokeObjectURL(url);
+    return { path: filename, success: true };
+  }
+
   private async openFileWithFSAccess(types: FilePickerTypes[]): Promise<FileOpenResult | null> {
     const [handle] = await (window as unknown as { showOpenFilePicker: (options: { types: FilePickerTypes[] }) => Promise<FileSystemFileHandle[]> }).showOpenFilePicker({
       types

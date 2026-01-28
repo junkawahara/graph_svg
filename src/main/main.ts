@@ -73,6 +73,10 @@ function createMenu(): void {
           click: () => mainWindow?.webContents.send('menu:importGraph')
         },
         {
+          label: 'グラフをエクスポート...',
+          click: () => mainWindow?.webContents.send('menu:exportGraph')
+        },
+        {
           label: '保存',
           accelerator: 'CmdOrCtrl+S',
           click: () => mainWindow?.webContents.send('menu:save')
@@ -487,6 +491,34 @@ ipcMain.handle('file:openGraph', async (): Promise<{ path: string; content: stri
     return { path: filePath, content };
   } catch (error) {
     console.error('Failed to open graph file:', error);
+    return null;
+  }
+});
+
+// Export graph file (edge list or DIMACS format)
+ipcMain.handle('file:exportGraph', async (_event, content: string, defaultPath?: string): Promise<string | null> => {
+  if (!mainWindow) return null;
+
+  const result = await dialog.showSaveDialog(mainWindow, {
+    title: 'Export Graph File',
+    defaultPath: defaultPath || 'untitled.txt',
+    filters: [
+      { name: 'Text Files', extensions: ['txt'] },
+      { name: 'All Files', extensions: ['*'] }
+    ]
+  });
+
+  if (result.canceled || !result.filePath) {
+    return null;
+  }
+
+  try {
+    // Write with UTF-8 encoding and LF line endings
+    const normalizedContent = content.replace(/\r\n/g, '\n');
+    fs.writeFileSync(result.filePath, normalizedContent, 'utf-8');
+    return result.filePath;
+  } catch (error) {
+    console.error('Failed to export graph file:', error);
     return null;
   }
 });

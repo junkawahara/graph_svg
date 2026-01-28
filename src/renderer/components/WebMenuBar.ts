@@ -63,6 +63,7 @@ const MENUS: Menu[] = [
     label: 'Graph',
     items: [
       { label: 'Import Graph File...', event: 'importGraph' },
+      { label: 'Export Graph...', event: 'exportGraph' },
       { separator: true, label: '' },
       { label: 'Auto Layout', event: 'autoLayout' },
       { label: 'Auto Label Nodes', event: 'autoLabelNodes' },

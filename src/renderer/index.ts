@@ -25,6 +25,8 @@ import { FitCanvasToContentCommand } from './commands/FitCanvasToContentCommand'
 import { ImportGraphCommand } from './commands/ImportGraphCommand';
 import { GraphFileParser } from './core/GraphFileParser';
 import { GraphImportDialog } from './components/GraphImportDialog';
+import { GraphExportDialog, GraphExportOptions } from './components/GraphExportDialog';
+import { validateLabels, exportGraph, GraphExportFormat } from './core/GraphFileExporter';
 import { Shape } from './shapes/Shape';
 import { Group } from './shapes/Group';
 import { Node } from './shapes/Node';
@@ -238,6 +240,122 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Register import graph menu event
   getPlatformAdapter().onMenuEvent('importGraph', handleImportGraph);
+
+  // Export graph file handler
+  async function handleExportGraph(): Promise<void> {
+    const adapter = getPlatformAdapter();
+    const shapes = canvas.getShapes();
+
+    // Collect all nodes and edges (including those in groups)
+    function collectNodesAndEdges(shapeList: Shape[]): { nodes: Node[]; edges: Edge[] } {
+      const nodes: Node[] = [];
+      const edges: Edge[] = [];
+
+      for (const shape of shapeList) {
+        if (shape instanceof Node) {
+          nodes.push(shape);
+        } else if (shape instanceof Edge) {
+          edges.push(shape);
+        } else if (shape instanceof Group) {
+          const children = collectNodesAndEdges(shape.children);
+          nodes.push(...children.nodes);
+          edges.push(...children.edges);
+        }
+      }
+
+      return { nodes, edges };
+    }
+
+    const allNodesAndEdges = collectNodesAndEdges(shapes);
+
+    // Check if there are any nodes
+    if (allNodesAndEdges.nodes.length === 0) {
+      alert('エクスポートするノードがありません。');
+      return;
+    }
+
+    // Check selection
+    const selectedShapes = selectionManager.getSelection();
+    const selectedNodesAndEdges = collectNodesAndEdges(selectedShapes);
+
+    // For 'selection' mode, include nodes connected to selected edges
+    const selectedNodeIds = new Set(selectedNodesAndEdges.nodes.map(n => n.id));
+    const edgesWithConnectedNodes: Edge[] = [];
+    const additionalNodes: Node[] = [];
+
+    for (const edge of selectedNodesAndEdges.edges) {
+      edgesWithConnectedNodes.push(edge);
+      // Add source node if not already selected
+      if (!selectedNodeIds.has(edge.sourceNodeId)) {
+        const sourceNode = allNodesAndEdges.nodes.find(n => n.id === edge.sourceNodeId);
+        if (sourceNode) {
+          additionalNodes.push(sourceNode);
+          selectedNodeIds.add(sourceNode.id);
+        }
+      }
+      // Add target node if not already selected
+      if (!selectedNodeIds.has(edge.targetNodeId)) {
+        const targetNode = allNodesAndEdges.nodes.find(n => n.id === edge.targetNodeId);
+        if (targetNode) {
+          additionalNodes.push(targetNode);
+          selectedNodeIds.add(targetNode.id);
+        }
+      }
+    }
+
+    const hasSelection = selectedNodesAndEdges.nodes.length > 0 || selectedNodesAndEdges.edges.length > 0;
+
+    // Validate labels for warnings
+    const validationResult = validateLabels(allNodesAndEdges.nodes, allNodesAndEdges.edges);
+
+    // Show export dialog
+    const exportDialog = new GraphExportDialog();
+    const options = await exportDialog.show({
+      hasSelection,
+      warnings: validationResult.warnings
+    });
+
+    if (!options) return;
+
+    // Determine which nodes and edges to export
+    let nodesToExport: Node[];
+    let edgesToExport: Edge[];
+
+    if (options.scope === 'selection' && hasSelection) {
+      nodesToExport = [...selectedNodesAndEdges.nodes, ...additionalNodes];
+      edgesToExport = edgesWithConnectedNodes;
+    } else {
+      nodesToExport = allNodesAndEdges.nodes;
+      edgesToExport = allNodesAndEdges.edges;
+    }
+
+    // Sort by ID (creation order)
+    nodesToExport.sort((a, b) => a.id.localeCompare(b.id));
+    edgesToExport.sort((a, b) => a.id.localeCompare(b.id));
+
+    // Generate export content
+    const content = exportGraph(nodesToExport, edgesToExport, options.format);
+
+    // Determine default filename
+    const currentPath = editorState.currentFilePath;
+    let defaultFilename: string;
+    if (currentPath) {
+      // Remove .svg extension and add .txt
+      defaultFilename = currentPath.replace(/\.svg$/i, '.txt');
+    } else {
+      defaultFilename = 'untitled.txt';
+    }
+
+    // Show save dialog
+    const saveResult = await adapter.exportGraphFile(content, defaultFilename);
+    if (saveResult) {
+      alert('エクスポートが完了しました。');
+      console.log(`Exported graph: ${nodesToExport.length} nodes, ${edgesToExport.length} edges to ${saveResult.path}`);
+    }
+  }
+
+  // Register export graph menu event
+  getPlatformAdapter().onMenuEvent('exportGraph', handleExportGraph);
 
   // Mark as dirty when history changes (undo/redo stack modified)
   eventBus.on('history:changed', () => {

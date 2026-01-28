@@ -33,6 +33,14 @@ export class ElectronAdapter implements PlatformAdapter {
     return window.electronAPI.openGraphFile();
   }
 
+  async exportGraphFile(content: string, defaultPath?: string): Promise<FileSaveResult | null> {
+    const path = await window.electronAPI.exportGraphFile(content, defaultPath);
+    if (path) {
+      return { path, success: true };
+    }
+    return null;
+  }
+
   async saveFile(content: string, currentPath?: string): Promise<FileSaveResult | null> {
     const path = currentPath || this.currentFilePath;
     if (path) {
@@ -87,6 +95,7 @@ export class ElectronAdapter implements PlatformAdapter {
       new: 'onMenuNew',
       open: 'onMenuOpen',
       importGraph: 'onMenuImportGraph',
+      exportGraph: 'onMenuExportGraph',
       save: 'onMenuSave',
       saveAs: 'onMenuSaveAs',
       exportFitToContent: 'onMenuExportFitToContent',

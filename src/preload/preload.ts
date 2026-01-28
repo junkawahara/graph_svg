@@ -9,6 +9,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   saveFileToPath: (filePath: string, content: string) => ipcRenderer.invoke('file:saveToPath', filePath, content),
   openFile: () => ipcRenderer.invoke('file:open'),
   openGraphFile: () => ipcRenderer.invoke('file:openGraph'),
+  exportGraphFile: (content: string, defaultPath?: string) => ipcRenderer.invoke('file:exportGraph', content, defaultPath),
 
   // Window operations
   setWindowTitle: (title: string) => ipcRenderer.invoke('window:setTitle', title),
@@ -38,6 +39,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
     const handler = (_event: IpcRendererEvent) => callback();
     ipcRenderer.on('menu:importGraph', handler);
     return () => ipcRenderer.removeListener('menu:importGraph', handler);
+  },
+  onMenuExportGraph: (callback: () => void) => {
+    const handler = (_event: IpcRendererEvent) => callback();
+    ipcRenderer.on('menu:exportGraph', handler);
+    return () => ipcRenderer.removeListener('menu:exportGraph', handler);
   },
   onMenuSave: (callback: () => void) => {
     const handler = (_event: IpcRendererEvent) => callback();
@@ -149,6 +155,7 @@ declare global {
       saveFileToPath: (filePath: string, content: string) => Promise<boolean>;
       openFile: () => Promise<{ path: string; content: string } | null>;
       openGraphFile: () => Promise<{ path: string; content: string } | null>;
+      exportGraphFile: (content: string, defaultPath?: string) => Promise<string | null>;
       setWindowTitle: (title: string) => Promise<void>;
       allowClose: () => Promise<void>;
       readSettings: () => Promise<AppSettings>;
@@ -157,6 +164,7 @@ declare global {
       onMenuNew: (callback: () => void) => () => void;
       onMenuOpen: (callback: () => void) => () => void;
       onMenuImportGraph: (callback: () => void) => () => void;
+      onMenuExportGraph: (callback: () => void) => () => void;
       onMenuSave: (callback: () => void) => () => void;
       onMenuSaveAs: (callback: () => void) => () => void;
       onMenuUndo: (callback: () => void) => () => void;
