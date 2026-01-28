@@ -350,6 +350,28 @@ function createMenu(): void {
           click: () => mainWindow?.webContents.send('menu:toggleDirectedEdge')
         }
       ]
+    },
+    {
+      label: 'グラフ',
+      submenu: [
+        {
+          label: 'グラフファイルをインポート...',
+          click: () => mainWindow?.webContents.send('menu:importGraph')
+        },
+        {
+          label: 'グラフをエクスポート...',
+          click: () => mainWindow?.webContents.send('menu:exportGraph')
+        },
+        { type: 'separator' },
+        {
+          label: 'ノードを自動ラベル',
+          click: () => mainWindow?.webContents.send('menu:autoLabelNodes')
+        },
+        {
+          label: 'エッジを自動ラベル',
+          click: () => mainWindow?.webContents.send('menu:autoLabelEdges')
+        }
+      ]
     }
   ];
 
