@@ -911,20 +911,6 @@ export class Edge implements Shape {
       this.updatePathEndpoints(sourceNode, targetNode);
 
       this.pathElement.setAttribute('d', this.getPathData(sourceNode, targetNode));
-
-      // Update label position
-      if (this.labelElement && this.label) {
-        const labelPos = this.calculateLabelPosition(sourceNode, targetNode);
-        this.labelElement.setAttribute('x', String(labelPos.x));
-        this.labelElement.setAttribute('y', String(labelPos.y));
-        this.labelElement.setAttribute('fill', this.style.stroke);
-        if (labelPos.rotation !== 0) {
-          this.labelElement.setAttribute('transform', `rotate(${labelPos.rotation}, ${labelPos.x}, ${labelPos.y})`);
-        } else {
-          this.labelElement.removeAttribute('transform');
-        }
-        this.updateLabelBackground();
-      }
     }
 
     // Update style
@@ -967,6 +953,57 @@ export class Edge implements Shape {
     } else if (this.arrowElement) {
       this.arrowElement.remove();
       this.arrowElement = null;
+    }
+
+    // Update label - create or remove as needed
+    if (this.label && sourceNode && targetNode) {
+      const labelPos = this.calculateLabelPosition(sourceNode, targetNode);
+
+      // Create label elements if they don't exist
+      if (!this.labelBgElement) {
+        const labelBg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        labelBg.setAttribute('fill', 'white');
+        labelBg.setAttribute('stroke', 'none');
+        labelBg.setAttribute('rx', '2');
+        labelBg.setAttribute('ry', '2');
+        this.element?.appendChild(labelBg);
+        this.labelBgElement = labelBg;
+      }
+
+      if (!this.labelElement) {
+        const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        text.setAttribute('text-anchor', 'middle');
+        text.setAttribute('dominant-baseline', 'middle');
+        text.setAttribute('font-size', '12');
+        text.setAttribute('font-family', 'Arial');
+        text.setAttribute('pointer-events', 'none');
+        this.element?.appendChild(text);
+        this.labelElement = text;
+      }
+
+      // Update label content and position
+      this.labelElement.setAttribute('x', String(labelPos.x));
+      this.labelElement.setAttribute('y', String(labelPos.y));
+      this.labelElement.setAttribute('fill', this.style.stroke);
+      if (labelPos.rotation !== 0) {
+        this.labelElement.setAttribute('transform', `rotate(${labelPos.rotation}, ${labelPos.x}, ${labelPos.y})`);
+      } else {
+        this.labelElement.removeAttribute('transform');
+      }
+      this.labelElement.textContent = this.label;
+
+      // Update background rect size after text is rendered
+      setTimeout(() => this.updateLabelBackground(), 0);
+    } else {
+      // Remove label elements if label is empty
+      if (this.labelElement) {
+        this.labelElement.remove();
+        this.labelElement = null;
+      }
+      if (this.labelBgElement) {
+        this.labelBgElement.remove();
+        this.labelBgElement = null;
+      }
     }
 
     // Update data-label attribute and label placement attributes
