@@ -2,7 +2,7 @@
 
 TypeScript で構築された SVG ドローエディタ。Electron デスクトップアプリとしても、Web ブラウザアプリとしても利用できます。
 
-**[English README](README.md)**
+**[オンラインで試す](https://junkawahara.github.io/graph_svg/)** | **[English README](README.md)**
 
 ## 機能
 

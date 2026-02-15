@@ -2,7 +2,7 @@
 
 An SVG drawing editor built with TypeScript. Available as both an Electron desktop app and a web browser app.
 
-**[日本語版 README はこちら](README_ja.md)**
+**[Try it online](https://junkawahara.github.io/graph_svg/)** | **[日本語版 README はこちら](README_ja.md)**
 
 ## Features
 
