@@ -5,3 +5,4 @@ localdata/
 *.log
 .DS_Store
 AGENTS.md
+restart.sh
